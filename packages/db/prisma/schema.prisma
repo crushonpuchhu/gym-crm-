@@ -1,0 +1,634 @@
+// SalesFlow CRM — Prisma schema
+// Multi-tenant by organization. Every business record scoped to organizationId.
+// Soft delete via deletedAt.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleKey {
+  SUPER_ADMIN
+  ORG_OWNER
+  ORG_ADMIN
+  SALES_MANAGER
+  SALES_REP
+  SUPPORT_MANAGER
+  SUPPORT_AGENT
+  VIEWER
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  CONVERTED
+  DISQUALIFIED
+}
+
+enum LeadSource {
+  WEBSITE
+  REFERRAL
+  COLD_CALL
+  EMAIL
+  EVENT
+  OTHER
+}
+
+enum LeadPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum TicketStatus {
+  NEW
+  OPEN
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ActivityType {
+  CALL
+  MEETING
+  EMAIL
+  TASK
+  NOTE
+  STATUS_CHANGE
+  ASSIGNMENT
+}
+
+enum NotificationType {
+  ASSIGNMENT
+  FOLLOW_UP
+  DEAL_UPDATE
+  TICKET_UPDATE
+  SLA_WARNING
+  MENTION
+  SYSTEM
+}
+
+enum SubscriptionPlan {
+  FREE
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  TRIAL
+  EXPIRED
+}
+
+model Organization {
+  id        String   @id(default: uuid()) @db.Uuid
+  name      String   @db.VarChar(200)
+  slug      String   @unique @db.VarChar(100)
+  plan      SubscriptionPlan @default(FREE)
+  status    String   @default("active") // active, suspended
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  users       User[]
+  memberships Membership[]
+  leads       Lead[]
+  contacts    Contact[]
+  companies   Company[]
+  pipelines   Pipeline[]
+  deals       Deal[]
+  tickets     Ticket[]
+  tasks       Task[]
+  activities  Activity[]
+  notifications Notification[]
+  workflows   Workflow[]
+  workflowExecutions WorkflowExecution[]
+  subscriptions Subscription[]
+  auditLogs   AuditLog[]
+  invitations Invitation[]
+  roles       Role[]
+
+  @@index([deletedAt])
+}
+
+model User {
+  id            String   @id(default: uuid()) @db.Uuid
+  email         String   @unique @db.VarChar(255)
+  passwordHash  String   @db.VarChar(255)
+  name          String   @db.VarChar(200)
+  avatarUrl     String?
+  emailVerified Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  memberships   Membership[]
+  ownedLeads    Lead[]         @relation("LeadOwner")
+  ownedContacts Contact[]      @relation("ContactOwner")
+  ownedDeals    Deal[]         @relation("DealOwner")
+  ownedTickets  Ticket[]       @relation("TicketOwner")
+  ownedTasks    Task[]         @relation("TaskOwner")
+  leadActivities LeadActivity[] @relation("LeadActivityAuthor")
+  ticketComments TicketComment[] @relation("TicketCommentAuthor")
+  dealStageHistories DealStageHistory[] @relation("DealStageHistoryChanger")
+  activities    Activity[]     @relation("ActivityActor")
+  notifications Notification[] @relation("NotificationRecipient")
+  auditLogs     AuditLog[]     @relation("AuditLogActor")
+  createdInvitations Invitation[] @relation("InvitationCreator")
+
+  @@index([deletedAt])
+}
+
+model Membership {
+  id            String   @id(default: uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  organizationId String  @db.Uuid
+  role          RoleKey  @default(SALES_REP)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+  @@index([deletedAt])
+}
+
+model Role {
+  id            String   @id(default: uuid()) @db.Uuid
+  organizationId String  @db.Uuid
+  name          String   @db.VarChar(100)
+  key           RoleKey
+  permissions   Json      @default("{}")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([deletedAt])
+}
+
+model Permission {
+  id          String   @id(default: uuid()) @db.Uuid
+  key         String   @unique @db.VarChar(100)
+  description String   @db.VarChar(255)
+  createdAt   DateTime @default(now())
+}
+
+model PasswordResetToken {
+  id        String   @id(default: uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+model EmailVerificationToken {
+  id        String   @id(default: uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+model Invitation {
+  id            String   @id(default: uuid()) @db.Uuid
+  organizationId String  @db.Uuid
+  email         String   @db.VarChar(255)
+  role          RoleKey
+  token         String   @unique
+  expiresAt     DateTime
+  acceptedAt    DateTime?
+  createdById   String   @db.Uuid
+  createdAt     DateTime @default(now())
+
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy     User       @relation("InvitationCreator", fields: [createdById], references: [id])
+
+  @@index([organizationId])
+  @@index([token])
+}
+
+model Lead {
+  id                String     @id(default: uuid()) @db.Uuid
+  organizationId    String     @db.Uuid
+  ownerId           String     @db.Uuid
+  firstName         String     @db.VarChar(100)
+  lastName          String     @db.VarChar(100)
+  email             String?    @db.VarChar(255)
+  phone             String?    @db.VarChar(50)
+  company           String?    @db.VarChar(200)
+  source            LeadSource @default(WEBSITE)
+  status            LeadStatus @default(NEW)
+  priority          LeadPriority @default(MEDIUM)
+  score             Int        @default(0)
+  value             Decimal?   @db.Decimal(12, 2)
+  followUpAt        DateTime?
+  convertedToContactId String? @unique @db.Uuid
+  convertedToDealId   String?  @unique @db.Uuid
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  deletedAt         DateTime?
+
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner             User        @relation("LeadOwner", fields: [ownerId], references: [id])
+  activities        LeadActivity[]
+  convertedContact  Contact?    @relation("LeadConvertedContact", fields: [convertedToContactId], references: [id])
+  convertedDeal     Deal?       @relation("LeadConvertedDeal", fields: [convertedToDealId], references: [id])
+
+  @@index([organizationId])
+  @@index([ownerId])
+  @@index([status])
+  @@index([deletedAt])
+}
+
+model LeadActivity {
+  id        String   @id(default: uuid()) @db.Uuid
+  leadId    String   @db.Uuid
+  authorId  String   @db.Uuid
+  type      ActivityType
+  subject   String   @db.VarChar(200)
+  body      String?
+  occurredAt DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  lead    Lead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  author  User    @relation("LeadActivityAuthor", fields: [authorId], references: [id])
+
+  @@index([leadId])
+  @@index([authorId])
+}
+
+model Contact {
+  id          String   @id(default: uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  ownerId     String   @db.Uuid
+  firstName   String   @db.VarChar(100)
+  lastName    String   @db.VarChar(100)
+  email       String?  @db.VarChar(255)
+  phone       String?  @db.VarChar(50)
+  position    String?  @db.VarChar(100)
+  companyId   String?  @db.Uuid
+  address     String?  @db.VarChar(500)
+  notes       String?  @db.VarChar(2000)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner       User     @relation("ContactOwner", fields: [ownerId], references: [id])
+  company     Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  deals       Deal[]
+
+  @@index([organizationId])
+  @@index([ownerId])
+  @@index([companyId])
+  @@index([deletedAt])
+}
+
+model Company {
+  id          String   @id(default: uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  name        String   @db.VarChar(200)
+  industry    String?  @db.VarChar(100)
+  website     String?  @db.VarChar(200)
+  employees   Int?
+  revenueRange String? @db.VarChar(50)
+  address     String?  @db.VarChar(500)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  contacts    Contact[]
+  deals       Deal[]
+
+  @@index([organizationId])
+  @@index([deletedAt])
+}
+
+model Pipeline {
+  id          String   @id(default: uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  name        String   @db.VarChar(200)
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stages      PipelineStage[]
+  deals       Deal[]
+
+  @@index([organizationId])
+  @@index([deletedAt])
+}
+
+model PipelineStage {
+  id        String   @id(default: uuid()) @db.Uuid
+  pipelineId String  @db.Uuid
+  name      String   @db.VarChar(100)
+  key       String   @db.VarChar(100)
+  order     Int
+  probability Int    @default(0)
+  isWon     Boolean  @default(false)
+  isLost    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pipeline Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  deals    Deal[]
+
+  @@index([pipelineId])
+  @@index([key])
+}
+
+model Deal {
+  id              String   @id(default: uuid()) @db.Uuid
+  organizationId  String   @db.Uuid
+  pipelineId      String   @db.Uuid
+  stageId         String   @db.Uuid
+  ownerId         String   @db.Uuid
+  contactId       String?  @db.Uuid
+  companyId       String?  @db.Uuid
+  title           String   @db.VarChar(200)
+  value           Decimal    @db.Decimal(12, 2)
+  probability     Int        @default(0)
+  expectedCloseAt DateTime?
+  wonAt           DateTime?
+  lostAt          DateTime?
+  wonReason       String?  @db.VarChar(500)
+  lostReason      String?  @db.VarChar(500)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  pipeline      Pipeline       @relation(fields: [pipelineId], references: [id])
+  stage         PipelineStage  @relation(fields: [stageId], references: [id])
+  owner         User           @relation("DealOwner", fields: [ownerId], references: [id])
+  contact       Contact?       @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  company       Company?       @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  stageHistory  DealStageHistory[]
+  convertedLead Lead?         @relation("LeadConvertedDeal")
+
+  @@index([organizationId])
+  @@index([pipelineId])
+  @@index([stageId])
+  @@index([ownerId])
+  @@index([deletedAt])
+}
+
+model DealStageHistory {
+  id          String   @id(default: uuid()) @db.Uuid
+  dealId      String   @db.Uuid
+  fromStageId String?  @db.Uuid
+  toStageId   String   @db.Uuid
+  changedById String   @db.Uuid
+  changedAt   DateTime @default(now())
+
+  deal        Deal            @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  fromStage   PipelineStage?  @relation(fields: [fromStageId], references: [id], onDelete: SetNull)
+  toStage     PipelineStage   @relation(fields: [toStageId], references: [id])
+  changedBy   User            @relation("DealStageHistoryChanger", fields: [changedById], references: [id])
+
+  @@index([dealId])
+  @@index([changedAt])
+}
+
+model Ticket {
+  id            String   @id(default: uuid()) @db.Uuid
+  organizationId String  @db.Uuid
+  ticketNumber  String   @db.VarChar(50)
+  customerEmail String   @db.VarChar(255)
+  customerName  String   @db.VarChar(100)
+  ownerId       String?  @db.Uuid
+  priority      TicketPriority @default(MEDIUM)
+  status        TicketStatus @default(NEW)
+  subject       String   @db.VarChar(200)
+  description   String   @db.VarChar(2000)
+  firstResponseAt DateTime?
+  resolvedAt    DateTime?
+  closedAt      DateTime?
+  slaDueAt      DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner         User?     @relation("TicketOwner", fields: [ownerId], references: [id])
+  comments      TicketComment[]
+
+  @@index([organizationId])
+  @@index([ticketNumber])
+  @@index([ownerId])
+  @@index([status])
+  @@index([deletedAt])
+}
+
+model TicketComment {
+  id        String   @id(default: uuid()) @db.Uuid
+  ticketId  String   @db.Uuid
+  authorId  String   @db.Uuid
+  body      String   @db.VarChar(4000)
+  isInternal Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  ticket   Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author   User      @relation("TicketCommentAuthor", fields: [authorId], references: [id])
+  attachments TicketAttachment[]
+
+  @@index([ticketId])
+  @@index([authorId])
+  @@index([deletedAt])
+}
+
+model TicketAttachment {
+  id         String   @id(default: uuid()) @db.Uuid
+  ticketCommentId String @db.Uuid
+  fileName   String   @db.VarChar(255)
+  fileUrl    String   @db.VarChar(500)
+  fileSize   Int
+  mimeType   String   @db.VarChar(100)
+  createdAt  DateTime @default(now())
+
+  comment TicketComment @relation(fields: [ticketCommentId], references: [id], onDelete: Cascade)
+
+  @@index([ticketCommentId])
+}
+
+model Task {
+  id                String   @id(default: uuid()) @db.Uuid
+  organizationId    String   @db.Uuid
+  title             String   @db.VarChar(200)
+  type              ActivityType @default(TASK)
+  ownerId           String   @db.Uuid
+  dueAt             DateTime?
+  reminderAt        DateTime?
+  status            TaskStatus @default(OPEN)
+  relatedEntityType String?  @db.VarChar(50)
+  relatedEntityId   String?  @db.Uuid
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  deletedAt         DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner       User      @relation("TaskOwner", fields: [ownerId], references: [id])
+
+  @@index([organizationId])
+  @@index([ownerId])
+  @@index([status])
+  @@index([deletedAt])
+}
+
+model Activity {
+  id          String   @id(default: uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  actorId     String   @db.Uuid
+  type        ActivityType
+  subject     String   @db.VarChar(200)
+  entityType  String   @db.VarChar(50)
+  entityId    String   @db.Uuid
+  occurredAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actor       User     @relation("ActivityActor", fields: [actorId], references: [id])
+
+  @@index([organizationId])
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@index([deletedAt])
+}
+
+model Notification {
+  id          String   @id(default: uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  userId      String   @db.Uuid
+  type        NotificationType
+  title       String   @db.VarChar(200)
+  body        String   @db.VarChar(1000)
+  data        Json?
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user        User     @relation("NotificationRecipient", fields: [userId], references: [id])
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([readAt])
+  @@index([deletedAt])
+}
+
+model Workflow {
+  id          String   @id(default: uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  name        String   @db.VarChar(200)
+  trigger     String   @db.VarChar(100)
+  condition   Json      @default("{}")
+  actions     Json      @default("[]")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  executions  WorkflowExecution[]
+
+  @@index([organizationId])
+}
+
+model WorkflowExecution {
+  id          String   @id(default: uuid()) @db.Uuid
+  workflowId  String   @db.Uuid
+  triggerEvent String  @db.VarChar(100)
+  status      String   @db.VarChar(50) // success, failed, retry
+  input       Json?
+  output      Json?
+  error       String?  @db.VarChar(1000)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([status])
+}
+
+model Subscription {
+  id                String             @id(default: uuid()) @db.Uuid
+  organizationId    String             @db.Uuid
+  plan              SubscriptionPlan   @default(FREE)
+  status            SubscriptionStatus @default(TRIAL)
+  currentPeriodEnd  DateTime?
+  quotaLeads        Int                @default(1000)
+  quotaUsers        Int                @default(5)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+model AuditLog {
+  id          String   @id(default: uuid()) @db.Uuid
+  organizationId String  @db.Uuid
+  userId      String?   @db.Uuid
+  action      String   @db.VarChar(100)
+  entityType  String   @db.VarChar(100)
+  entityId    String?   @db.Uuid
+  oldValues   Json?
+  newValues   Json?
+  ip          String?   @db.VarChar(45)
+  userAgent   String?   @db.VarChar(500)
+  createdAt   DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user        User?     @relation("AuditLogActor", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
