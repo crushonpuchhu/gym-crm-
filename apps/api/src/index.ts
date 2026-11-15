@@ -1,6 +1,13 @@
 import { createApp } from "./app";
 import { env } from "./config/env";
 
+process.on("unhandledRejection", (reason) => {
+  console.error("[unhandledRejection]", reason);
+});
+process.on("uncaughtException", (error) => {
+  console.error("[uncaughtException]", error);
+});
+
 const app = createApp();
 
 app.listen(env.PORT, () => {

@@ -21,7 +21,7 @@ router.get("/", async (req: AuthedRequest, res) => {
   const where: any = { organizationId: req.orgId!, deletedAt: null };
   if (req.query.ownerId) where.ownerId = req.query.ownerId;
   if (req.query.status) where.status = req.query.status;
-  const tasks = await prisma.task.findMany({ where, orderBy: { dueAt: "asc", createdAt: "desc" } });
+  const tasks = await prisma.task.findMany({ where, orderBy: [{ dueAt: "asc" }, { createdAt: "desc" }] });
   return ok(res, tasks);
 });
 
