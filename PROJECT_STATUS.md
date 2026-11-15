@@ -1,12 +1,12 @@
 # PROJECT STATUS — SALESFLOW CRM
 
 ## Current phase
-Phase 8 — Integration and testing. All modules wired; E2E/CI still pending.
+Phase 8 — Integration and testing. All core modules wired and smoke-tested. E2E/CI-lite in place (CI workflow added; unit tests + isolation script pass). Phase 9 delivered: Docker images build+run, docs written.
 
 ## Completed modules (verified working end-to-end)
 - Auth (register/login/logout/refresh rotation/forgot-reset)
 - Organizations + Memberships + RBAC skeleton (org scoping server-side)
-- Leads (CRUD, search, filter, pagination, convert → contact+company+deal)
+- Leads (CRUD, search, filter, pagination, convert → contact+company+deal, CSV import)
 - Contacts, Companies (CRUD)
 - Pipelines + Stages + Deals (Kanban drag-drop → stage history, weighted revenue)
 - Tickets (creation w/ TK-nnnn numbers, comments internal+customer, status flow, SLA fields)
@@ -27,10 +27,15 @@ Phase 8 — Integration and testing. All modules wired; E2E/CI still pending.
 
 ## In-progress / pending
 - E2E tests (playwright) not installed
-- CI workflow (.github/workflows/ci.yml) not created
 - BullMQ workers (email, SLA warnings, reminders) — Redis wired but worker processes not built
 - Socket.IO real-time — out of scope this milestone
-- CSV import UI for leads (API has /leads/import not implemented)
+
+## Verified Docker
+- salesflow-api:test — builds, `/health` OK, production-mode login OK against live Postgres
+- salesflow-web:test — image builds successfully
+- `docker compose up -d` — postgres + redis healthy
+
+## Evidence
 
 ## Known bugs
 - Lead create form uses WEBSITE/REFERRAL etc. — see shared schema
