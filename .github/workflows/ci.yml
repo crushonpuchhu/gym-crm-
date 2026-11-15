@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-22.04
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: salesflow
+          POSTGRES_PASSWORD: salesflow
+          POSTGRES_DB: salesflow
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U salesflow -d salesflow"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://salesflow:salesflow@localhost:5432/salesflow?schema=public
+      JWT_SECRET: ci-access-secret-minimum-32-characters-long
+      REFRESH_SECRET: ci-refresh-secret-minimum-32-characters-long
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --no-audit --no-fund
+      - run: npx prisma migrate deploy
+        working-directory: packages/db
+      - run: npx tsc --noEmit
+        working-directory: apps/api
+      - run: npx vitest run
+        working-directory: apps/api
+      - run: npx next build
+        working-directory: apps/web
