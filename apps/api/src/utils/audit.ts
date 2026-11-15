@@ -21,10 +21,11 @@ export async function audit({
   ip?: string;
   userAgent?: string;
 }) {
+  if (!orgId) return; // audit is always tenant-scoped; skip when org unknown
   try {
     await prisma.auditLog.create({
       data: {
-        organizationId: orgId || "",
+        organizationId: orgId,
         userId: userId || null,
         action,
         entityType,
