@@ -9,12 +9,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "baseUrl": ".",
-    "paths": {
-      "@salesflow/shared": ["../../packages/shared/src/index.ts"],
-      "@salesflow/db": ["../../packages/db/src/index.ts"]
-    }
+    "resolveJsonModule": true
   },
   "include": ["src/**/*"]
 }

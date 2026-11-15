@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../config/prisma";
 import { ok, err } from "../utils/response";
 import { audit } from "../utils/audit";
-import { AuthedRequest } from "./auth";
+import { AuthedRequest } from "../middleware/auth";
 
 const router = Router();
 const companySchema = z.object({

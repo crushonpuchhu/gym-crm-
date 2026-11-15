@@ -143,11 +143,12 @@ router.post("/forgot-password", validate(forgotPasswordSchema), async (req, res)
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) return ok(res, { message: "If the account exists, a reset link was sent" });
   const token = require("crypto").randomBytes(32).toString("hex");
-  await prisma.passwordResetToken.upsert({
-    where: { userId: user.id },
-    update: { token, expiresAt: new Date(Date.now() + 15 * 60 * 1000) },
-    create: { userId: user.id, token, expiresAt: new Date(Date.now() + 15 * 60 * 1000) },
-  });
+  const existing = await prisma.passwordResetToken.findFirst({ where: { userId: user.id, used: false } });
+  if (existing) {
+    await prisma.passwordResetToken.update({ where: { id: existing.id }, data: { token, expiresAt: new Date(Date.now() + 15 * 60 * 1000) } });
+  } else {
+    await prisma.passwordResetToken.create({ data: { userId: user.id, token, expiresAt: new Date(Date.now() + 15 * 60 * 1000) } });
+  }
   // In dev, log token; in prod, send email
   if (process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console

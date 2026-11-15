@@ -6,9 +6,9 @@ export const createLeadSchema = z.object({
   email: z.string().email().optional().or(z.literal("")),
   phone: z.string().max(50).optional(),
   company: z.string().max(100).optional(),
-  source: z.enum(["website", "referral", "cold_call", "email", "event", "other"]).default("website"),
+  source: z.enum(["WEBSITE", "REFERRAL", "COLD_CALL", "EMAIL", "EVENT", "OTHER"]).default("WEBSITE"),
   status: z.enum(["NEW", "CONTACTED", "QUALIFIED", "PROPOSAL", "NEGOTIATION", "CONVERTED", "DISQUALIFIED"]).default("NEW"),
-  priority: z.enum(["low", "medium", "high"]).default("medium"),
+  priority: z.enum(["LOW", "MEDIUM", "HIGH"]).default("MEDIUM"),
   value: z.coerce.number().nonnegative().optional(),
   followUpAt: z.string().datetime().optional(),
 });

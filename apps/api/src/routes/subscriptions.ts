@@ -2,12 +2,12 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../config/prisma";
 import { ok, err } from "../utils/response";
-import { AuthedRequest } from "./auth";
+import { AuthedRequest } from "../middleware/auth";
 
 const router = Router();
 
 router.get("/", async (req: AuthedRequest, res) => {
-  const sub = await prisma.subscription.findFirst({ where: { organizationId: req.orgId!, deletedAt: null } });
+  const sub = await prisma.subscription.findFirst({ where: { organizationId: req.orgId! } });
   return ok(res, sub || { plan: "FREE", status: "TRIAL", quotaLeads: 1000, quotaUsers: 5 });
 });
 
@@ -15,7 +15,7 @@ const planSchema = z.object({ plan: z.enum(["FREE", "PROFESSIONAL", "ENTERPRISE"
 
 router.post("/:plan", validateBody(planSchema), async (req: AuthedRequest, res) => {
   const { plan } = req.body as any;
-  let sub = await prisma.subscription.findFirst({ where: { organizationId: req.orgId!, deletedAt: null } });
+  let sub = await prisma.subscription.findFirst({ where: { organizationId: req.orgId! } });
   const data: any = { plan, status: "ACTIVE", currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) };
   if (plan === "PROFESSIONAL") { data.quotaLeads = 10000; data.quotaUsers = 25; }
   if (plan === "ENTERPRISE") { data.quotaLeads = 100000; data.quotaUsers = 100; }

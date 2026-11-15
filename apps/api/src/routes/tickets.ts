@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../config/prisma";
 import { ok, err } from "../utils/response";
 import { audit } from "../utils/audit";
-import { AuthedRequest } from "./auth";
+import { AuthedRequest } from "../middleware/auth";
 
 const router = Router();
 const ticketSchema = z.object({
@@ -11,7 +11,7 @@ const ticketSchema = z.object({
   customerName: z.string().min(1).max(100),
   subject: z.string().min(1).max(200),
   description: z.string().min(1),
-  priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
+  priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).default("MEDIUM"),
 });
 
 let ticketCounter = 0;
@@ -62,7 +62,7 @@ router.get("/:id", async (req: AuthedRequest, res) => {
 router.patch("/:id", async (req: AuthedRequest, res) => {
   const ticket = await prisma.ticket.findFirst({ where: { id: req.params.id, organizationId: req.orgId!, deletedAt: null } });
   if (!ticket) return err(res, "not_found", "Ticket not found", 404);
-  const data = z.object({ subject: z.string().max(200).optional(), description: z.string().optional(), priority: z.string().optional(), status: z.string().optional(), ownerId: z.string().optional() }).parse(req.body);
+  const data = z.object({ subject: z.string().max(200).optional(), description: z.string().optional(), priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional(), status: z.enum(["NEW", "OPEN", "PENDING", "IN_PROGRESS", "RESOLVED", "CLOSED"]).optional(), ownerId: z.string().optional() }).parse(req.body);
   const updateData: any = { ...data };
   if (data.status === "RESOLVED" && !ticket.resolvedAt) updateData.resolvedAt = new Date();
   if (data.status === "CLOSED" && !ticket.closedAt) updateData.closedAt = new Date();

@@ -5,13 +5,13 @@ export const createTicketSchema = z.object({
   customerName: z.string().min(1).max(100),
   subject: z.string().min(1).max(200),
   description: z.string().min(1),
-  priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
+  priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).default("MEDIUM"),
 });
 
 export const updateTicketSchema = z.object({
   subject: z.string().min(1).max(200).optional(),
   description: z.string().optional(),
-  priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+  priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional(),
   status: z.enum(["NEW", "OPEN", "PENDING", "IN_PROGRESS", "RESOLVED", "CLOSED"]).optional(),
   ownerId: z.string().optional(),
 });

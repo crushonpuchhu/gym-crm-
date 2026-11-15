@@ -3,16 +3,16 @@ import { z } from "zod";
 import { prisma } from "../config/prisma";
 import { ok, err } from "../utils/response";
 import { audit } from "../utils/audit";
-import { AuthedRequest } from "./auth";
+import { AuthedRequest } from "../middleware/auth";
 
 const router = Router();
 const taskSchema = z.object({
   title: z.string().min(1).max(200),
-  type: z.enum(["call", "meeting", "email", "task", "note", "status_change", "assignment"]).default("task"),
+  type: z.enum(["CALL", "MEETING", "EMAIL", "TASK", "NOTE", "STATUS_CHANGE", "ASSIGNMENT"]).default("TASK"),
   ownerId: z.string(),
   dueAt: z.string().datetime().optional(),
   reminderAt: z.string().datetime().optional(),
-  status: z.enum(["open", "in_progress", "completed", "cancelled"]).default("open"),
+  status: z.enum(["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"]).default("OPEN"),
   relatedEntityType: z.string().max(50).optional(),
   relatedEntityId: z.string().optional(),
 });
@@ -36,7 +36,10 @@ router.patch("/:id", async (req: AuthedRequest, res) => {
   const task = await prisma.task.findFirst({ where: { id: req.params.id, organizationId: req.orgId!, deletedAt: null } });
   if (!task) return err(res, "not_found", "Task not found", 404);
   const data = taskSchema.partial().parse(req.body);
-  const updated = await prisma.task.update({ where: { id: req.params.id }, data: { ...data, dueAt: data.dueAt ? new Date(data.dueAt) : undefined } });
+  const { ownerId, ...rest } = data;
+  const updateData: any = { ...rest, dueAt: data.dueAt ? new Date(data.dueAt) : undefined };
+  if (ownerId) updateData.owner = { connect: { id: ownerId } };
+  const updated = await prisma.task.update({ where: { id: req.params.id }, data: updateData });
   await audit({ orgId: req.orgId, userId: req.userId, action: "task.update", entityType: "task", entityId: req.params.id, newValues: data, ip: req.ip, userAgent: req.get("user-agent") });
   return ok(res, updated);
 });

@@ -3,11 +3,11 @@ import { z } from "zod";
 import { prisma } from "../config/prisma";
 import { ok, err } from "../utils/response";
 import { audit } from "../utils/audit";
-import { AuthedRequest } from "./auth";
+import { AuthedRequest } from "../middleware/auth";
 
 const router = Router();
 const activitySchema = z.object({
-  type: z.enum(["call", "meeting", "email", "task", "note", "status_change", "assignment"]),
+  type: z.enum(["CALL", "MEETING", "EMAIL", "TASK", "NOTE", "STATUS_CHANGE", "ASSIGNMENT"]),
   subject: z.string().min(1).max(200),
   entityType: z.string().min(1).max(50),
   entityId: z.string(),

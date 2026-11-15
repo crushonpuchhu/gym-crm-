@@ -8,7 +8,7 @@ import {
 import { prisma } from "../config/prisma";
 import { ok, err } from "../utils/response";
 import { audit } from "../utils/audit";
-import { AuthedRequest } from "./auth";
+import { AuthedRequest } from "../middleware/auth";
 
 const router = Router();
 
@@ -87,7 +87,7 @@ router.post("/:id/convert", async (req: AuthedRequest, res) => {
       });
     }
     let deal: any = null;
-    if (lead.value && lead.value > 0) {
+    if (lead.value && Number(lead.value) > 0) {
       const pipeline = await tx.pipeline.findFirst({ where: { organizationId: req.orgId!, isDefault: true } });
       const stage = pipeline ? await tx.pipelineStage.findFirst({ where: { pipelineId: pipeline.id, isWon: false }, orderBy: { order: "asc" } }) : null;
       if (pipeline && stage) {

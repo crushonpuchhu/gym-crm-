@@ -1,6 +1,8 @@
-import { PrismaClient, RoleKey, LeadStatus, TicketStatus, SubscriptionPlan, SubscriptionStatus } from "@prisma/client";
+import { PrismaClient, RoleKey, LeadStatus, LeadSource, LeadPriority, TicketStatus, TicketPriority, SubscriptionPlan, SubscriptionStatus, ActivityType } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
+const DEMO_PASSWORD_HASH = bcrypt.hashSync("password123", 12);
 
 async function main() {
   // Demo organization
@@ -17,7 +19,7 @@ async function main() {
   const owner = await prisma.user.create({
     data: {
       email: "owner@demo.com",
-      passwordHash: "$2b$12$EXAMPLE.hash.do.not.use.in.production",
+      passwordHash: DEMO_PASSWORD_HASH,
       name: "Org Owner",
       emailVerified: true,
     },
@@ -25,7 +27,7 @@ async function main() {
   const rep = await prisma.user.create({
     data: {
       email: "rep@demo.com",
-      passwordHash: "$2b$12$EXAMPLE.hash.do.not.use.in.production",
+      passwordHash: DEMO_PASSWORD_HASH,
       name: "Sales Rep",
       emailVerified: true,
     },
@@ -33,7 +35,7 @@ async function main() {
   const support = await prisma.user.create({
     data: {
       email: "support@demo.com",
-      passwordHash: "$2b$12$EXAMPLE.hash.do.not.use.in.production",
+      passwordHash: DEMO_PASSWORD_HASH,
       name: "Support Agent",
       emailVerified: true,
     },
@@ -41,7 +43,7 @@ async function main() {
   const viewer = await prisma.user.create({
     data: {
       email: "viewer@demo.com",
-      passwordHash: "$2b$12$EXAMPLE.hash.do.not.use.in.production",
+      passwordHash: DEMO_PASSWORD_HASH,
       name: "Viewer",
       emailVerified: true,
     },

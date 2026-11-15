@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../config/prisma";
 import { ok, err } from "../utils/response";
 import { audit } from "../utils/audit";
-import { AuthedRequest } from "./auth";
+import { AuthedRequest } from "../middleware/auth";
 
 const router = Router();
 const workflowSchema = z.object({
@@ -15,7 +15,7 @@ const workflowSchema = z.object({
 });
 
 router.get("/", async (req: AuthedRequest, res) => {
-  const workflows = await prisma.workflow.findMany({ where: { organizationId: req.orgId!, deletedAt: null }, orderBy: { createdAt: "desc" } });
+  const workflows = await prisma.workflow.findMany({ where: { organizationId: req.orgId! }, orderBy: { createdAt: "desc" } });
   return ok(res, workflows);
 });
 
@@ -27,7 +27,7 @@ router.post("/", async (req: AuthedRequest, res) => {
 });
 
 router.patch("/:id", async (req: AuthedRequest, res) => {
-  const w = await prisma.workflow.findFirst({ where: { id: req.params.id, organizationId: req.orgId!, deletedAt: null } });
+  const w = await prisma.workflow.findFirst({ where: { id: req.params.id, organizationId: req.orgId! } });
   if (!w) return err(res, "not_found", "Workflow not found", 404);
   const data = workflowSchema.partial().parse(req.body);
   const updated = await prisma.workflow.update({ where: { id: req.params.id }, data });
