@@ -5,7 +5,7 @@ import {
   StatusBadge, PriorityBadge, EmptyState, ErrorState, LoadingSkeleton,
   Modal, PaginationBar, FormField,
 } from "@/components/ui";
-import { Plus, Search, Trash2, ArrowRightLeft, Filter } from "lucide-react";
+import { Plus, Search, Trash2, ArrowRightLeft, Filter, Upload } from "lucide-react";
 
 interface Lead {
   id: string;
@@ -33,6 +33,9 @@ export default function LeadsPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [csvText, setCsvText] = useState("firstname,lastname,email,company,source,priority,value\n");
+  const [importResult, setImportResult] = useState("");
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", company: "", source: "WEBSITE", priority: "MEDIUM", value: "" });
   const [formError, setFormError] = useState("");
 
@@ -80,6 +83,20 @@ export default function LeadsPage() {
     }
   };
 
+  const importCsv = async () => {
+    setImportResult("");
+    try {
+      const result = await api<{ created: number; rejected: number; errors: string[] }>("/leads/import", {
+        method: "POST",
+        body: JSON.stringify({ csv: csvText }),
+      });
+      setImportResult(`Imported ${result.created} lead(s), rejected ${result.rejected}.${result.errors.length ? " " + result.errors.join("; ") : ""}`);
+      await load();
+    } catch (err: any) {
+      setImportResult(err?.message || "Import failed");
+    }
+  };
+
   const deleteLead = async (id: string) => {
     if (!confirm("Delete this lead?")) return;
     setBusy(true);
@@ -100,7 +117,10 @@ export default function LeadsPage() {
           <h1 className="text-xl font-bold text-ink-900">Leads</h1>
           <p className="text-xs text-slate-500">{data?.total ?? 0} records in this workspace</p>
         </div>
-        <button className="btn-primary" onClick={() => setModalOpen(true)}><Plus size={16} /> New lead</button>
+        <div className="flex items-center gap-2">
+          <button className="btn-secondary" onClick={() => setImportOpen(true)}><Upload size={16} /> Import CSV</button>
+          <button className="btn-primary" onClick={() => setModalOpen(true)}><Plus size={16} /> New lead</button>
+        </div>
       </div>
 
       <div className="card flex flex-wrap items-center gap-2 p-3">
@@ -160,6 +180,16 @@ export default function LeadsPage() {
           <PaginationBar page={data.page} pages={data.pages} total={data.total} onPage={setPage} />
         </div>
       )}
+
+      <Modal open={importOpen} title="Import leads from CSV" onClose={() => setImportOpen(false)}>
+        <p className="mb-2 text-xs text-slate-500">Header row required: <code>firstname,lastname,email,phone,company,source,priority,value</code>. Source/priority are case-insensitive.</p>
+        <textarea className="input h-40 font-mono text-xs" value={csvText} onChange={(e) => setCsvText(e.target.value)} spellCheck={false} />
+        {importResult && <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">{importResult}</p>}
+        <div className="mt-3 flex justify-end gap-2">
+          <button className="btn-secondary" onClick={() => setImportOpen(false)}>Close</button>
+          <button className="btn-primary" onClick={() => void importCsv()}>Run import</button>
+        </div>
+      </Modal>
 
       <Modal open={modalOpen} title="New lead" onClose={() => setModalOpen(false)}>
         <form onSubmit={createLead} className="grid grid-cols-2 gap-3">

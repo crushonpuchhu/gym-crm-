@@ -110,6 +110,45 @@ router.post("/:id/convert", async (req: AuthedRequest, res) => {
   return ok(res, result);
 });
 
+router.post("/import", async (req: AuthedRequest, res) => {
+  const { csv } = z.object({ csv: z.string().min(1) }).parse(req.body);
+  const lines = csv.trim().split(/\r?\n/).filter(Boolean);
+  const header = lines[0].split(",").map((h) => h.trim().toLowerCase());
+  if (!["firstname", "lastname"].every((c) => header.includes(c))) {
+    return err(res, "validation_error", "CSV must include firstname,lastname columns", 400);
+  }
+  const rows = lines.slice(1);
+  let created = 0;
+  const errors: string[] = [];
+  for (const [index, row] of rows.entries()) {
+    const cells = row.split(",").map((c) => c.trim());
+    const record: Record<string, string> = {};
+    header.forEach((h, i) => {
+      record[h] = cells[i];
+    });
+    const parsed = createLeadSchema.safeParse({
+      firstName: record.firstname,
+      lastName: record.lastname,
+      email: record.email || undefined,
+      phone: record.phone || undefined,
+      company: record.company || undefined,
+      source: record.source?.toUpperCase() || "WEBSITE",
+      priority: record.priority?.toUpperCase() || "MEDIUM",
+      value: record.value ? Number(record.value) : undefined,
+    });
+    if (parsed.success) {
+      await prisma.lead.create({
+        data: { organizationId: req.orgId!, ownerId: req.userId!, ...parsed.data },
+      });
+      created++;
+    } else {
+      errors.push(`row ${index + 2}: ${parsed.error.issues[0]?.message}`);
+    }
+  }
+  await audit({ orgId: req.orgId, userId: req.userId, action: "lead.import", entityType: "lead", newValues: { created, rejected: errors.length }, ip: req.ip, userAgent: req.get("user-agent") });
+  return ok(res, { created, rejected: errors.length, errors });
+});
+
 function validateBody(schema: z.ZodSchema) {
   return (req: any, res: any, next: any) => {
     const r = schema.safeParse(req.body);
