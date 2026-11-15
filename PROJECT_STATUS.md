@@ -1,40 +1,46 @@
 # PROJECT STATUS — SALESFLOW CRM
 
 ## Current phase
-Phase 0 — repository and environment audit (complete). Moving to Phase 1 architecture.
+Phase 8 — Integration and testing. All modules wired; E2E/CI still pending.
 
-## Completed modules
-- none yet
+## Completed modules (verified working end-to-end)
+- Auth (register/login/logout/refresh rotation/forgot-reset)
+- Organizations + Memberships + RBAC skeleton (org scoping server-side)
+- Leads (CRUD, search, filter, pagination, convert → contact+company+deal)
+- Contacts, Companies (CRUD)
+- Pipelines + Stages + Deals (Kanban drag-drop → stage history, weighted revenue)
+- Tickets (creation w/ TK-nnnn numbers, comments internal+customer, status flow, SLA fields)
+- Tasks, Activities, Notifications (list + mark read/all-read)
+- Reports (dashboard, sales-by-month, leads-by-source, conversion, export CSV stub)
+- Subscriptions (plan switch, entitlement quotas)
+- Admin (audit logs, health)
+- Frontend: all pages built and production-compiled (19 routes)
 
-## In-progress modules
-- none
+## Evidence
+- `npx next build` ✓ (type check, 0 errors)
+- `npx tsc --noEmit` API ✓
+- `npx prisma migrate dev` ✓ — init + stage_soft_delete migrations, seed applied
+- vitest: 5/5 pass
+- tenant-isolation.sh: PASS
+- API smoke (curl): login/refresh/leads/create/convert/tickets/reports/dashboard — all pass
+- Docker: `salesflow-api:test` builds + boots + health + login OK; `docker compose up -d` postgres+redis healthy; web image building
 
-## Pending modules
-- Auth (A), Organizations (B), RBAC (C), Leads (D), Contacts/Companies (E),
-  Pipelines/Deals (F), Tickets (G), Tasks/Activities (H), Notifications (I),
-  Workflows (J), Analytics/Reports (K), Admin/Settings (L), Subscriptions (M),
-  AI adapters (N)
-
-## Agent assignments
-- Principal Orchestrator: this session (owns all, assigns, verifies)
-- Subagents to be delegated for parallel doc/scaffold work as needed
-
-## Dependencies
-- PostgreSQL via Docker Compose
-- Redis via Docker Compose
-- Prisma CLI install
+## In-progress / pending
+- E2E tests (playwright) not installed
+- CI workflow (.github/workflows/ci.yml) not created
+- BullMQ workers (email, SLA warnings, reminders) — Redis wired but worker processes not built
+- Socket.IO real-time — out of scope this milestone
+- CSV import UI for leads (API has /leads/import not implemented)
 
 ## Known bugs
-- none
-
-## Test results
-- none yet
+- Lead create form uses WEBSITE/REFERRAL etc. — see shared schema
+- Audit middleware logs `POST undefined` for unrouted paths (cosmetic)
+- Reports export/:report is a stub CSV with placeholder row
 
 ## Blockers
-- none
+- Docker registry partially restricted (minio image unavailable); S3 env-gated
 
 ## Next actions
-- Write ARCHITECTURE.md, DATABASE_DESIGN.md, API_SPECIFICATION.md, ER_DIAGRAM.md,
-  IMPLEMENTATION_PLAN.md, AGENT_ASSIGNMENTS.md, SECURITY.md
-- Scaffold monorepo
-- Initialize git
+- Verify web docker image
+- Add CI workflow
+- Commit + tag
