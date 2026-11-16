@@ -6,12 +6,15 @@ import { AuthedRequest } from "../middleware/auth";
 const router = Router();
 
 router.get("/", async (req: AuthedRequest, res) => {
-  const notifications = await prisma.notification.findMany({
-    where: { organizationId: req.orgId!, userId: req.userId! },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });
-  const unread = notifications.filter((n) => !n.readAt).length;
+  const [notifications, unread] = await Promise.all([
+    prisma.notification.findMany({
+      where: { organizationId: req.orgId!, userId: req.userId! },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    }),
+    // count unread across the whole history, not only the newest page
+    prisma.notification.count({ where: { organizationId: req.orgId!, userId: req.userId!, readAt: null } }),
+  ]);
   return ok(res, { items: notifications, unread });
 });
 

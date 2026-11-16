@@ -9,13 +9,22 @@ import {
 } from "@salesflow/shared";
 import { validate } from "../middleware/validation";
 import { ok, err } from "../utils/response";
-import { signAccess, signRefresh } from "../utils/jwt";
+import { signAccess, signRefresh, verifyAccess, verifyRefresh } from "../utils/jwt";
 import { hash, compare } from "../utils/hash";
 import { prisma } from "../config/prisma";
 import { audit } from "../utils/audit";
-import jwt from "jsonwebtoken";
+import { env } from "../config/env";
 
 const router = Router();
+
+/** Never leak password hashes or internal flags to the client. */
+const publicUserSelect = {
+  id: true,
+  email: true,
+  name: true,
+  emailVerified: true,
+  avatarUrl: true,
+} as const;
 
 async function getOrgContext(userId: string) {
   const m = await prisma.membership.findFirst({
@@ -23,6 +32,42 @@ async function getOrgContext(userId: string) {
     select: { organizationId: true, role: true },
   });
   return m;
+}
+
+function refreshCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict" as const,
+    maxAge: env.REFRESH_TTL_MS,
+    path: "/",
+  };
+}
+
+/** Issue a refresh token and persist its session so it can be revoked. */
+async function issueRefreshToken(userId: string) {
+  const { token, jti } = signRefresh({ userId });
+  await prisma.refreshToken.create({
+    data: {
+      userId,
+      tokenId: jti,
+      expiresAt: new Date(Date.now() + env.REFRESH_TTL_MS),
+    },
+  });
+  return token;
+}
+
+async function revokeRefreshToken(token: string | undefined) {
+  if (!token) return;
+  try {
+    const payload = verifyRefresh(token);
+    await prisma.refreshToken.updateMany({
+      where: { tokenId: payload.jti, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  } catch {
+    // token already invalid or expired
+  }
 }
 
 router.post(
@@ -54,14 +99,8 @@ router.post(
     });
 
     const access = signAccess({ userId: result.user.id, orgId: result.org.id });
-    const refresh = signRefresh({ userId: result.user.id });
-    res.cookie("refresh_token", refresh, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: "/",
-    });
+    const refresh = await issueRefreshToken(result.user.id);
+    res.cookie("refresh_token", refresh, refreshCookieOptions());
     await audit({
       orgId: result.org.id,
       userId: result.user.id,
@@ -71,7 +110,8 @@ router.post(
       ip: req.ip,
       userAgent: req.get("user-agent"),
     });
-    return ok(res, { accessToken: access, user: result.user, organization: result.org }, 201);
+    const user = await prisma.user.findUnique({ where: { id: result.user.id }, select: publicUserSelect });
+    return ok(res, { accessToken: access, user, organization: { id: result.org.id, name: result.org.name, slug: result.org.slug } }, 201);
   },
 );
 
@@ -80,7 +120,7 @@ router.post(
   validate(loginSchema),
   async (req, res) => {
     const { email, password } = req.body as any;
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findFirst({ where: { email, deletedAt: null } });
     if (!user || !(await compare(password, user.passwordHash))) {
       return err(res, "auth_invalid", "Invalid credentials", 401);
     }
@@ -88,14 +128,8 @@ router.post(
     if (!membership) return err(res, "auth_invalid", "No organization membership", 401);
 
     const access = signAccess({ userId: user.id, orgId: membership.organizationId });
-    const refresh = signRefresh({ userId: user.id });
-    res.cookie("refresh_token", refresh, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: "/",
-    });
+    const refresh = await issueRefreshToken(user.id);
+    res.cookie("refresh_token", refresh, refreshCookieOptions());
     await audit({
       orgId: membership.organizationId,
       userId: user.id,
@@ -105,11 +139,13 @@ router.post(
       ip: req.ip,
       userAgent: req.get("user-agent"),
     });
-    return ok(res, { accessToken: access, user, organizationId: membership.organizationId });
+    const safeUser = await prisma.user.findUnique({ where: { id: user.id }, select: publicUserSelect });
+    return ok(res, { accessToken: access, user: safeUser, organizationId: membership.organizationId });
   },
 );
 
-router.post("/logout", (_req, res) => {
+router.post("/logout", async (req, res) => {
+  await revokeRefreshToken(req.cookies?.refresh_token);
   res.clearCookie("refresh_token", { path: "/" });
   return ok(res, { loggedOut: true });
 });
@@ -118,20 +154,21 @@ router.post("/refresh", async (req, res) => {
   const token = req.cookies?.refresh_token;
   if (!token) return err(res, "auth_required", "No refresh token", 401);
   try {
-    // verify
-    const jwt = require("jsonwebtoken");
-    const decoded = jwt.verify(token, process.env.REFRESH_SECRET || "dev-refresh-secret-change-me") as { userId: string };
-    const membership = await getOrgContext(decoded.userId);
+    const decoded = verifyRefresh(token);
+    const session = await prisma.refreshToken.findUnique({ where: { tokenId: decoded.jti } });
+    if (!session || session.revokedAt || session.expiresAt < new Date()) {
+      return err(res, "auth_invalid", "Session expired", 401);
+    }
+    const user = await prisma.user.findFirst({ where: { id: decoded.userId, deletedAt: null }, select: { id: true } });
+    if (!user) return err(res, "auth_invalid", "User not found", 401);
+    const membership = await getOrgContext(user.id);
     if (!membership) return err(res, "auth_invalid", "No membership", 401);
-    const access = signAccess({ userId: decoded.userId, orgId: membership.organizationId });
-    const newRefresh = signRefresh({ userId: decoded.userId });
-    res.cookie("refresh_token", newRefresh, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: "/",
-    });
+
+    // rotate: revoke the used token, issue a new one
+    await prisma.refreshToken.update({ where: { id: session.id }, data: { revokedAt: new Date() } });
+    const access = signAccess({ userId: user.id, orgId: membership.organizationId });
+    const newRefresh = await issueRefreshToken(user.id);
+    res.cookie("refresh_token", newRefresh, refreshCookieOptions());
     return ok(res, { accessToken: access });
   } catch {
     return err(res, "auth_invalid", "Invalid refresh token", 401);
@@ -140,7 +177,7 @@ router.post("/refresh", async (req, res) => {
 
 router.post("/forgot-password", validate(forgotPasswordSchema), async (req, res) => {
   const { email } = req.body as any;
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findFirst({ where: { email, deletedAt: null } });
   if (!user) return ok(res, { message: "If the account exists, a reset link was sent" });
   const token = require("crypto").randomBytes(32).toString("hex");
   const existing = await prisma.passwordResetToken.findFirst({ where: { userId: user.id, used: false } });
@@ -187,8 +224,8 @@ router.get("/me", async (req, res) => {
   const token = req.headers.authorization?.replace("Bearer ", "");
   if (!token) return err(res, "auth_required", "Authentication required", 401);
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "dev-access-secret-change-me") as { userId: string };
-    const user = await prisma.user.findUnique({ where: { id: decoded.userId }, select: { id: true, email: true, name: true, emailVerified: true } });
+    const decoded = verifyAccess(token);
+    const user = await prisma.user.findFirst({ where: { id: decoded.userId, deletedAt: null }, select: publicUserSelect });
     if (!user) return err(res, "not_found", "User not found", 404);
     const memberships = await prisma.membership.findMany({ where: { userId: user.id, deletedAt: null } });
     return ok(res, { user, memberships });

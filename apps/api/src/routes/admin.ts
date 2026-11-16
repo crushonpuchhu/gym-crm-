@@ -1,19 +1,24 @@
 import { Router } from "express";
 import { prisma } from "../config/prisma";
 import { ok, err } from "../utils/response";
-import { AuthedRequest } from "../middleware/auth";
+import { AuthedRequest, requirePermission } from "../middleware/auth";
 
 const router = Router();
 
-router.get("/audit-logs", async (req: AuthedRequest, res) => {
-  const page = Number(req.query.page) || 1;
-  const limit = Math.min(Number(req.query.limit) || 50, 100);
-  const [items, total] = await Promise.all([
-    prisma.auditLog.findMany({ where: { organizationId: req.orgId! }, skip: (page - 1) * limit, take: limit, orderBy: { createdAt: "desc" }, include: { user: { select: { id: true, name: true, email: true } } } }),
-    prisma.auditLog.count({ where: { organizationId: req.orgId! } }),
-  ]);
-  return ok(res, { items, total, page, limit, pages: Math.ceil(total / limit) });
-});
+router.get(
+  "/audit-logs",
+  requirePermission("view_audit_logs"),
+  async (req: AuthedRequest, res) => {
+    const page = Number(req.query.page) || 1;
+    const limit = Math.min(Number(req.query.limit) || 50, 100);
+    const where = { organizationId: req.orgId! };
+    const [items, total] = await Promise.all([
+      prisma.auditLog.findMany({ where, skip: (page - 1) * limit, take: limit, orderBy: { createdAt: "desc" }, include: { user: { select: { id: true, name: true, email: true } } } }),
+      prisma.auditLog.count({ where }),
+    ]);
+    return ok(res, { items, total, page, limit, pages: Math.ceil(total / limit) });
+  },
+);
 
 router.get("/health", async (_req, res) => {
   try {

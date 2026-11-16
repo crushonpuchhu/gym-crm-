@@ -17,10 +17,14 @@ router.post("/:plan", validateBody(planSchema), async (req: AuthedRequest, res) 
   const { plan } = req.body as any;
   let sub = await prisma.subscription.findFirst({ where: { organizationId: req.orgId! } });
   const data: any = { plan, status: "ACTIVE", currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) };
+  // FREE must not inherit elevated quotas from a previous paid plan
+  if (plan === "FREE") { data.quotaLeads = 1000; data.quotaUsers = 5; }
   if (plan === "PROFESSIONAL") { data.quotaLeads = 10000; data.quotaUsers = 25; }
   if (plan === "ENTERPRISE") { data.quotaLeads = 100000; data.quotaUsers = 100; }
   if (sub) sub = await prisma.subscription.update({ where: { id: sub.id }, data });
   else sub = await prisma.subscription.create({ data: { organizationId: req.orgId!, ...data } });
+  // keep the organization plan in sync with the subscription
+  await prisma.organization.update({ where: { id: req.orgId! }, data: { plan } });
   return ok(res, sub);
 });
 

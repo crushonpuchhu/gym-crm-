@@ -160,6 +160,7 @@ model User {
   createdInvitations Invitation[] @relation("InvitationCreator")
   passwordResetTokens PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
+  refreshTokens RefreshToken[]
 
   @@index([deletedAt])
 }
@@ -227,6 +228,20 @@ model EmailVerificationToken {
 
   @@index([userId])
   @@index([token])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  tokenId   String   @unique @db.VarChar(64)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Invitation {
@@ -463,6 +478,7 @@ model Ticket {
 
   @@index([organizationId])
   @@index([ticketNumber])
+  @@unique([organizationId, ticketNumber])
   @@index([ownerId])
   @@index([status])
   @@index([deletedAt])

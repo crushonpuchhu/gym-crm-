@@ -36,14 +36,27 @@ router.patch("/:id", async (req: AuthedRequest, res) => {
 });
 
 router.post("/:id/test", async (req: AuthedRequest, res) => {
+  // workflow must belong to the current tenant
+  const workflow = await prisma.workflow.findFirst({ where: { id: req.params.id, organizationId: req.orgId! } });
+  if (!workflow) return err(res, "not_found", "Workflow not found", 404);
   const execution = await prisma.workflowExecution.create({
-    data: { workflowId: req.params.id, triggerEvent: "test", status: "success", input: {}, output: {} },
+    data: {
+      workflowId: workflow.id,
+      triggerEvent: "test",
+      status: "success",
+      input: {},
+      output: { note: "Dry run recorded. Actions are not executed by the test endpoint." },
+    },
   });
+  await audit({ orgId: req.orgId, userId: req.userId, action: "workflow.test", entityType: "workflow", entityId: workflow.id, ip: req.ip, userAgent: req.get("user-agent") });
   return ok(res, execution);
 });
 
 router.get("/:id/executions", async (req: AuthedRequest, res) => {
-  const executions = await prisma.workflowExecution.findMany({ where: { workflowId: req.params.id }, orderBy: { createdAt: "desc" }, take: 50 });
+  // executions are only visible for workflows owned by the current tenant
+  const workflow = await prisma.workflow.findFirst({ where: { id: req.params.id, organizationId: req.orgId! } });
+  if (!workflow) return err(res, "not_found", "Workflow not found", 404);
+  const executions = await prisma.workflowExecution.findMany({ where: { workflowId: workflow.id }, orderBy: { createdAt: "desc" }, take: 50 });
   return ok(res, executions);
 });
 

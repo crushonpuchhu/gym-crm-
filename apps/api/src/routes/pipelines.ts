@@ -11,7 +11,7 @@ const pipelineSchema = z.object({ name: z.string().min(1).max(200), isDefault: z
 router.get("/", async (req: AuthedRequest, res) => {
   const pipelines = await prisma.pipeline.findMany({
     where: { organizationId: req.orgId!, deletedAt: null },
-    include: { stages: { orderBy: { order: "asc" } } },
+    include: { stages: { where: { deletedAt: null }, orderBy: { order: "asc" } } },
     orderBy: { createdAt: "asc" },
   });
   return ok(res, pipelines);
@@ -35,15 +35,18 @@ router.patch("/:id", async (req: AuthedRequest, res) => {
   if (data.isDefault) {
     await prisma.pipeline.updateMany({ where: { organizationId: req.orgId!, deletedAt: null, id: { not: req.params.id } }, data: { isDefault: false } });
   }
-  const updated = await prisma.pipeline.update({ where: { id: req.params.id }, data, include: { stages: true } });
+  const updated = await prisma.pipeline.update({ where: { id: req.params.id }, data, include: { stages: { where: { deletedAt: null }, orderBy: { order: "asc" } } } });
   await audit({ orgId: req.orgId, userId: req.userId, action: "pipeline.update", entityType: "pipeline", entityId: req.params.id, newValues: data, ip: req.ip, userAgent: req.get("user-agent") });
   return ok(res, updated);
 });
 
 router.delete("/:id", async (req: AuthedRequest, res) => {
-  const dealCount = await prisma.deal.count({ where: { pipelineId: req.params.id, deletedAt: null } });
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: req.params.id, organizationId: req.orgId!, deletedAt: null } });
+  if (!pipeline) return err(res, "not_found", "Pipeline not found", 404);
+  const dealCount = await prisma.deal.count({ where: { pipelineId: req.params.id, organizationId: req.orgId!, deletedAt: null } });
   if (dealCount > 0) return err(res, "conflict", "Pipeline has deals", 409);
   await prisma.pipeline.update({ where: { id: req.params.id }, data: { deletedAt: new Date() } });
+  await audit({ orgId: req.orgId, userId: req.userId, action: "pipeline.delete", entityType: "pipeline", entityId: req.params.id, ip: req.ip, userAgent: req.get("user-agent") });
   return ok(res, { deleted: true });
 });
 

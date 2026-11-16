@@ -14,7 +14,7 @@ const activitySchema = z.object({
 });
 
 router.get("/", async (req: AuthedRequest, res) => {
-  const where: any = { organizationId: req.orgId!, deletedAt: null };
+  const where: any = { organizationId: req.orgId! };
   if (req.query.entityType) where.entityType = req.query.entityType;
   if (req.query.entityId) where.entityId = req.query.entityId;
   const activities = await prisma.activity.findMany({ where, orderBy: { occurredAt: "desc" }, take: 100, include: { actor: { select: { id: true, name: true } } } });

@@ -9,11 +9,22 @@ const router = Router();
 const contactSchema = z.object({
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
-  email: z.string().email().optional(),
+  // empty string means "not provided" in the UI forms
+  email: z.union([z.string().email(), z.literal("")]).optional().transform((v) => (v ? v : undefined)),
   phone: z.string().max(50).optional(),
   position: z.string().max(100).optional(),
-  companyId: z.string().optional(),
+  companyId: z.string().uuid().optional(),
 });
+
+/** Reject references to records outside the current tenant. */
+async function assertCompanyInOrg(orgId: string, companyId: string | undefined) {
+  if (!companyId) return true;
+  const company = await prisma.company.findFirst({
+    where: { id: companyId, organizationId: orgId, deletedAt: null },
+    select: { id: true },
+  });
+  return !!company;
+}
 
 router.get("/", async (req: AuthedRequest, res) => {
   const page = Number(req.query.page) || 1;
@@ -28,6 +39,9 @@ router.get("/", async (req: AuthedRequest, res) => {
 
 router.post("/", async (req: AuthedRequest, res) => {
   const data = contactSchema.parse(req.body);
+  if (!(await assertCompanyInOrg(req.orgId!, data.companyId))) {
+    return err(res, "validation_error", "companyId not found in organization", 400, "companyId");
+  }
   const contact = await prisma.contact.create({ data: { organizationId: req.orgId!, ownerId: req.userId!, ...data }, include: { owner: { select: { id: true, name: true } } } });
   await audit({ orgId: req.orgId, userId: req.userId, action: "contact.create", entityType: "contact", entityId: contact.id, newValues: data, ip: req.ip, userAgent: req.get("user-agent") });
   return ok(res, contact, 201);
@@ -43,6 +57,9 @@ router.patch("/:id", async (req: AuthedRequest, res) => {
   const contact = await prisma.contact.findFirst({ where: { id: req.params.id, organizationId: req.orgId!, deletedAt: null } });
   if (!contact) return err(res, "not_found", "Contact not found", 404);
   const data = contactSchema.partial().parse(req.body);
+  if (!(await assertCompanyInOrg(req.orgId!, data.companyId))) {
+    return err(res, "validation_error", "companyId not found in organization", 400, "companyId");
+  }
   const updated = await prisma.contact.update({ where: { id: req.params.id }, data, include: { owner: { select: { id: true, name: true } } } });
   await audit({ orgId: req.orgId, userId: req.userId, action: "contact.update", entityType: "contact", entityId: req.params.id, newValues: data, ip: req.ip, userAgent: req.get("user-agent") });
   return ok(res, updated);

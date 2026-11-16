@@ -6,8 +6,28 @@ import { prisma } from "../config/prisma";
 export interface AuthedRequest extends Request {
   userId?: string;
   orgId?: string;
+  role?: string;
   memberships?: Array<{ organizationId: string; role: string }>;
 }
+
+/** Permission grants per role. "*" means full access. */
+const ROLE_PERMISSIONS: Record<string, string[]> = {
+  SUPER_ADMIN: ["*"],
+  ORG_OWNER: ["*"],
+  ORG_ADMIN: [
+    "manage_users",
+    "manage_pipelines",
+    "manage_leads",
+    "manage_reports",
+    "manage_tickets_internal",
+    "view_audit_logs",
+  ],
+  SALES_MANAGER: ["manage_leads", "manage_pipelines", "manage_reports"],
+  SALES_REP: ["manage_leads"],
+  SUPPORT_MANAGER: ["manage_tickets", "manage_tickets_internal"],
+  SUPPORT_AGENT: ["manage_tickets"],
+  VIEWER: [],
+};
 
 export function authenticate(req: AuthedRequest, res: Response, next: NextFunction) {
   const access = req.headers.authorization?.replace("Bearer ", "");
@@ -48,6 +68,8 @@ export async function resolveTenant(req: AuthedRequest, res: Response, next: Nex
     });
     req.memberships = memberships;
     if (!req.orgId && memberships[0]) req.orgId = memberships[0].organizationId;
+    const current = memberships.find((m) => m.organizationId === req.orgId);
+    if (current) req.role = current.role;
     next();
   } catch {
     next();
@@ -62,9 +84,20 @@ export function requireOrg(req: AuthedRequest, res: Response, next: NextFunction
   next();
 }
 
+export function hasPermission(role: string | undefined, permission: string) {
+  if (!role) return false;
+  const grants = ROLE_PERMISSIONS[role] || [];
+  return grants.includes("*") || grants.includes(permission);
+}
+
 export function requirePermission(permission: string) {
   return (req: AuthedRequest, res: Response, next: NextFunction) => {
-    // permission enforced at service layer via role; middleware ensures org context
+    if (!req.orgId) return err(res, "org_required", "No organization context", 400);
+    const membership = req.memberships?.find((m) => m.organizationId === req.orgId);
+    if (!membership) return err(res, "forbidden", "Not a member of this organization", 403);
+    if (!hasPermission(membership.role, permission)) {
+      return err(res, "forbidden", "Insufficient permission", 403);
+    }
     next();
   };
 }

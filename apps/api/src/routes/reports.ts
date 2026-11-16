@@ -49,10 +49,68 @@ router.get("/salesperson-performance", async (req: AuthedRequest, res) => {
   return ok(res, rows.map((r) => ({ ownerId: r.ownerId, revenue: Number(r._sum.value || 0), count: r._count.ownerId })));
 });
 
+/** Escape a CSV cell (quotes, commas, newlines). */
+function csvCell(value: unknown) {
+  const text = value === null || value === undefined ? "" : String(value);
+  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function toCsv(header: string[], rows: unknown[][]) {
+  return [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
+}
+
 router.get("/export/:report", async (req: AuthedRequest, res) => {
-  res.setHeader("Content-Type", "text/csv");
-  res.setHeader("Content-Disposition", `attachment; filename=${req.params.report}.csv`);
-  return res.send("id,name,value\n1,placeholder,0\n");
+  const org = req.orgId!;
+  const report = req.params.report.toLowerCase();
+  let csv = "";
+
+  if (report === "leads") {
+    const leads = await prisma.lead.findMany({
+      where: { organizationId: org, deletedAt: null },
+      orderBy: { createdAt: "desc" },
+      select: { firstName: true, lastName: true, email: true, phone: true, company: true, source: true, status: true, priority: true, value: true, createdAt: true },
+    });
+    csv = toCsv(
+      ["firstName", "lastName", "email", "phone", "company", "source", "status", "priority", "value", "createdAt"],
+      leads.map((l) => [l.firstName, l.lastName, l.email, l.phone, l.company, l.source, l.status, l.priority, l.value, l.createdAt.toISOString()]),
+    );
+  } else if (report === "deals") {
+    const deals = await prisma.deal.findMany({
+      where: { organizationId: org, deletedAt: null },
+      orderBy: { updatedAt: "desc" },
+      include: { stage: { select: { name: true } }, owner: { select: { name: true } } },
+    });
+    csv = toCsv(
+      ["title", "stage", "value", "probability", "owner", "expectedCloseAt", "updatedAt"],
+      deals.map((d) => [d.title, d.stage?.name, d.value, d.probability, d.owner?.name, d.expectedCloseAt?.toISOString(), d.updatedAt.toISOString()]),
+    );
+  } else if (report === "contacts") {
+    const contacts = await prisma.contact.findMany({
+      where: { organizationId: org, deletedAt: null },
+      orderBy: { createdAt: "desc" },
+      select: { firstName: true, lastName: true, email: true, phone: true, position: true, createdAt: true },
+    });
+    csv = toCsv(
+      ["firstName", "lastName", "email", "phone", "position", "createdAt"],
+      contacts.map((c) => [c.firstName, c.lastName, c.email, c.phone, c.position, c.createdAt.toISOString()]),
+    );
+  } else if (report === "tickets") {
+    const tickets = await prisma.ticket.findMany({
+      where: { organizationId: org, deletedAt: null },
+      orderBy: { createdAt: "desc" },
+      select: { ticketNumber: true, subject: true, customerName: true, customerEmail: true, priority: true, status: true, createdAt: true },
+    });
+    csv = toCsv(
+      ["ticketNumber", "subject", "customerName", "customerEmail", "priority", "status", "createdAt"],
+      tickets.map((t) => [t.ticketNumber, t.subject, t.customerName, t.customerEmail, t.priority, t.status, t.createdAt.toISOString()]),
+    );
+  } else {
+    return err(res, "not_found", "Unknown report", 404);
+  }
+
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename=${report}.csv`);
+  return res.send(csv);
 });
 
 export default router;

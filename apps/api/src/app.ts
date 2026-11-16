@@ -1,10 +1,11 @@
+import "express-async-errors";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import { env } from "./config/env";
-import { authenticate, resolveTenant, requireOrg } from "./middleware/auth";
+import { authenticate, resolveTenant, requireOrg, requirePermission } from "./middleware/auth";
 import { errorHandler, notFound } from "./middleware/error";
 import { auditMiddleware } from "./middleware/audit";
 import { validate } from "./middleware/validation";
@@ -65,7 +66,7 @@ export function createApp() {
   app.use("/api/v1/workflows", authenticate, resolveTenant, requireOrg, workflowRoutes);
   app.use("/api/v1/reports", authenticate, resolveTenant, requireOrg, reportRoutes);
   app.use("/api/v1/subscriptions", authenticate, resolveTenant, requireOrg, subscriptionRoutes);
-  app.use("/api/v1/admin", authenticate, adminRoutes);
+  app.use("/api/v1/admin", authenticate, resolveTenant, requireOrg, adminRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

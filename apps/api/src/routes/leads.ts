@@ -12,10 +12,61 @@ import { AuthedRequest } from "../middleware/auth";
 
 const router = Router();
 
+const LEAD_STATUSES = ["NEW", "CONTACTED", "QUALIFIED", "PROPOSAL", "NEGOTIATION", "CONVERTED", "DISQUALIFIED"] as const;
+const SORTABLE_FIELDS = ["createdAt", "updatedAt", "firstName", "lastName", "status", "priority", "value", "followUpAt"] as const;
+
+/** Minimal RFC 4180 CSV parser: handles quoted fields, commas and escaped quotes. */
+function parseCsvRows(input: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let inQuotes = false;
+  const text = input.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (inQuotes) {
+      if (char === '"') {
+        if (text[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        field += char;
+      }
+      continue;
+    }
+    if (char === '"') {
+      inQuotes = true;
+    } else if (char === ",") {
+      row.push(field);
+      field = "";
+    } else if (char === "\n") {
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = "";
+    } else {
+      field += char;
+    }
+  }
+  if (field.length > 0 || row.length > 0) {
+    row.push(field);
+    rows.push(row);
+  }
+  return rows.filter((r) => r.some((cell) => cell.trim() !== ""));
+}
+
 router.get("/", async (req: AuthedRequest, res) => {
   const q = leadQuerySchema.safeParse(req.query);
   if (!q.success) return err(res, "validation_error", "Invalid query", 400);
   const { page, limit, search, status, ownerId, sortBy, sortOrder } = q.data;
+  if (status && !LEAD_STATUSES.includes(status as any)) {
+    return err(res, "validation_error", "Invalid status filter", 400, "status");
+  }
+  const sortField = (SORTABLE_FIELDS as readonly string[]).includes(sortBy) ? sortBy : "createdAt";
   const where: any = { organizationId: req.orgId!, deletedAt: null };
   if (search) where.OR = [{ firstName: { contains: search } }, { lastName: { contains: search } }, { email: { contains: search } }];
   if (status) where.status = status;
@@ -25,7 +76,7 @@ router.get("/", async (req: AuthedRequest, res) => {
       where,
       skip: (page - 1) * limit,
       take: limit,
-      orderBy: { [sortBy]: sortOrder },
+      orderBy: { [sortField]: sortOrder },
       include: { owner: { select: { id: true, name: true, email: true } } },
     }),
     prisma.lead.count({ where }),
@@ -76,6 +127,9 @@ router.delete("/:id", async (req: AuthedRequest, res) => {
 router.post("/:id/convert", async (req: AuthedRequest, res) => {
   const lead = await prisma.lead.findFirst({ where: { id: req.params.id, organizationId: req.orgId!, deletedAt: null } });
   if (!lead) return err(res, "not_found", "Lead not found", 404);
+  if (lead.status === "CONVERTED" || lead.convertedToContactId || lead.convertedToDealId) {
+    return err(res, "conflict", "Lead already converted", 409);
+  }
   const result = await prisma.$transaction(async (tx) => {
     let contact: any = null;
     if (lead.email) {
@@ -88,8 +142,8 @@ router.post("/:id/convert", async (req: AuthedRequest, res) => {
     }
     let deal: any = null;
     if (lead.value && Number(lead.value) > 0) {
-      const pipeline = await tx.pipeline.findFirst({ where: { organizationId: req.orgId!, isDefault: true } });
-      const stage = pipeline ? await tx.pipelineStage.findFirst({ where: { pipelineId: pipeline.id, isWon: false }, orderBy: { order: "asc" } }) : null;
+      const pipeline = await tx.pipeline.findFirst({ where: { organizationId: req.orgId!, deletedAt: null, isDefault: true } });
+      const stage = pipeline ? await tx.pipelineStage.findFirst({ where: { pipelineId: pipeline.id, deletedAt: null, isWon: false }, orderBy: { order: "asc" } }) : null;
       if (pipeline && stage) {
         deal = await tx.deal.create({
           data: {
@@ -112,19 +166,18 @@ router.post("/:id/convert", async (req: AuthedRequest, res) => {
 
 router.post("/import", async (req: AuthedRequest, res) => {
   const { csv } = z.object({ csv: z.string().min(1) }).parse(req.body);
-  const lines = csv.trim().split(/\r?\n/).filter(Boolean);
-  const header = lines[0].split(",").map((h) => h.trim().toLowerCase());
+  const rows = parseCsvRows(csv);
+  if (!rows.length) return err(res, "validation_error", "CSV is empty", 400);
+  const header = rows[0].map((h) => h.trim().toLowerCase());
   if (!["firstname", "lastname"].every((c) => header.includes(c))) {
     return err(res, "validation_error", "CSV must include firstname,lastname columns", 400);
   }
-  const rows = lines.slice(1);
   let created = 0;
   const errors: string[] = [];
-  for (const [index, row] of rows.entries()) {
-    const cells = row.split(",").map((c) => c.trim());
+  for (const [index, cells] of rows.slice(1).entries()) {
     const record: Record<string, string> = {};
     header.forEach((h, i) => {
-      record[h] = cells[i];
+      record[h] = (cells[i] ?? "").trim();
     });
     const parsed = createLeadSchema.safeParse({
       firstName: record.firstname,

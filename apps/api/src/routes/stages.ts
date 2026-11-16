@@ -7,7 +7,7 @@ import { AuthedRequest } from "../middleware/auth";
 
 const router = Router();
 const stageSchema = z.object({
-  pipelineId: z.string(),
+  pipelineId: z.string().uuid(),
   name: z.string().min(1).max(100),
   key: z.string().min(1).max(100),
   order: z.coerce.number().int().default(0),
@@ -17,8 +17,13 @@ const stageSchema = z.object({
 });
 
 router.get("/:pipelineId", async (req: AuthedRequest, res) => {
+  const pipeline = await prisma.pipeline.findFirst({
+    where: { id: req.params.pipelineId, organizationId: req.orgId!, deletedAt: null },
+    select: { id: true },
+  });
+  if (!pipeline) return err(res, "not_found", "Pipeline not found", 404);
   const stages = await prisma.pipelineStage.findMany({
-    where: { pipelineId: req.params.pipelineId },
+    where: { pipelineId: req.params.pipelineId, deletedAt: null },
     orderBy: { order: "asc" },
   });
   return ok(res, stages);
@@ -35,19 +40,28 @@ router.post("/", async (req: AuthedRequest, res) => {
 
 router.patch("/:id", async (req: AuthedRequest, res) => {
   const stage = await prisma.pipelineStage.findFirst({
-    where: { id: req.params.id, pipeline: { organizationId: req.orgId!, deletedAt: null } },
+    where: { id: req.params.id, deletedAt: null, pipeline: { organizationId: req.orgId!, deletedAt: null } },
   });
   if (!stage) return err(res, "not_found", "Stage not found", 404);
   const data = stageSchema.partial().parse(req.body);
+  if (data.pipelineId && data.pipelineId !== stage.pipelineId) {
+    const pipeline = await prisma.pipeline.findFirst({ where: { id: data.pipelineId, organizationId: req.orgId!, deletedAt: null } });
+    if (!pipeline) return err(res, "validation_error", "pipelineId not found in organization", 400, "pipelineId");
+  }
   const updated = await prisma.pipelineStage.update({ where: { id: req.params.id }, data });
   await audit({ orgId: req.orgId, userId: req.userId, action: "stage.update", entityType: "pipelineStage", entityId: req.params.id, newValues: data, ip: req.ip, userAgent: req.get("user-agent") });
   return ok(res, updated);
 });
 
 router.delete("/:id", async (req: AuthedRequest, res) => {
-  const dealCount = await prisma.deal.count({ where: { stageId: req.params.id, deletedAt: null } });
+  const stage = await prisma.pipelineStage.findFirst({
+    where: { id: req.params.id, deletedAt: null, pipeline: { organizationId: req.orgId!, deletedAt: null } },
+  });
+  if (!stage) return err(res, "not_found", "Stage not found", 404);
+  const dealCount = await prisma.deal.count({ where: { stageId: req.params.id, organizationId: req.orgId!, deletedAt: null } });
   if (dealCount > 0) return err(res, "conflict", "Stage has deals", 409);
   await prisma.pipelineStage.update({ where: { id: req.params.id }, data: { deletedAt: new Date() } });
+  await audit({ orgId: req.orgId, userId: req.userId, action: "stage.delete", entityType: "pipelineStage", entityId: req.params.id, ip: req.ip, userAgent: req.get("user-agent") });
   return ok(res, { deleted: true });
 });
 

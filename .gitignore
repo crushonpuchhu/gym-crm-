@@ -8,3 +8,5 @@ build
 .turbo
 prisma/migrations/*.sql
 coverage
+
+*.tsbuildinfo
