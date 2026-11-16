@@ -17,12 +17,27 @@ cp .env.example .env            # placeholders are fine for dev
 docker compose up -d            # postgres + redis
 npm install
 cd packages/db && npx prisma migrate dev && npx prisma db seed && cd ../..
+npm run db:seed               # build packages/db first (npm run build --workspace=packages/db)
 npm run dev:api                 # API on :4000
 npm run dev:web                 # Web on :3000 (proxies /api/v1 to :4000)
 ```
 
-Demo users (password `password123`):
-- `owner@demo.com` (ORG_OWNER) · `rep@demo.com` (SALES_REP) · `support@demo.com` (SUPPORT_AGENT) · `viewer@demo.com` (VIEWER)
+Demo data resets the `Demo Corp` organization deterministically, so it is safe to rerun. It seeds 8 users, 2 pipelines, 12 companies, 60 contacts, 90 leads (10 converted), 62 deals, 30 tickets, 32 tasks, 80 activities, 5 workflows and audit logs.
+
+All demo accounts use password `password123`:
+
+| Email | Role |
+| --- | --- |
+| `owner@demo.com` | ORG_OWNER |
+| `admin@demo.com` | ORG_ADMIN |
+| `manager@demo.com` | SALES_MANAGER |
+| `rep@demo.com` | SALES_REP |
+| `rep2@demo.com` | SALES_REP |
+| `supportlead@demo.com` | SUPPORT_MANAGER |
+| `support@demo.com` | SUPPORT_AGENT |
+| `viewer@demo.com` | VIEWER |
+
+New to CRM concepts? Read [`DEMO_GUIDE.md`](DEMO_GUIDE.md) — it explains the object model, maps each page to its purpose, lists the seeded fixtures, and gives eight short manual test paths.
 
 ## Docs
 See `docs/` — ARCHITECTURE, DATABASE_DESIGN, API_SPECIFICATION, SECURITY, DEPLOYMENT, TESTING.
