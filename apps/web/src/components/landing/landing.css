@@ -383,7 +383,12 @@
   background: var(--line);
   display: block;
   transform-origin: top;
-  animation: sf-cue 2.2s cubic-bezier(0.7, 0, 0.2, 1) infinite;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sfx .h-cue i {
+    animation: sf-cue 2.2s cubic-bezier(0.7, 0, 0.2, 1) infinite;
+  }
 }
 
 .sfx .h-cue:hover .mono,
@@ -408,9 +413,11 @@
   }
 }
 
-.sfx .intro .c {
-  animation: sf-rise 1.3s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
-  animation-delay: calc(0.15s + var(--i) * 55ms);
+@media (prefers-reduced-motion: no-preference) {
+  .sfx .intro .c {
+    animation: sf-rise 1.3s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+    animation-delay: calc(0.15s + var(--i) * 55ms);
+  }
 }
 
 @keyframes sf-rise {
@@ -728,7 +735,12 @@
   height: 1.5px;
   background: var(--line);
   transform-origin: left center;
-  animation: sf-cardcue 3.6s cubic-bezier(0.6, 0, 0.2, 1) infinite;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sfx .card .open i {
+    animation: sf-cardcue 3.6s cubic-bezier(0.6, 0, 0.2, 1) infinite;
+  }
 }
 
 .sfx .card .open i::after {
@@ -1137,7 +1149,12 @@ div.sf-menu {
   gap: 32px;
   overflow: auto;
   z-index: 61;
-  animation: sf-menu-in 0.7s cubic-bezier(0.7, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  div.sf-menu {
+    animation: sf-menu-in 0.7s cubic-bezier(0.7, 0, 0.2, 1);
+  }
 }
 
 @keyframes sf-menu-in {
@@ -1413,6 +1430,14 @@ div.sf-menu a:focus-visible {
   height: min(56vh, 520px);
 }
 
+.sfx:not(.is3d) .ab-txt {
+  width: min(520px, 84vw);
+}
+
+.sfx:not(.is3d) .ab-big {
+  font-size: clamp(34px, 3.6vw, 68px);
+}
+
 .sfx:not(.is3d) .svc-st {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
@@ -1532,12 +1557,6 @@ div.sf-menu a:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sfx .h-cue i,
-  .sfx .card .open i,
-  .sfx .intro .c {
-    animation: none;
-  }
-
   .sfx #cv,
   .sfx #spacer,
   .sfx #hud {
