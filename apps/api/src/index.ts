@@ -12,5 +12,5 @@ const app = createApp();
 
 app.listen(env.PORT, () => {
   // eslint-disable-next-line no-console
-  console.log(`salesflow api listening on ${env.PORT} (${env.NODE_ENV})`);
+  console.log(`gymflow api listening on ${env.PORT} (${env.NODE_ENV})`);
 });

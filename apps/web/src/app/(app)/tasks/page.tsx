@@ -62,7 +62,7 @@ export default function TasksPage() {
         </div>
         <button className="btn-primary" onClick={() => setModalOpen(true)}><Plus size={16} /> New task</button>
       </div>
-      {tasks.length === 0 && <EmptyState title="All clear" hint="Create follow-up tasks to stay on top of revenue actions." />}
+      {tasks.length === 0 && <EmptyState title="All clear" hint="Create follow-up tasks for tours, trials and renewals." />}
       <div className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
         {tasks.map((t) => (
           <div key={t.id} className="flex items-center gap-3 p-4 transition hover:bg-slate-50">

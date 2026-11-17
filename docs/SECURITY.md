@@ -1,4 +1,4 @@
-# SECURITY — SALESFLOW CRM
+# SECURITY — GYMFLOW MEMBER CRM
 
 ## Authentication
 - Passwords hashed with bcrypt (salt 12). Never stored plaintext.
@@ -10,7 +10,7 @@
 ## Authorization
 - All business endpoints require authenticated session.
 - Tenant scope: every query filtered by organizationId derived from session memberships. Client-supplied organizationId never trusted as proof of access.
-- Role-based permissions checked server-side (leads.read, deals.manage, tickets.manage, users.manage, settings.manage, reports.read).
+- Role-based permissions checked server-side (`manage_users`, `manage_prospects`, `manage_members`, `manage_memberships`, `manage_pipelines`, `manage_tickets`, `manage_tickets_internal`, `manage_reports`, `view_audit_logs`).
 - Record-level: owner or assigned user can act on own records; managers can act on org records.
 
 ## Input & injection

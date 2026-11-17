@@ -17,13 +17,15 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   ORG_ADMIN: [
     "manage_users",
     "manage_pipelines",
-    "manage_leads",
+    "manage_prospects",
+    "manage_members",
+    "manage_memberships",
     "manage_reports",
     "manage_tickets_internal",
     "view_audit_logs",
   ],
-  SALES_MANAGER: ["manage_leads", "manage_pipelines", "manage_reports"],
-  SALES_REP: ["manage_leads"],
+  CLUB_MANAGER: ["manage_prospects", "manage_members", "manage_memberships", "manage_pipelines", "manage_tickets", "manage_reports"],
+  MEMBERSHIP_ADVISOR: ["manage_prospects", "manage_members", "manage_memberships"],
   SUPPORT_MANAGER: ["manage_tickets", "manage_tickets_internal"],
   SUPPORT_AGENT: ["manage_tickets"],
   VIEWER: [],
@@ -62,7 +64,7 @@ export function authenticate(req: AuthedRequest, res: Response, next: NextFuncti
 export async function resolveTenant(req: AuthedRequest, res: Response, next: NextFunction) {
   if (!req.userId) return next();
   try {
-    const memberships = await prisma.membership.findMany({
+    const memberships = await prisma.teamMembership.findMany({
       where: { userId: req.userId, deletedAt: null },
       select: { organizationId: true, role: true },
     });

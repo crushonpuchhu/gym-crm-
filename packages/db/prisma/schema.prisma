@@ -1,6 +1,6 @@
-// SalesFlow CRM — Prisma schema
-// Multi-tenant by organization. Every business record scoped to organizationId.
-// Soft delete via deletedAt.
+// GymFlow — Prisma schema
+// Multi-tenant by organization: one organization is one gym brand.
+// Every business record is scoped to organizationId. Soft delete via deletedAt.
 
 generator client {
   provider = "prisma-client-js"
@@ -16,36 +16,69 @@ enum RoleKey {
   SUPER_ADMIN
   ORG_OWNER
   ORG_ADMIN
-  SALES_MANAGER
-  SALES_REP
+  CLUB_MANAGER
+  MEMBERSHIP_ADVISOR
   SUPPORT_MANAGER
   SUPPORT_AGENT
   VIEWER
 }
 
-enum LeadStatus {
+enum ProspectStatus {
   NEW
   CONTACTED
-  QUALIFIED
-  PROPOSAL
-  NEGOTIATION
-  CONVERTED
-  DISQUALIFIED
+  TOUR_BOOKED
+  TOURED
+  TRIAL
+  NEGOTIATING
+  JOINED
+  LOST
 }
 
-enum LeadSource {
+enum ProspectSource {
+  WALK_IN
   WEBSITE
   REFERRAL
-  COLD_CALL
-  EMAIL
+  INSTAGRAM
+  FACEBOOK
+  GOOGLE
   EVENT
+  PARTNER
   OTHER
 }
 
-enum LeadPriority {
+enum ProspectPriority {
   LOW
   MEDIUM
   HIGH
+}
+
+enum MemberStatus {
+  TRIAL
+  ACTIVE
+  PAUSED
+  CANCELLED
+  EXPIRED
+}
+
+enum MembershipStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+  CANCELLED
+  EXPIRED
+}
+
+enum BillingCycle {
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+  ONE_TIME
+}
+
+enum CheckInMethod {
+  QR
+  APP
+  FRONT_DESK
 }
 
 enum TicketStatus {
@@ -64,6 +97,16 @@ enum TicketPriority {
   URGENT
 }
 
+enum TicketCategory {
+  BILLING
+  EQUIPMENT
+  CLASS_BOOKING
+  ACCESS
+  CLEANLINESS
+  STAFF
+  OTHER
+}
+
 enum TaskStatus {
   OPEN
   IN_PROGRESS
@@ -73,28 +116,30 @@ enum TaskStatus {
 
 enum ActivityType {
   CALL
-  MEETING
+  TOUR
   EMAIL
   TASK
   NOTE
   STATUS_CHANGE
   ASSIGNMENT
+  CHECK_IN
 }
 
 enum NotificationType {
   ASSIGNMENT
   FOLLOW_UP
-  DEAL_UPDATE
+  MEMBERSHIP_UPDATE
   TICKET_UPDATE
   SLA_WARNING
   MENTION
+  RENEWAL
   SYSTEM
 }
 
 enum SubscriptionPlan {
-  FREE
-  PROFESSIONAL
-  ENTERPRISE
+  STARTER
+  GROWTH
+  SCALE
 }
 
 enum SubscriptionStatus {
@@ -109,27 +154,31 @@ model Organization {
   id        String   @id @default(uuid()) @db.Uuid
   name      String   @db.VarChar(200)
   slug      String   @unique @db.VarChar(100)
-  plan      SubscriptionPlan @default(FREE)
+  plan      SubscriptionPlan @default(STARTER)
   status    String   @default("active") // active, suspended
+  currency  String   @default("USD") @db.VarChar(3)
+  timezone  String   @default("America/New_York") @db.VarChar(64)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime?
 
-  memberships Membership[]
-  leads       Lead[]
-  contacts    Contact[]
-  companies   Company[]
-  pipelines   Pipeline[]
-  deals       Deal[]
-  tickets     Ticket[]
-  tasks       Task[]
-  activities  Activity[]
+  team          TeamMembership[]
+  locations     Location[]
+  members       Member[]
+  prospects     Prospect[]
+  plans         MembershipPlan[]
+  pipelines     Pipeline[]
+  memberships   Membership[]
+  checkIns      CheckIn[]
+  tickets       Ticket[]
+  tasks         Task[]
+  activities    Activity[]
   notifications Notification[]
-  workflows   Workflow[]
+  workflows     Workflow[]
   subscriptions Subscription[]
-  auditLogs   AuditLog[]
-  invitations Invitation[]
-  roles       Role[]
+  auditLogs     AuditLog[]
+  invitations   Invitation[]
+  roles         Role[]
 
   @@index([deletedAt])
 }
@@ -145,37 +194,38 @@ model User {
   updatedAt     DateTime @updatedAt
   deletedAt     DateTime?
 
-  memberships   Membership[]
-  ownedLeads    Lead[]         @relation("LeadOwner")
-  ownedContacts Contact[]      @relation("ContactOwner")
-  ownedDeals    Deal[]         @relation("DealOwner")
-  ownedTickets  Ticket[]       @relation("TicketOwner")
-  ownedTasks    Task[]         @relation("TaskOwner")
-  leadActivities LeadActivity[] @relation("LeadActivityAuthor")
-  ticketComments TicketComment[] @relation("TicketCommentAuthor")
-  dealStageHistories DealStageHistory[] @relation("DealStageHistoryChanger")
-  activities    Activity[]     @relation("ActivityActor")
-  notifications Notification[] @relation("NotificationRecipient")
-  auditLogs     AuditLog[]     @relation("AuditLogActor")
-  createdInvitations Invitation[] @relation("InvitationCreator")
+  team                TeamMembership[]
+  ownedProspects      Prospect[]        @relation("ProspectOwner")
+  ownedMembers        Member[]          @relation("MemberOwner")
+  ownedMemberships    Membership[]      @relation("MembershipOwner")
+  ownedTickets        Ticket[]          @relation("TicketOwner")
+  ownedTasks          Task[]            @relation("TaskOwner")
+  prospectActivities  ProspectActivity[] @relation("ProspectActivityAuthor")
+  ticketComments      TicketComment[]   @relation("TicketCommentAuthor")
+  membershipHistories MembershipStageHistory[] @relation("MembershipStageHistoryChanger")
+  activities          Activity[]        @relation("ActivityActor")
+  notifications       Notification[]    @relation("NotificationRecipient")
+  auditLogs           AuditLog[]        @relation("AuditLogActor")
+  createdInvitations  Invitation[]      @relation("InvitationCreator")
   passwordResetTokens PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
-  refreshTokens RefreshToken[]
+  refreshTokens       RefreshToken[]
 
   @@index([deletedAt])
 }
 
-model Membership {
+/// Staff access to a gym brand. Replaces the old "membership" join table.
+model TeamMembership {
   id            String   @id @default(uuid()) @db.Uuid
   userId        String   @db.Uuid
   organizationId String  @db.Uuid
-  role          RoleKey  @default(SALES_REP)
+  role          RoleKey  @default(MEMBERSHIP_ADVISOR)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   deletedAt     DateTime?
 
-  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([userId, organizationId])
   @@index([organizationId])
@@ -262,42 +312,134 @@ model Invitation {
   @@index([token])
 }
 
-model Lead {
+/// A branch or club. Members, memberships, classes and check-ins belong to one.
+model Location {
+  id            String   @id @default(uuid()) @db.Uuid
+  organizationId String  @db.Uuid
+  name          String   @db.VarChar(200)
+  address       String?  @db.VarChar(500)
+  city          String?  @db.VarChar(100)
+  region        String?  @db.VarChar(100)
+  phone         String?  @db.VarChar(50)
+  email         String?  @db.VarChar(255)
+  capacity      Int?     @default(0)
+  opensAt       String?  @db.VarChar(5)
+  closesAt      String?  @db.VarChar(5)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members      Member[]
+  prospects    Prospect[]
+  memberships  Membership[]
+  checkIns     CheckIn[]
+  tickets      Ticket[]
+
+  @@index([organizationId])
+  @@index([deletedAt])
+}
+
+/// Sellable membership product: day pass, monthly, annual, PT pack.
+model MembershipPlan {
+  id            String   @id @default(uuid()) @db.Uuid
+  organizationId String  @db.Uuid
+  name          String   @db.VarChar(120)
+  description   String?  @db.VarChar(500)
+  price         Decimal  @db.Decimal(10, 2)
+  billingCycle  BillingCycle @default(MONTHLY)
+  durationDays  Int      @default(30)
+  color         String   @db.VarChar(20) @default("#4f46e5")
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  memberships  Membership[]
+
+  @@index([organizationId])
+  @@index([deletedAt])
+}
+
+/// A person with a membership or a trial. The gym's customer record.
+model Member {
+  id                String   @id @default(uuid()) @db.Uuid
+  organizationId    String   @db.Uuid
+  ownerId           String   @db.Uuid
+  locationId        String?  @db.Uuid
+  firstName         String   @db.VarChar(100)
+  lastName          String   @db.VarChar(100)
+  email             String?  @db.VarChar(255)
+  phone             String?  @db.VarChar(50)
+  dateOfBirth       DateTime?
+  address           String?  @db.VarChar(500)
+  emergencyContact  String?  @db.VarChar(200)
+  fitnessGoal       String?  @db.VarChar(200)
+  status            MemberStatus @default(ACTIVE)
+  joinedAt          DateTime?
+  notes             String?  @db.VarChar(2000)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  deletedAt         DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner        User         @relation("MemberOwner", fields: [ownerId], references: [id])
+  location     Location?    @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  memberships  Membership[]
+  checkIns     CheckIn[]
+  tickets      Ticket[]
+  convertedProspect Prospect? @relation("ProspectConvertedMember")
+
+  @@index([organizationId])
+  @@index([ownerId])
+  @@index([locationId])
+  @@index([status])
+  @@index([deletedAt])
+}
+
+/// An enquiry, guest pass or trial that has not become a paying member yet.
+model Prospect {
   id                String     @id @default(uuid()) @db.Uuid
   organizationId    String     @db.Uuid
   ownerId           String     @db.Uuid
+  locationId        String?    @db.Uuid
   firstName         String     @db.VarChar(100)
   lastName          String     @db.VarChar(100)
   email             String?    @db.VarChar(255)
   phone             String?    @db.VarChar(50)
-  company           String?    @db.VarChar(200)
-  source            LeadSource @default(WEBSITE)
-  status            LeadStatus @default(NEW)
-  priority          LeadPriority @default(MEDIUM)
+  source            ProspectSource @default(WALK_IN)
+  status            ProspectStatus @default(NEW)
+  priority          ProspectPriority @default(MEDIUM)
   score             Int        @default(0)
+  /// Expected monthly revenue if this prospect joins.
   value             Decimal?   @db.Decimal(12, 2)
+  fitnessGoal       String?    @db.VarChar(200)
   followUpAt        DateTime?
-  convertedToContactId String? @unique @db.Uuid
-  convertedToDealId   String?  @unique @db.Uuid
+  convertedMemberId String?    @unique @db.Uuid
+  convertedMembershipId String? @unique @db.Uuid
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
   deletedAt         DateTime?
 
   organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  owner             User        @relation("LeadOwner", fields: [ownerId], references: [id])
-  activities        LeadActivity[]
-  convertedContact  Contact?    @relation("LeadConvertedContact", fields: [convertedToContactId], references: [id])
-  convertedDeal     Deal?       @relation("LeadConvertedDeal", fields: [convertedToDealId], references: [id])
+  owner             User         @relation("ProspectOwner", fields: [ownerId], references: [id])
+  location          Location?    @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  activities        ProspectActivity[]
+  convertedMember   Member?      @relation("ProspectConvertedMember", fields: [convertedMemberId], references: [id])
+  convertedMembership Membership? @relation("ProspectConvertedMembership", fields: [convertedMembershipId], references: [id])
 
   @@index([organizationId])
   @@index([ownerId])
+  @@index([locationId])
   @@index([status])
   @@index([deletedAt])
 }
 
-model LeadActivity {
+model ProspectActivity {
   id        String   @id @default(uuid()) @db.Uuid
-  leadId    String   @db.Uuid
+  prospectId String  @db.Uuid
   authorId  String   @db.Uuid
   type      ActivityType
   subject   String   @db.VarChar(200)
@@ -305,60 +447,11 @@ model LeadActivity {
   occurredAt DateTime @default(now())
   createdAt DateTime @default(now())
 
-  lead    Lead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  author  User    @relation("LeadActivityAuthor", fields: [authorId], references: [id])
+  prospect Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  author   User     @relation("ProspectActivityAuthor", fields: [authorId], references: [id])
 
-  @@index([leadId])
+  @@index([prospectId])
   @@index([authorId])
-}
-
-model Contact {
-  id          String   @id @default(uuid()) @db.Uuid
-  organizationId String @db.Uuid
-  ownerId     String   @db.Uuid
-  firstName   String   @db.VarChar(100)
-  lastName    String   @db.VarChar(100)
-  email       String?  @db.VarChar(255)
-  phone       String?  @db.VarChar(50)
-  position    String?  @db.VarChar(100)
-  companyId   String?  @db.Uuid
-  address     String?  @db.VarChar(500)
-  notes       String?  @db.VarChar(2000)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  deletedAt   DateTime?
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  owner       User     @relation("ContactOwner", fields: [ownerId], references: [id])
-  company     Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  deals       Deal[]
-  convertedLead Lead?  @relation("LeadConvertedContact")
-
-  @@index([organizationId])
-  @@index([ownerId])
-  @@index([companyId])
-  @@index([deletedAt])
-}
-
-model Company {
-  id          String   @id @default(uuid()) @db.Uuid
-  organizationId String @db.Uuid
-  name        String   @db.VarChar(200)
-  industry    String?  @db.VarChar(100)
-  website     String?  @db.VarChar(200)
-  employees   Int?
-  revenueRange String? @db.VarChar(50)
-  address     String?  @db.VarChar(500)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  deletedAt   DateTime?
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  contacts    Contact[]
-  deals       Deal[]
-
-  @@index([organizationId])
-  @@index([deletedAt])
 }
 
 model Pipeline {
@@ -372,7 +465,7 @@ model Pipeline {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   stages      PipelineStage[]
-  deals       Deal[]
+  memberships Membership[]
 
   @@index([organizationId])
   @@index([deletedAt])
@@ -392,30 +485,40 @@ model PipelineStage {
   deletedAt DateTime?
 
   pipeline Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
-  deals    Deal[]
-  historyFrom DealStageHistory[] @relation("HistoryFromStage")
-  historyTo   DealStageHistory[] @relation("HistoryToStage")
+  memberships Membership[]
+  historyFrom MembershipStageHistory[] @relation("HistoryFromStage")
+  historyTo   MembershipStageHistory[] @relation("HistoryToStage")
 
   @@index([pipelineId])
   @@index([key])
 }
 
-model Deal {
+/// A membership contract in motion or active. The Kanban card is a contract.
+model Membership {
   id              String   @id @default(uuid()) @db.Uuid
   organizationId  String   @db.Uuid
   pipelineId      String   @db.Uuid
   stageId         String   @db.Uuid
   ownerId         String   @db.Uuid
-  contactId       String?  @db.Uuid
-  companyId       String?  @db.Uuid
+  memberId        String?  @db.Uuid
+  planId          String?  @db.Uuid
+  locationId      String?  @db.Uuid
   title           String   @db.VarChar(200)
-  value           Decimal    @db.Decimal(12, 2)
-  probability     Int        @default(0)
+  /// Total contract value across the full term.
+  value           Decimal  @db.Decimal(12, 2)
+  /// Recurring monthly revenue used for MRR.
+  monthlyValue    Decimal  @db.Decimal(10, 2) @default(0)
+  billingCycle    BillingCycle @default(MONTHLY)
+  status          MembershipStatus @default(PENDING)
+  probability     Int      @default(0)
   expectedCloseAt DateTime?
+  startDate       DateTime?
+  endDate         DateTime?
   wonAt           DateTime?
   lostAt          DateTime?
+  cancelledAt     DateTime?
   wonReason       String?  @db.VarChar(500)
-  lostReason      String?  @db.VarChar(500)
+  cancelReason    String?  @db.VarChar(500)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   deletedAt       DateTime?
@@ -423,43 +526,70 @@ model Deal {
   organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   pipeline      Pipeline       @relation(fields: [pipelineId], references: [id])
   stage         PipelineStage  @relation(fields: [stageId], references: [id])
-  owner         User           @relation("DealOwner", fields: [ownerId], references: [id])
-  contact       Contact?       @relation(fields: [contactId], references: [id], onDelete: SetNull)
-  company       Company?       @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  stageHistory  DealStageHistory[]
-  convertedLead Lead?         @relation("LeadConvertedDeal")
+  owner         User           @relation("MembershipOwner", fields: [ownerId], references: [id])
+  member        Member?        @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  plan          MembershipPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+  location      Location?      @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  stageHistory  MembershipStageHistory[]
+  convertedProspect Prospect? @relation("ProspectConvertedMembership")
 
   @@index([organizationId])
   @@index([pipelineId])
   @@index([stageId])
   @@index([ownerId])
+  @@index([memberId])
+  @@index([status])
   @@index([deletedAt])
 }
 
-model DealStageHistory {
+model MembershipStageHistory {
   id          String   @id @default(uuid()) @db.Uuid
-  dealId      String   @db.Uuid
+  membershipId String  @db.Uuid
   fromStageId String?  @db.Uuid
   toStageId   String   @db.Uuid
   changedById String   @db.Uuid
   changedAt   DateTime @default(now())
 
-  deal        Deal            @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  membership  Membership      @relation(fields: [membershipId], references: [id], onDelete: Cascade)
   fromStage   PipelineStage?  @relation("HistoryFromStage", fields: [fromStageId], references: [id], onDelete: SetNull)
   toStage     PipelineStage   @relation("HistoryToStage", fields: [toStageId], references: [id])
-  changedBy   User            @relation("DealStageHistoryChanger", fields: [changedById], references: [id])
+  changedBy   User            @relation("MembershipStageHistoryChanger", fields: [changedById], references: [id])
 
-  @@index([dealId])
+  @@index([membershipId])
   @@index([changedAt])
 }
 
+/// Front-desk, app or QR entry. Drives attendance and retention reporting.
+model CheckIn {
+  id            String   @id @default(uuid()) @db.Uuid
+  organizationId String  @db.Uuid
+  memberId      String   @db.Uuid
+  locationId    String   @db.Uuid
+  method        CheckInMethod @default(FRONT_DESK)
+  checkedInAt   DateTime @default(now())
+  durationMinutes Int?
+  createdAt     DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  member       Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  location     Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, checkedInAt])
+  @@index([memberId])
+  @@index([locationId])
+}
+
+/// Member support: billing questions, broken equipment, access issues.
 model Ticket {
   id            String   @id @default(uuid()) @db.Uuid
   organizationId String  @db.Uuid
   ticketNumber  String   @db.VarChar(50)
-  customerEmail String   @db.VarChar(255)
-  customerName  String   @db.VarChar(100)
+  reporterName  String   @db.VarChar(100)
+  reporterEmail String   @db.VarChar(255)
+  memberId      String?  @db.Uuid
+  locationId    String?  @db.Uuid
   ownerId       String?  @db.Uuid
+  category      TicketCategory @default(OTHER)
   priority      TicketPriority @default(MEDIUM)
   status        TicketStatus @default(NEW)
   subject       String   @db.VarChar(200)
@@ -473,8 +603,10 @@ model Ticket {
   deletedAt     DateTime?
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  owner         User?     @relation("TicketOwner", fields: [ownerId], references: [id])
-  comments      TicketComment[]
+  member       Member?      @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  location     Location?    @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  owner        User?        @relation("TicketOwner", fields: [ownerId], references: [id])
+  comments     TicketComment[]
 
   @@index([organizationId])
   @@index([ticketNumber])
@@ -504,12 +636,12 @@ model TicketComment {
 }
 
 model TicketAttachment {
-  id         String   @id @default(uuid()) @db.Uuid
+  id         String  @id @default(uuid()) @db.Uuid
   ticketCommentId String @db.Uuid
-  fileName   String   @db.VarChar(255)
-  fileUrl    String   @db.VarChar(500)
+  fileName   String  @db.VarChar(255)
+  fileUrl    String  @db.VarChar(500)
   fileSize   Int
-  mimeType   String   @db.VarChar(100)
+  mimeType   String  @db.VarChar(100)
   createdAt  DateTime @default(now())
 
   comment TicketComment @relation(fields: [ticketCommentId], references: [id], onDelete: Cascade)
@@ -616,11 +748,11 @@ model WorkflowExecution {
 model Subscription {
   id                String             @id @default(uuid()) @db.Uuid
   organizationId    String             @db.Uuid
-  plan              SubscriptionPlan   @default(FREE)
+  plan              SubscriptionPlan   @default(STARTER)
   status            SubscriptionStatus @default(TRIAL)
   currentPeriodEnd  DateTime?
-  quotaLeads        Int                @default(1000)
-  quotaUsers        Int                @default(5)
+  quotaMembers      Int                @default(500)
+  quotaStaff        Int                @default(5)
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 
@@ -635,11 +767,11 @@ model AuditLog {
   userId      String?   @db.Uuid
   action      String   @db.VarChar(100)
   entityType  String   @db.VarChar(100)
-  entityId    String?   @db.Uuid
+  entityId    String?  @db.Uuid
   oldValues   Json?
   newValues   Json?
-  ip          String?   @db.VarChar(45)
-  userAgent   String?   @db.VarChar(500)
+  ip          String?  @db.VarChar(45)
+  userAgent   String?  @db.VarChar(500)
   createdAt   DateTime @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -650,4 +782,3 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([createdAt])
 }
-

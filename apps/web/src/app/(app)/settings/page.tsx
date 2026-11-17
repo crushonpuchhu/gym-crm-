@@ -20,21 +20,21 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-5">
       <div>
-        <h1 className="text-xl font-bold text-ink-900">Organization settings</h1>
-        <p className="text-xs text-slate-500">Profile, access control and audit trail</p>
+        <h1 className="text-xl font-bold text-ink-900">Gym brand settings</h1>
+        <p className="text-xs text-slate-500">Brand profile, staff access and the audit trail</p>
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="card p-5">
-          <p className="label">Organization</p>
+          <p className="label">Gym brand</p>
           <p className="mt-1 text-lg font-black text-ink-900">{orgName || "…"}</p>
           <p className="mt-3 text-xs text-slate-500">Signed in as</p>
           <p className="text-sm font-semibold text-slate-800">{user?.name} · {user?.email}</p>
-          <Link href="/users" className="btn-secondary mt-4 !text-xs">Manage users & roles</Link>
+          <Link href="/users" className="btn-secondary mt-4 !text-xs">Manage staff & roles</Link>
         </div>
         <div className="card p-5">
           <p className="label">Data export</p>
-          <p className="mt-1 text-sm text-slate-600">Download workspace records as CSV from the reports center.</p>
-          <Link href="/reports" className="btn-secondary mt-4 !text-xs">Open reports</Link>
+          <p className="mt-1 text-sm text-slate-600">Download members, memberships, prospects, tickets and check-ins as CSV.</p>
+          <Link href="/reports" className="btn-secondary mt-4 !text-xs">Open club reports</Link>
         </div>
       </div>
       <div className="card p-5">

@@ -7,7 +7,7 @@ import { AuthedRequest } from "../middleware/auth";
 
 const router = Router();
 const activitySchema = z.object({
-  type: z.enum(["CALL", "MEETING", "EMAIL", "TASK", "NOTE", "STATUS_CHANGE", "ASSIGNMENT"]),
+  type: z.enum(["CALL", "TOUR", "EMAIL", "TASK", "NOTE", "STATUS_CHANGE", "ASSIGNMENT", "CHECK_IN"]),
   subject: z.string().min(1).max(200),
   entityType: z.string().min(1).max(50),
   entityId: z.string(),

@@ -1,54 +1,63 @@
-# PROJECT STATUS — SALESFLOW CRM
+# PROJECT STATUS — GYMFLOW MEMBER CRM
 
 ## Current phase
-Phase 9 complete. CRM app, API hardening pass and the new marketing landing page are all built, tested and committed. No open blockers.
+Phase 10 complete. The project has been converted from a generic sales CRM into a multi-tenant gym member CRM. Domain, schema, API, seed, web app, landing page and docs all speak the gym model. No open blockers.
+
+## Product
+GymFlow is sold to gym brands. One organization = one brand; a brand owns many clubs (locations), staff, membership plans, members, contracts, check-ins, support tickets and reports.
 
 ## Completed modules (verified end-to-end)
 - Auth — register/login/logout/refresh rotation/forgot-reset; DB-backed refresh-token sessions, prod secret enforcement
-- Organizations + Memberships + RBAC — role permission map (`requirePermission`), tenant-scoped relation validation
-- Leads — CRUD, search, filter, pagination, convert → contact + company + deal, CSV import
-- Contacts, Companies — CRUD, tenant scoping, soft delete
-- Pipelines + Stages + Deals — Kanban drag-drop, stage history, weighted revenue
-- Tickets — TK-nnnn unique numbers, comments (internal + customer), status flow, SLA fields
+- Organizations + TeamMembership + RBAC — role permission map (`requirePermission`), tenant-scoped relation validation
+- Clubs (`locations`) — capacity, opening hours, member/check-in/contract counts, archive guard
+- Membership plans — price, billing cycle, duration, colour, pause/archive, in-use guard
+- Prospects — CRUD, search, filter, pagination, convert → member + opening contract, CSV import
+- Members — CRUD, home club, status, current plan, archive
+- Memberships — Kanban drag-drop by stage, stage history, weighted contract value, won activates the member, lost cancels the contract
+- Check-ins — QR/app/front-desk entries, daily filter, today counter, activity feed entry, inactive-member guard
+- Tickets — GF-nnnn unique numbers, categories, member/club links, comments (internal + member), status flow, SLA fields
 - Tasks, Activities, Notifications — list + mark read/all-read
-- Reports — dashboard, sales-by-month, leads-by-source, conversion, CSV export
-- Subscriptions — plan switch, entitlement quotas
+- Reports — dashboard KPIs (members, MRR, check-ins, open support), joins-by-month, prospects-by-source, conversion, retention/churn, 30-day check-ins, advisor MRR, CSV export for five datasets
+- Subscriptions — STARTER / GROWTH / SCALE plans, member + staff quota usage
 - Admin — audit logs, health, permission-gated
-- Frontend — 19 routes production-compiled; shared ink/accent Tailwind palette
+- Frontend — 19 routes production-compiled; shared ink/accent Tailwind palette; GymFlow shell with gym navigation
 
-## Landing page (new)
-- Replaces the previous template with a scroll-driven 3D "world" layout modelled on a measured reference: sections are stops on a path, DOM elements are projected from world coordinates, a canvas draws the indigo path, theme interpolates cream → ink navy on dark stops.
-- Engine: `apps/web/src/components/landing/world.ts` (TypeScript, no copied reference code) — depth unit `p`, camera `zc` from piecewise scroll segments, per-element perspective projection, Catmull-Rom path anchors, HUD rail with ticks, intro camera pull-back, counter, letter-fill effect, circular clip-path product panel.
-- Content: `content.ts` (brand, stats, milestones, modules, six customer stories, product panel, contact, nav).
-- Markup: `Landing.tsx` with shadcn-style primitives — `Button`, `Dialog` (full-screen menu + customer story sheet), `Tooltip` (copy-email hint), `cn()` helper.
-- Styles: `landing.css` — CRM tokens on the reference's paper ground (`--bg #eceae2`, ink navy `#0b1220`, indigo `#4338ca`, orange `#f47920`, hairline `#d3d0c6`).
-- Fonts: `Anton` + `Bebas Neue` (display), `Geist` / `Geist Mono` (body/mono), `DM Serif Display` (product headline), loaded in `apps/web/src/app/layout.tsx`.
-- Media: local Unsplash stills in `apps/web/public/media/`, halftone portrait generated locally (ImageMagick ordered dither + luminance alpha), product walkthrough video.
-- Responsive: engine anchors per stop, per-element mobile overrides (`data-mp`, `data-mz`), viewport clamp so type never clips at tablet widths, static flow fallback for `prefers-reduced-motion`.
+## Data model
+`Organization → Location, MembershipPlan, Prospect → Member → Membership (Pipeline → Stage), CheckIn, Ticket, Task, Activity, Workflow, Subscription, AuditLog`.
+
+Fresh single migration: `20261117224417_gymflow_init`. Old CRM migrations were removed and the database reset; the project ships with demo data only.
+
+## Demo dataset
+`Iron Atlas Fitness` (`iron-atlas`), 3 clubs, 8 staff, 6 plans, 120 members, 90 prospects, 186 contracts, 450 check-ins, 30 tickets (`GF-1001…GF-1030`), 32 tasks, 80 activities, 28 notifications, 5 workflows, 45 audit rows. MRR $4,135; trial conversion 11.1%; churn 8.6%. Deterministic seed, safe to rerun.
+
+## Landing page
+- Scroll-driven 3D "world" layout: sections are stops on a path, DOM elements projected from world coordinates, canvas draws the indigo path, theme interpolates cream → ink navy on dark stops.
+- Engine: `apps/web/src/components/landing/world.ts` (TypeScript, original) — depth unit, piecewise camera, perspective projection, Catmull-Rom anchors, HUD rail, intro pull-back, counter, letter fill, product clip-path panel.
+- Content rebranded for gym brands: brand, stats, milestones, five modules (Prospects, Memberships, Check-ins, Automation, Reports), six gym customer stories, product panel, contact.
+- Styles: `landing.css` — paper ground `#eceae2`, ink navy `#0b1220`, indigo `#4338ca`, orange `#f47920`.
+- Responsive: per-stop anchors, per-element mobile overrides, viewport clamp, reduced-motion fallback.
 
 ## Evidence
-- `npx next build` ✓ (landing + all routes, 0 type errors)
-- `npx tsc --noEmit` web + API ✓
-- API smoke suite: 38/38 PASS; vitest 5/5; `tests/tenant-isolation.sh` PASS
-- `npx prisma migrate` ✓ — init, stage_soft_delete, add_refresh_token_sessions, ticket_number_unique
-- Docker: API + web images build, compose postgres/redis healthy
-- Landing verified at 1440×900, 1024×768, 768×1024, 390×844, reduced-motion: hero, about, numbers (dark), journey fill, milestones, beyond, services (dark), work intro, six customer cards, orange product panel, contact; menu and story dialogs.
+- `npm run build --workspace=apps/web` ✓ (19 routes, 0 type errors)
+- `npx tsc -p apps/api/tsconfig.json --noEmit` ✓
+- `npx prisma migrate status` ✓ — one migration, schema up to date
+- Seed run ✓ — counts above
+- API smoke: login, dashboard, conversion, retention, check-ins series, members, prospects, memberships, plans, check-ins, tickets, locations all return 200 with seeded data
 
 ## In-progress / pending
 - E2E tests (Playwright) not installed
 - BullMQ workers (email, SLA warnings, reminders) — Redis wired, workers not built
 - Socket.IO real-time — out of scope this milestone
-- Reference-only flourishes intentionally not reproduced: paratrooper contact animation, random star dots, runner character, project-page routing, testimonial video
 
 ## Known limitations
-- Reports `export/:report` is a CSV stub
-- Audit middleware logs `POST undefined` for unrouted paths (cosmetic)
-- Landing is a visual rebuild from measurement, not a byte-for-byte copy of the reference
+- Class scheduling, door/turnstile hardware and direct-debit mandates are out of scope; check-ins are logged through the API.
+- Audit middleware logs `POST undefined` for unrouted paths (cosmetic).
+- Landing is a visual rebuild from measurement, not a byte-for-byte copy of the reference.
 
 ## Blockers
 - None. S3 storage remains env-gated (MinIO image unavailable in the restricted registry).
 
 ## Next actions
-- Install Playwright and cover auth + deal drag-drop + ticket flow
-- Add BullMQ worker process for notifications and SLA warnings
+- Install Playwright and cover auth, membership drag-drop, check-in and ticket flows
+- Add a BullMQ worker process for trial-ending, dunning and win-back automations
 - Tag the release once CI is green

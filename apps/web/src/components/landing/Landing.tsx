@@ -391,7 +391,7 @@ export default function Landing() {
               <figure className="ab-fig pose">
                 <img
                   src="/media/pose-dither.png"
-                  alt="Portrait of a SalesFlow account executive"
+                  alt="Portrait of a GymFlow membership advisor"
                   width={720}
                   height={1350}
                 />
@@ -408,13 +408,13 @@ export default function Landing() {
               <div className="ab-txt">
                 <span className="mono">About</span>
                 <p className="d bb ab-big split">
-                  <Split text="One workspace. Every revenue motion." />
+                  <Split text="One platform. Every club." />
                 </p>
                 <p className="lede">
-                  SalesFlow is a multi-tenant CRM for teams that sell and support. Leads,
-                  contacts, deals, tickets and reports share one record set, so nothing is
-                  re-typed and nobody argues about whose number is right. Built for reps who
-                  live in the pipeline and for the people who have to report on it.
+                  GymFlow is a multi-tenant member CRM for gym brands. Prospects, members,
+                  membership contracts, check-ins, tickets and reports share one record set,
+                  so the front desk, the advisors and the owner read the same numbers. Built
+                  for clubs that sell memberships and for the people who report on retention.
                 </p>
               </div>
             </div>
@@ -869,7 +869,7 @@ export default function Landing() {
           <DialogContent className="sf-menu" hideClose>
             <DialogTitle className="sr-only">Main menu</DialogTitle>
             <DialogDescription className="sr-only">
-              Jump to a section of the SalesFlow landing page.
+              Jump to a section of the GymFlow landing page.
             </DialogDescription>
             <div className="menu-head">
               <span className="mark">

@@ -43,8 +43,8 @@ router.patch("/:id", async (req: AuthedRequest, res) => {
 router.delete("/:id", async (req: AuthedRequest, res) => {
   const pipeline = await prisma.pipeline.findFirst({ where: { id: req.params.id, organizationId: req.orgId!, deletedAt: null } });
   if (!pipeline) return err(res, "not_found", "Pipeline not found", 404);
-  const dealCount = await prisma.deal.count({ where: { pipelineId: req.params.id, organizationId: req.orgId!, deletedAt: null } });
-  if (dealCount > 0) return err(res, "conflict", "Pipeline has deals", 409);
+  const dealCount = await prisma.membership.count({ where: { pipelineId: req.params.id, organizationId: req.orgId!, deletedAt: null } });
+  if (dealCount > 0) return err(res, "conflict", "Pipeline has memberships", 409);
   await prisma.pipeline.update({ where: { id: req.params.id }, data: { deletedAt: new Date() } });
   await audit({ orgId: req.orgId, userId: req.userId, action: "pipeline.delete", entityType: "pipeline", entityId: req.params.id, ip: req.ip, userAgent: req.get("user-agent") });
   return ok(res, { deleted: true });

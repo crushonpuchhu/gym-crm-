@@ -8,7 +8,7 @@ import { AuthedRequest, requirePermission } from "../middleware/auth";
 const router = Router();
 
 router.get("/list", async (req: AuthedRequest, res) => {
-  const memberships = await prisma.membership.findMany({
+  const memberships = await prisma.teamMembership.findMany({
     where: { userId: req.userId!, deletedAt: null },
     include: { organization: true },
   });
@@ -48,8 +48,8 @@ const invitationSchema = z.object({
     "SUPER_ADMIN",
     "ORG_OWNER",
     "ORG_ADMIN",
-    "SALES_MANAGER",
-    "SALES_REP",
+    "CLUB_MANAGER",
+    "MEMBERSHIP_ADVISOR",
     "SUPPORT_MANAGER",
     "SUPPORT_AGENT",
     "VIEWER",

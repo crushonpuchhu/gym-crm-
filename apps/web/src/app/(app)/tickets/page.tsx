@@ -5,7 +5,7 @@ import { StatusBadge, PriorityBadge, EmptyState, ErrorState, LoadingSkeleton, Mo
 import { Inbox, Plus, Send } from "lucide-react";
 
 interface Comment { id: string; body: string; isInternal: boolean; createdAt: string; author: { name: string } }
-interface Ticket { id: string; ticketNumber: string; subject: string; customerName: string; status: string; priority: string; owner?: { name: string } | null; comments?: Comment[]; createdAt: string }
+interface Ticket { id: string; ticketNumber: string; subject: string; reporterName: string; reporterEmail: string; category: string; status: string; priority: string; owner?: { name: string } | null; location?: { name: string } | null; comments?: Comment[]; createdAt: string }
 interface TicketList { items: Ticket[]; total: number }
 
 const STATUS_FLOW = ["NEW", "OPEN", "PENDING", "IN_PROGRESS", "RESOLVED", "CLOSED"];
@@ -17,7 +17,7 @@ export default function TicketsPage() {
   const [comment, setComment] = useState("");
   const [isInternal, setIsInternal] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({ customerEmail: "", customerName: "", subject: "", description: "", priority: "MEDIUM" });
+  const [form, setForm] = useState({ reporterEmail: "", reporterName: "", category: "OTHER", subject: "", description: "", priority: "MEDIUM" });
   const [formError, setFormError] = useState("");
 
   const load = async () => {
@@ -47,7 +47,7 @@ export default function TicketsPage() {
     try {
       await api("/tickets", { method: "POST", body: JSON.stringify(form) });
       setModalOpen(false);
-      setForm({ customerEmail: "", customerName: "", subject: "", description: "", priority: "MEDIUM" });
+      setForm({ reporterEmail: "", reporterName: "", category: "OTHER", subject: "", description: "", priority: "MEDIUM" });
       await load();
     } catch (err: any) {
       setFormError(err?.message || "Failed to create ticket");
@@ -86,7 +86,7 @@ export default function TicketsPage() {
         <div className="flex items-center justify-between border-b border-slate-200 p-4">
           <div className="flex items-center gap-2">
             <Inbox size={17} className="text-accent-600" />
-            <p className="text-sm font-bold text-ink-900">Support tickets · {data.total}</p>
+            <p className="text-sm font-bold text-ink-900">Member support · {data.total}</p>
           </div>
           <button className="btn-primary !px-3 !py-1.5 text-xs" onClick={() => setModalOpen(true)}><Plus size={14} /> New</button>
         </div>
@@ -101,7 +101,8 @@ export default function TicketsPage() {
               <p className="line-clamp-1 text-sm font-semibold text-slate-800">{t.subject}</p>
               <div className="flex items-center gap-2">
                 <StatusBadge status={t.status} />
-                <span className="text-[10px] text-slate-400">{t.customerName}</span>
+                <span className="text-[10px] text-slate-400">{t.reporterName}</span>
+                <span className="ml-auto rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-500">{t.category.replaceAll("_", " ")}</span>
               </div>
             </button>
           ))}
@@ -118,7 +119,7 @@ export default function TicketsPage() {
                 <div>
                   <p className="text-[10px] font-mono font-bold uppercase text-slate-400">{selected.ticketNumber}</p>
                   <p className="text-base font-bold text-ink-900">{selected.subject}</p>
-                  <p className="text-xs text-slate-500">{selected.customerName}</p>
+                  <p className="text-xs text-slate-500">{selected.reporterName} · {selected.reporterEmail}{selected.location ? ` · ${selected.location.name}` : ""}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <StatusBadge status={selected.status} />
@@ -156,9 +157,14 @@ export default function TicketsPage() {
       <Modal open={modalOpen} title="New ticket" onClose={() => setModalOpen(false)}>
         <form onSubmit={createTicket} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <FormField label="Customer name"><input className="input" value={form.customerName} onChange={(e) => setForm({ ...form, customerName: e.target.value })} required /></FormField>
-            <FormField label="Customer email"><input className="input" type="email" value={form.customerEmail} onChange={(e) => setForm({ ...form, customerEmail: e.target.value })} required /></FormField>
+            <FormField label="Member name"><input className="input" value={form.reporterName} onChange={(e) => setForm({ ...form, reporterName: e.target.value })} required /></FormField>
+            <FormField label="Member email"><input className="input" type="email" value={form.reporterEmail} onChange={(e) => setForm({ ...form, reporterEmail: e.target.value })} required /></FormField>
           </div>
+          <FormField label="Category">
+            <select className="input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+              <option>BILLING</option><option>EQUIPMENT</option><option>CLASS_BOOKING</option><option>ACCESS</option><option>CLEANLINESS</option><option>STAFF</option><option>OTHER</option>
+            </select>
+          </FormField>
           <FormField label="Subject"><input className="input" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} required /></FormField>
           <FormField label="Description"><textarea className="input min-h-20" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} required /></FormField>
           <FormField label="Priority"><select className="input" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}><option>LOW</option><option>MEDIUM</option><option>HIGH</option><option>URGENT</option></select></FormField>

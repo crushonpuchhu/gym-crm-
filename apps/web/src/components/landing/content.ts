@@ -11,17 +11,17 @@ export type Customer = {
 };
 
 export const brand = {
-  first: "Sales",
+  first: "Gym",
   second: "Flow",
-  email: "hello@salesflow.app",
-  kicker: "Revenue platform · Since 2019",
+  email: "hello@gymflow.app",
+  kicker: "Member CRM · Since 2019",
   lede:
-    "Leads, contacts, deals, tickets and reports on one record set. One workspace, one pipeline, one source of truth — for teams that sell, support and grow.",
+    "Prospects, members, memberships, check-ins and support on one record set. One platform for every club in your brand — so the front desk, the advisors and the owner see the same member.",
 };
 
 export const stats = [
   { label: "Running since", value: "2019", suffix: "" },
-  { label: "Deals closed", value: "38", suffix: "k+", countTo: 38 },
+  { label: "Members managed", value: "120", suffix: "k+", countTo: 120 },
   { label: "Uptime", value: "99.9", suffix: "%" },
 ];
 
@@ -30,70 +30,70 @@ export const milestones = [
     year: "2019",
     tag: "Start",
     icon: "layers",
-    text: "One pipeline and a spreadsheet-killer. SalesFlow began as an internal tool for a six-person sales team.",
+    text: "One club, one spreadsheet of members and a whiteboard for tours. GymFlow began as the front-desk tool for a single gym.",
   },
   {
     year: "2021",
-    tag: "Pipeline",
+    tag: "Contracts",
     icon: "board",
-    text: "Custom stages, shared views and weighted forecasts shipped. The forecast stopped living in someone's head.",
+    text: "Membership plans, join dates and pause/cancel handling shipped. Renewals stopped depending on somebody's memory.",
   },
   {
     year: "2023",
-    tag: "Workflows",
+    tag: "Check-ins",
     icon: "flow",
-    text: "Rules, tasks and SLAs became one automation layer across sales and support — no more copy-paste handoffs.",
+    text: "QR, app and front-desk check-ins became one attendance stream — feeding retention reports and win-back automations.",
   },
   {
     year: "2025",
-    tag: "AI assist",
+    tag: "Retention",
     icon: "spark",
-    text: "Summaries, next-best actions and deal-risk signals, grounded in your own record history. Not a chatbot bolted on.",
+    text: "Members who stop attending surface before they cancel. Advisors get a list, not a hunch.",
   },
   {
     year: "2026",
-    tag: "Multi-tenant",
+    tag: "Multi-club",
     icon: "shield",
-    text: "Workspaces, roles, permissions and audit trails. One platform, many teams, zero data bleed between tenants.",
+    text: "Clubs, roles, permissions and audit trails. One gym brand, many locations, zero data bleed between tenants.",
   },
 ];
 
 export const beyond = {
   image: "/media/raw-collab.jpg",
-  lines: ["Pipeline owner", "Support desk", "Forecaster", "Wannabe revenue scientist"],
-  note: "Whatever the job title says, the work happens in one place.",
+  lines: ["Club manager", "Membership advisor", "Front desk", "Retention analyst"],
+  note: "Whatever the job title says, the member record is in one place.",
 };
 
 export const modules = [
   {
-    name: "Leads",
+    name: "Prospects",
     x: -0.27,
     y: -0.1,
     z: 0.5,
     mx: 0,
     my: -0.26,
     mz: 0.1,
-    detail: ["Capture", "Scoring", "Routing", "Conversion"],
+    detail: ["Walk-ins", "Tours", "Trials", "Conversion"],
   },
   {
-    name: "Pipeline",
+    name: "Memberships",
     x: 0.26,
     y: 0.2,
     z: 0.18,
     mx: 0,
     my: -0.14,
     mz: 0.2,
-    detail: ["Stages", "Deals", "Forecast", "Win reasons"],
+    detail: ["Plans", "Contracts", "Renewals", "Cancellations"],
   },
   {
-    name: "Support",
+    name: "Check-ins",
     x: 0.29,
     y: -0.24,
     z: 0.85,
     mx: 0,
     my: -0.02,
     mz: 0.05,
-    detail: ["Tickets", "SLA", "Owners", "Internal notes"],
+    detail: ["QR", "App", "Front desk", "Attendance"],
   },
   {
     name: "Automation",
@@ -103,7 +103,7 @@ export const modules = [
     mx: 0,
     my: 0.1,
     mz: 0.15,
-    detail: ["Rules", "Tasks", "Handoffs", "Reminders"],
+    detail: ["Trial follow-up", "Dunning", "Win-back", "Reminders"],
   },
   {
     name: "Reports",
@@ -113,127 +113,127 @@ export const modules = [
     mx: 0,
     my: 0.22,
     mz: 0.25,
-    detail: ["Dashboards", "CSV export", "Activity", "Attribution"],
+    detail: ["MRR", "Retention", "Traffic", "CSV export"],
   },
 ];
 
 export const work = {
-  heading1: "Customer",
+  heading1: "Gym",
   heading2: "Stories",
-  note: "Six teams · More soon",
+  note: "Six brands · More soon",
 };
 
 export const customers: Customer[] = [
   {
-    name: "Acme Co",
-    industry: "SaaS",
-    seats: "240 seats",
+    name: "Iron Atlas Fitness",
+    industry: "3 clubs",
+    seats: "2,400 members",
     cover: "/media/raw-team.jpg",
-    summary: "One pipeline for new business, expansion and renewals.",
+    summary: "Three clubs, one member record, one retention number.",
     challenge:
-      "Three teams kept three pipelines. Forecast calls meant rebuilding the same spreadsheet every Friday.",
+      "Each club kept its own member list. Head office found out about churn when the direct debit stopped.",
     change:
-      "Acme moved new business, expansion and renewals into one tenant with shared stages and a single activity trail. Managers review the live board instead of a deck.",
+      "Iron Atlas moved every club into one tenant with shared plans and a single check-in stream. The Monday review reads one dashboard instead of three exports.",
     metrics: [
-      { label: "Forecast prep", value: "−6 hrs/wk" },
-      { label: "Stage hygiene", value: "98%" },
-      { label: "Win rate", value: "+11 pts" },
+      { label: "Admin time", value: "−6 hrs/wk" },
+      { label: "Member data", value: "One record" },
+      { label: "Trial conversion", value: "+11 pts" },
     ],
-    modules: ["Pipeline", "Reports", "Automation"],
+    modules: ["Memberships", "Reports", "Automation"],
   },
   {
-    name: "Globex",
-    industry: "Manufacturing",
-    seats: "1,200 seats",
+    name: "Northgate Strength Co.",
+    industry: "Strength gym",
+    seats: "980 members",
     cover: "/media/raw-meeting.jpg",
-    summary: "Quote-to-order handoffs that nobody has to chase.",
+    summary: "Trials that turn into contracts, without the chasing.",
     challenge:
-      "Quotes left the CRM at signature. Order status, service tickets and renewals lived in three systems.",
+      "Trial passes were handed out on paper. Nobody knew which trial ended today, so half of them just lapsed.",
     change:
-      "Globex runs the full record — contact, quote, ticket, renewal — with role-based access per business unit and an audit trail on every change.",
+      "Every trial is a prospect with an end date. A workflow creates the follow-up task two days out and the advisor gets a notification.",
     metrics: [
-      { label: "Handoff time", value: "−64%" },
-      { label: "Duplicate records", value: "−91%" },
-      { label: "Quote cycle", value: "4.1 days" },
+      { label: "Trial → member", value: "+23%" },
+      { label: "Follow-up missed", value: "−91%" },
+      { label: "Front-desk admin", value: "−4 hrs/wk" },
     ],
-    modules: ["Deals", "Tickets", "Permissions"],
+    modules: ["Prospects", "Automation", "Tasks"],
   },
   {
-    name: "Initech",
-    industry: "Fintech",
-    seats: "85 seats",
+    name: "Riverside Athletic",
+    industry: "Full-service club",
+    seats: "3,100 members",
     cover: "/media/raw-dashboard.jpg",
-    summary: "A forecast the board trusts, built from real records.",
+    summary: "Attendance data that predicts the cancellation.",
     challenge:
-      "A ten-person sales team, a fifty-row spreadsheet and no shared definition of qualified.",
+      "Cancellations looked sudden. The attendance record showed members disappearing six weeks earlier.",
     change:
-      "Weighted stages, required fields at each gate and an exportable report pack. The board sees the same numbers the reps do.",
+      "Check-ins by member and by day feed a retention view. Any active member with no visit in 14 days lands on a win-back list automatically.",
     metrics: [
+      { label: "Churn", value: "−18%" },
+      { label: "Win-back calls", value: "+340/yr" },
       { label: "Report build", value: "−9 hrs" },
-      { label: "Stale deals", value: "−47%" },
-      { label: "Quota attainment", value: "104%" },
     ],
-    modules: ["Pipeline", "Reports", "Workflows"],
+    modules: ["Check-ins", "Reports", "Workflows"],
   },
   {
-    name: "Umbrella Health",
-    industry: "Healthcare",
-    seats: "3,400 seats",
+    name: "Vantage Wellness Group",
+    industry: "Multi-site brand",
+    seats: "11,500 members",
     cover: "/media/raw-office.jpg",
-    summary: "Support and sales on one tenant, with strict separation.",
+    summary: "Club managers see their club. Owners see the brand.",
     challenge:
-      "Clinical and commercial teams could not share a workspace without exposing patient-adjacent data.",
+      "Regional managers needed cross-club numbers; club managers only needed their own. One shared login gave everyone everything.",
     change:
-      "Umbrella uses scoped roles and ticket-level restrictions, with internal comments hidden from requesters and every permission change logged.",
+      "Scoped roles per club, a shared plan catalogue and an audit trail on every price or permission change. Data access matches the org chart.",
     metrics: [
-      { label: "First response", value: "−38%" },
-      { label: "Escalations", value: "−22%" },
+      { label: "Price errors", value: "0" },
+      { label: "Onboarding", value: "1 day" },
       { label: "Audit findings", value: "0" },
     ],
-    modules: ["Tickets", "Roles", "Audit log"],
+    modules: ["Memberships", "Roles", "Audit log"],
   },
   {
-    name: "Soylent Logistics",
-    industry: "Logistics",
-    seats: "600 seats",
+    name: "Peak24",
+    industry: "24-hour gyms",
+    seats: "6,800 members",
     cover: "/media/raw-collab.jpg",
-    summary: "Every account, every depot, one shared view.",
+    summary: "Access, billing and support on one member timeline.",
     challenge:
-      "Depot managers kept local account lists. Head office found out about churn from the invoice.",
+      "A failed card, a broken turnstile and a class-booking bug were three separate tickets with three different owners.",
     change:
-      "A tenant per region, a shared customer record and renewal tasks that fire 90 days out. Churn conversations start early.",
+      "Support tickets attach to the member and the club. The advisor sees the billing history and the access log before replying.",
     metrics: [
-      { label: "Renewal visibility", value: "90 days" },
-      { label: "Cycle time", value: "−19%" },
-      { label: "Account coverage", value: "100%" },
+      { label: "First response", value: "−38%" },
+      { label: "Repeat tickets", value: "−22%" },
+      { label: "Member satisfaction", value: "4.7/5" },
     ],
-    modules: ["Contacts", "Tasks", "Automation"],
+    modules: ["Support", "Members", "Check-ins"],
   },
   {
-    name: "Vandelay Imports",
-    industry: "Import / Export",
-    seats: "40 seats",
+    name: "Studio Nine",
+    industry: "Boutique studio",
+    seats: "320 members",
     cover: "/media/raw-notes.jpg",
-    summary: "Small team, short cycle, no admin tax.",
+    summary: "Small studio, short sales cycle, no admin tax.",
     challenge:
-      "Two partners, one shared inbox and a CRM that took longer to update than the sale took to close.",
+      "Two coaches, one shared inbox and a CRM that took longer to update than the intro offer took to sell.",
     change:
-      "Fast capture, keyboard-first deal updates and a single board. Pipeline review is a five-minute Monday habit.",
+      "Fast prospect capture, keyboard-first contract updates and one board. The weekly review is a five-minute habit.",
     metrics: [
-      { label: "Admin per deal", value: "−52%" },
+      { label: "Admin per join", value: "−52%" },
       { label: "Response time", value: "1.4 hrs" },
       { label: "Adoption", value: "100%" },
     ],
-    modules: ["Leads", "Pipeline", "Inbox"],
+    modules: ["Prospects", "Memberships", "Plans"],
   },
 ];
 
 export const product = {
   badge: "The product",
-  headline: ["The revenue workspace", "teams actually open."],
+  headline: ["The member platform", "your front desk actually opens."],
   body:
-    "Every lead, deal, ticket and report on one record set. Install it, invite the team, and run your first pipeline in an afternoon. No migration project, no per-seat surprises.",
-  steps: ["Leads", "Pipeline", "Inbox", "Reports"],
+    "Every prospect, member, contract, check-in and ticket on one record set. Create your gym brand, add your clubs, invite staff, and run the first membership pipeline this afternoon. Demo data included.",
+  steps: ["Prospects", "Memberships", "Members", "Reports"],
   cta: { label: "Open the live demo", href: "/login" },
   video: "/media/hero-pipeline.mp4",
   poster: "/media/hero-poster.jpg",
@@ -241,16 +241,16 @@ export const product = {
 };
 
 export const contact = {
-  headline: "Let's make quota",
+  headline: "Let's fill the floor",
   email: brand.email,
   links: [
     { label: "Live demo", href: "/login" },
-    { label: "Create workspace", href: "/register" },
+    { label: "Create gym workspace", href: "/register" },
     { label: "Modules", href: "#services" },
     { label: "Customers", href: "#work" },
     { label: "Sign in", href: "/login" },
   ],
-  copyright: "© 2026 SalesFlow",
+  copyright: "© 2026 GymFlow",
 };
 
 export const nav = [

@@ -27,7 +27,7 @@ const publicUserSelect = {
 } as const;
 
 async function getOrgContext(userId: string) {
-  const m = await prisma.membership.findFirst({
+  const m = await prisma.teamMembership.findFirst({
     where: { userId, deletedAt: null },
     select: { organizationId: true, role: true },
   });
@@ -86,11 +86,11 @@ router.post(
       const org = await tx.organization.create({
         data: { name: organizationName, slug: organizationName.toLowerCase().replace(/\s+/g, "-"), status: "active" },
       });
-      await tx.membership.create({
+      await tx.teamMembership.create({
         data: { userId: user.id, organizationId: org.id, role: "ORG_OWNER" },
       });
       await tx.subscription.create({
-        data: { organizationId: org.id, plan: "FREE", status: "TRIAL" },
+        data: { organizationId: org.id, plan: "STARTER", status: "TRIAL" },
       });
       await tx.emailVerificationToken.create({
         data: { userId: user.id, token: require("crypto").randomBytes(32).toString("hex"), expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) },
@@ -227,7 +227,7 @@ router.get("/me", async (req, res) => {
     const decoded = verifyAccess(token);
     const user = await prisma.user.findFirst({ where: { id: decoded.userId, deletedAt: null }, select: publicUserSelect });
     if (!user) return err(res, "not_found", "User not found", 404);
-    const memberships = await prisma.membership.findMany({ where: { userId: user.id, deletedAt: null } });
+    const memberships = await prisma.teamMembership.findMany({ where: { userId: user.id, deletedAt: null } });
     return ok(res, { user, memberships });
   } catch {
     return err(res, "auth_invalid", "Invalid token", 401);

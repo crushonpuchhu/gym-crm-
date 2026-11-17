@@ -10,7 +10,7 @@ export default function WorkflowsPage() {
   const [items, setItems] = useState<WorkflowItem[] | null>(null);
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: "", trigger: "lead.created", actionType: "create_task", actionValue: "" });
+  const [form, setForm] = useState({ name: "", trigger: "prospect.created", actionType: "create_task", actionValue: "" });
   const [formError, setFormError] = useState("");
 
   const load = async () => {
@@ -35,7 +35,7 @@ export default function WorkflowsPage() {
         body: JSON.stringify({ name: form.name, trigger: form.trigger, condition: {}, actions: [{ type: form.actionType, value: form.actionValue }], isActive: true }),
       });
       setShowForm(false);
-      setForm({ name: "", trigger: "lead.created", actionType: "create_task", actionValue: "" });
+      setForm({ name: "", trigger: "prospect.created", actionType: "create_task", actionValue: "" });
       await load();
     } catch (err: any) {
       setFormError(err?.message || "Failed to create workflow");
@@ -59,27 +59,29 @@ export default function WorkflowsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-ink-900">Workflow automation</h1>
-          <p className="text-xs text-slate-500">Trigger → action rules executed by the background worker</p>
+          <p className="text-xs text-slate-500">Trigger → action rules for enquiries, renewals and win-backs</p>
         </div>
         <button className="btn-primary" onClick={() => setShowForm((v) => !v)}><Plus size={16} /> New workflow</button>
       </div>
       {showForm && (
         <form onSubmit={create} className="card grid grid-cols-2 gap-3 p-4">
-          <FormField label="Workflow name"><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="Website leads get a follow-up" /></FormField>
+          <FormField label="Workflow name"><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="Website enquiries get a follow-up" /></FormField>
           <FormField label="Trigger">
             <select className="input" value={form.trigger} onChange={(e) => setForm({ ...form, trigger: e.target.value })}>
-              <option value="lead.created">Lead created</option>
-              <option value="lead.status_changed">Lead status changed</option>
-              <option value="deal.created">Deal created</option>
-              <option value="deal.won">Deal won</option>
-              <option value="deal.lost">Deal lost</option>
-              <option value="ticket.created">Ticket created</option>
-              <option value="ticket.priority_changed">Ticket priority changed</option>
+              <option value="prospect.created">Prospect created</option>
+              <option value="prospect.toured">Club tour completed</option>
+              <option value="prospect.trial_ending">Trial ending soon</option>
+              <option value="membership.created">Membership created</option>
+              <option value="membership.won">Membership joined</option>
+              <option value="membership.cancelled">Membership cancelled</option>
+              <option value="checkin.inactive">No check-in for N days</option>
+              <option value="payment.failed">Payment failed</option>
+              <option value="ticket.created">Support ticket created</option>
               <option value="ticket.sla_approaching">Ticket SLA approaching</option>
               <option value="task.overdue">Task overdue</option>
             </select>
           </FormField>
-          <FormField label="Action"><select className="input" value={form.actionType} onChange={(e) => setForm({ ...form, actionType: e.target.value })}><option value="create_task">Create follow-up task</option><option value="send_email">Send email notification</option><option value="assign_owner">Assign to owner</option></select></FormField>
+          <FormField label="Action"><select className="input" value={form.actionType} onChange={(e) => setForm({ ...form, actionType: e.target.value })}><option value="create_task">Create follow-up task</option><option value="send_email">Send email notification</option><option value="assign_owner">Assign to an advisor</option><option value="notify">Notify the member</option></select></FormField>
           <FormField label="Action value"><input className="input" value={form.actionValue} onChange={(e) => setForm({ ...form, actionValue: e.target.value })} placeholder="e.g. Call within 24h" /></FormField>
           {formError && <p className="col-span-2 text-sm text-rose-600">{formError}</p>}
           <div className="col-span-2 flex justify-end gap-2">
@@ -88,7 +90,7 @@ export default function WorkflowsPage() {
           </div>
         </form>
       )}
-      {items.length === 0 && <EmptyState title="No workflows" hint="Automate routine follow-ups to increase conversion." />}
+      {items.length === 0 && <EmptyState title="No workflows" hint="Automate trial follow-ups, dunning and win-back campaigns." />}
       <div className="space-y-3">
         {items.map((w) => (
           <div key={w.id} className="card flex items-center gap-4 p-4">

@@ -1,8 +1,11 @@
 import { z } from "zod";
 
 export const createTicketSchema = z.object({
-  customerEmail: z.string().email(),
-  customerName: z.string().min(1).max(100),
+  reporterEmail: z.string().email(),
+  reporterName: z.string().min(1).max(100),
+  memberId: z.string().optional(),
+  locationId: z.string().optional(),
+  category: z.enum(["BILLING", "EQUIPMENT", "CLASS_BOOKING", "ACCESS", "CLEANLINESS", "STAFF", "OTHER"]).default("OTHER"),
   subject: z.string().min(1).max(200),
   description: z.string().min(1),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).default("MEDIUM"),

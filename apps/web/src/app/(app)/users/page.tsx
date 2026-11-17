@@ -5,7 +5,7 @@ import { LoadingSkeleton, ErrorState } from "@/components/ui";
 import { ShieldCheck, UserRound } from "lucide-react";
 
 interface OrgUser { id: string; name: string; email: string; role: string }
-const ROLES = ["ORG_OWNER", "ORG_ADMIN", "SALES_MANAGER", "SALES_REP", "SUPPORT_MANAGER", "SUPPORT_AGENT", "VIEWER"];
+const ROLES = ["ORG_OWNER", "ORG_ADMIN", "CLUB_MANAGER", "MEMBERSHIP_ADVISOR", "SUPPORT_MANAGER", "SUPPORT_AGENT", "VIEWER"];
 
 export default function UsersPage() {
   const [users, setUsers] = useState<OrgUser[] | null>(null);

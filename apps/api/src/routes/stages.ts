@@ -58,8 +58,8 @@ router.delete("/:id", async (req: AuthedRequest, res) => {
     where: { id: req.params.id, deletedAt: null, pipeline: { organizationId: req.orgId!, deletedAt: null } },
   });
   if (!stage) return err(res, "not_found", "Stage not found", 404);
-  const dealCount = await prisma.deal.count({ where: { stageId: req.params.id, organizationId: req.orgId!, deletedAt: null } });
-  if (dealCount > 0) return err(res, "conflict", "Stage has deals", 409);
+  const dealCount = await prisma.membership.count({ where: { stageId: req.params.id, organizationId: req.orgId!, deletedAt: null } });
+  if (dealCount > 0) return err(res, "conflict", "Stage has memberships", 409);
   await prisma.pipelineStage.update({ where: { id: req.params.id }, data: { deletedAt: new Date() } });
   await audit({ orgId: req.orgId, userId: req.userId, action: "stage.delete", entityType: "pipelineStage", entityId: req.params.id, ip: req.ip, userAgent: req.get("user-agent") });
   return ok(res, { deleted: true });

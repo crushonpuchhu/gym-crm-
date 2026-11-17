@@ -8,7 +8,7 @@ import { AuthedRequest } from "../middleware/auth";
 const router = Router();
 const taskSchema = z.object({
   title: z.string().min(1).max(200),
-  type: z.enum(["CALL", "MEETING", "EMAIL", "TASK", "NOTE", "STATUS_CHANGE", "ASSIGNMENT"]).default("TASK"),
+  type: z.enum(["CALL", "TOUR", "EMAIL", "TASK", "NOTE", "STATUS_CHANGE", "ASSIGNMENT", "CHECK_IN"]).default("TASK"),
   ownerId: z.string().uuid().optional(),
   dueAt: z.string().datetime().optional(),
   reminderAt: z.string().datetime().optional(),
@@ -21,7 +21,7 @@ const TASK_STATUSES = ["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"] as const
 
 /** Owners must be members of the current tenant. */
 async function isOrgMember(orgId: string, userId: string) {
-  const membership = await prisma.membership.findFirst({
+  const membership = await prisma.teamMembership.findFirst({
     where: { organizationId: orgId, userId, deletedAt: null },
     select: { id: true },
   });

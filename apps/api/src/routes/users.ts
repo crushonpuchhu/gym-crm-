@@ -20,8 +20,8 @@ const roleSchema = z.object({
     "SUPER_ADMIN",
     "ORG_OWNER",
     "ORG_ADMIN",
-    "SALES_MANAGER",
-    "SALES_REP",
+    "CLUB_MANAGER",
+    "MEMBERSHIP_ADVISOR",
     "SUPPORT_MANAGER",
     "SUPPORT_AGENT",
     "VIEWER",
@@ -30,13 +30,13 @@ const roleSchema = z.object({
 
 /** Members are addressed by user id from the client; resolve membership by user. */
 async function findMembership(orgId: string, id: string) {
-  return prisma.membership.findFirst({
+  return prisma.teamMembership.findFirst({
     where: { organizationId: orgId, deletedAt: null, userId: id },
   });
 }
 
 router.get("/", async (req: AuthedRequest, res) => {
-  const memberships = await prisma.membership.findMany({
+  const memberships = await prisma.teamMembership.findMany({
     where: { organizationId: req.orgId!, deletedAt: null },
     include: { user: { select: publicUserSelect } },
   });
@@ -44,7 +44,7 @@ router.get("/", async (req: AuthedRequest, res) => {
 });
 
 router.get("/:id", async (req: AuthedRequest, res) => {
-  const membership = await prisma.membership.findFirst({
+  const membership = await prisma.teamMembership.findFirst({
     where: { organizationId: req.orgId!, deletedAt: null, userId: req.params.id },
     include: { user: { select: publicUserSelect } },
   });
@@ -63,7 +63,7 @@ router.patch(
     if (membership.userId === req.userId) {
       return err(res, "forbidden", "Cannot change your own role", 403);
     }
-    const updated = await prisma.membership.update({
+    const updated = await prisma.teamMembership.update({
       where: { id: membership.id },
       data: { role: parsed.data.role },
     });
@@ -81,7 +81,7 @@ router.delete(
     if (membership.userId === req.userId) {
       return err(res, "forbidden", "Cannot deactivate yourself", 403);
     }
-    await prisma.membership.update({ where: { id: membership.id }, data: { deletedAt: new Date() } });
+    await prisma.teamMembership.update({ where: { id: membership.id }, data: { deletedAt: new Date() } });
     await audit({ orgId: req.orgId, userId: req.userId, action: "user.deactivate", entityType: "membership", entityId: membership.id, ip: req.ip, userAgent: req.get("user-agent") });
     return ok(res, { deactivated: true });
   },

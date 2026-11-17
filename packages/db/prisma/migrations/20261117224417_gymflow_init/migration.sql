@@ -1,14 +1,26 @@
 -- CreateEnum
-CREATE TYPE "RoleKey" AS ENUM ('SUPER_ADMIN', 'ORG_OWNER', 'ORG_ADMIN', 'SALES_MANAGER', 'SALES_REP', 'SUPPORT_MANAGER', 'SUPPORT_AGENT', 'VIEWER');
+CREATE TYPE "RoleKey" AS ENUM ('SUPER_ADMIN', 'ORG_OWNER', 'ORG_ADMIN', 'CLUB_MANAGER', 'MEMBERSHIP_ADVISOR', 'SUPPORT_MANAGER', 'SUPPORT_AGENT', 'VIEWER');
 
 -- CreateEnum
-CREATE TYPE "LeadStatus" AS ENUM ('NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'CONVERTED', 'DISQUALIFIED');
+CREATE TYPE "ProspectStatus" AS ENUM ('NEW', 'CONTACTED', 'TOUR_BOOKED', 'TOURED', 'TRIAL', 'NEGOTIATING', 'JOINED', 'LOST');
 
 -- CreateEnum
-CREATE TYPE "LeadSource" AS ENUM ('WEBSITE', 'REFERRAL', 'COLD_CALL', 'EMAIL', 'EVENT', 'OTHER');
+CREATE TYPE "ProspectSource" AS ENUM ('WALK_IN', 'WEBSITE', 'REFERRAL', 'INSTAGRAM', 'FACEBOOK', 'GOOGLE', 'EVENT', 'PARTNER', 'OTHER');
 
 -- CreateEnum
-CREATE TYPE "LeadPriority" AS ENUM ('LOW', 'MEDIUM', 'HIGH');
+CREATE TYPE "ProspectPriority" AS ENUM ('LOW', 'MEDIUM', 'HIGH');
+
+-- CreateEnum
+CREATE TYPE "MemberStatus" AS ENUM ('TRIAL', 'ACTIVE', 'PAUSED', 'CANCELLED', 'EXPIRED');
+
+-- CreateEnum
+CREATE TYPE "MembershipStatus" AS ENUM ('PENDING', 'ACTIVE', 'PAUSED', 'CANCELLED', 'EXPIRED');
+
+-- CreateEnum
+CREATE TYPE "BillingCycle" AS ENUM ('MONTHLY', 'QUARTERLY', 'ANNUAL', 'ONE_TIME');
+
+-- CreateEnum
+CREATE TYPE "CheckInMethod" AS ENUM ('QR', 'APP', 'FRONT_DESK');
 
 -- CreateEnum
 CREATE TYPE "TicketStatus" AS ENUM ('NEW', 'OPEN', 'PENDING', 'IN_PROGRESS', 'RESOLVED', 'CLOSED');
@@ -17,16 +29,19 @@ CREATE TYPE "TicketStatus" AS ENUM ('NEW', 'OPEN', 'PENDING', 'IN_PROGRESS', 'RE
 CREATE TYPE "TicketPriority" AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'URGENT');
 
 -- CreateEnum
+CREATE TYPE "TicketCategory" AS ENUM ('BILLING', 'EQUIPMENT', 'CLASS_BOOKING', 'ACCESS', 'CLEANLINESS', 'STAFF', 'OTHER');
+
+-- CreateEnum
 CREATE TYPE "TaskStatus" AS ENUM ('OPEN', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED');
 
 -- CreateEnum
-CREATE TYPE "ActivityType" AS ENUM ('CALL', 'MEETING', 'EMAIL', 'TASK', 'NOTE', 'STATUS_CHANGE', 'ASSIGNMENT');
+CREATE TYPE "ActivityType" AS ENUM ('CALL', 'TOUR', 'EMAIL', 'TASK', 'NOTE', 'STATUS_CHANGE', 'ASSIGNMENT', 'CHECK_IN');
 
 -- CreateEnum
-CREATE TYPE "NotificationType" AS ENUM ('ASSIGNMENT', 'FOLLOW_UP', 'DEAL_UPDATE', 'TICKET_UPDATE', 'SLA_WARNING', 'MENTION', 'SYSTEM');
+CREATE TYPE "NotificationType" AS ENUM ('ASSIGNMENT', 'FOLLOW_UP', 'MEMBERSHIP_UPDATE', 'TICKET_UPDATE', 'SLA_WARNING', 'MENTION', 'RENEWAL', 'SYSTEM');
 
 -- CreateEnum
-CREATE TYPE "SubscriptionPlan" AS ENUM ('FREE', 'PROFESSIONAL', 'ENTERPRISE');
+CREATE TYPE "SubscriptionPlan" AS ENUM ('STARTER', 'GROWTH', 'SCALE');
 
 -- CreateEnum
 CREATE TYPE "SubscriptionStatus" AS ENUM ('ACTIVE', 'PAST_DUE', 'CANCELLED', 'TRIAL', 'EXPIRED');
@@ -36,8 +51,10 @@ CREATE TABLE "Organization" (
     "id" UUID NOT NULL,
     "name" VARCHAR(200) NOT NULL,
     "slug" VARCHAR(100) NOT NULL,
-    "plan" "SubscriptionPlan" NOT NULL DEFAULT 'FREE',
+    "plan" "SubscriptionPlan" NOT NULL DEFAULT 'STARTER',
     "status" TEXT NOT NULL DEFAULT 'active',
+    "currency" VARCHAR(3) NOT NULL DEFAULT 'USD',
+    "timezone" VARCHAR(64) NOT NULL DEFAULT 'America/New_York',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
@@ -61,16 +78,16 @@ CREATE TABLE "User" (
 );
 
 -- CreateTable
-CREATE TABLE "Membership" (
+CREATE TABLE "TeamMembership" (
     "id" UUID NOT NULL,
     "userId" UUID NOT NULL,
     "organizationId" UUID NOT NULL,
-    "role" "RoleKey" NOT NULL DEFAULT 'SALES_REP',
+    "role" "RoleKey" NOT NULL DEFAULT 'MEMBERSHIP_ADVISOR',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
 
-    CONSTRAINT "Membership_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "TeamMembership_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -120,6 +137,18 @@ CREATE TABLE "EmailVerificationToken" (
 );
 
 -- CreateTable
+CREATE TABLE "RefreshToken" (
+    "id" UUID NOT NULL,
+    "userId" UUID NOT NULL,
+    "tokenId" VARCHAR(64) NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "revokedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "RefreshToken_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Invitation" (
     "id" UUID NOT NULL,
     "organizationId" UUID NOT NULL,
@@ -135,34 +164,98 @@ CREATE TABLE "Invitation" (
 );
 
 -- CreateTable
-CREATE TABLE "Lead" (
+CREATE TABLE "Location" (
     "id" UUID NOT NULL,
     "organizationId" UUID NOT NULL,
-    "ownerId" UUID NOT NULL,
-    "firstName" VARCHAR(100) NOT NULL,
-    "lastName" VARCHAR(100) NOT NULL,
-    "email" VARCHAR(255),
+    "name" VARCHAR(200) NOT NULL,
+    "address" VARCHAR(500),
+    "city" VARCHAR(100),
+    "region" VARCHAR(100),
     "phone" VARCHAR(50),
-    "company" VARCHAR(200),
-    "source" "LeadSource" NOT NULL DEFAULT 'WEBSITE',
-    "status" "LeadStatus" NOT NULL DEFAULT 'NEW',
-    "priority" "LeadPriority" NOT NULL DEFAULT 'MEDIUM',
-    "score" INTEGER NOT NULL DEFAULT 0,
-    "value" DECIMAL(12,2),
-    "followUpAt" TIMESTAMP(3),
-    "convertedToContactId" UUID,
-    "convertedToDealId" UUID,
+    "email" VARCHAR(255),
+    "capacity" INTEGER DEFAULT 0,
+    "opensAt" VARCHAR(5),
+    "closesAt" VARCHAR(5),
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
 
-    CONSTRAINT "Lead_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Location_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "LeadActivity" (
+CREATE TABLE "MembershipPlan" (
     "id" UUID NOT NULL,
-    "leadId" UUID NOT NULL,
+    "organizationId" UUID NOT NULL,
+    "name" VARCHAR(120) NOT NULL,
+    "description" VARCHAR(500),
+    "price" DECIMAL(10,2) NOT NULL,
+    "billingCycle" "BillingCycle" NOT NULL DEFAULT 'MONTHLY',
+    "durationDays" INTEGER NOT NULL DEFAULT 30,
+    "color" VARCHAR(20) NOT NULL DEFAULT '#4f46e5',
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "deletedAt" TIMESTAMP(3),
+
+    CONSTRAINT "MembershipPlan_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Member" (
+    "id" UUID NOT NULL,
+    "organizationId" UUID NOT NULL,
+    "ownerId" UUID NOT NULL,
+    "locationId" UUID,
+    "firstName" VARCHAR(100) NOT NULL,
+    "lastName" VARCHAR(100) NOT NULL,
+    "email" VARCHAR(255),
+    "phone" VARCHAR(50),
+    "dateOfBirth" TIMESTAMP(3),
+    "address" VARCHAR(500),
+    "emergencyContact" VARCHAR(200),
+    "fitnessGoal" VARCHAR(200),
+    "status" "MemberStatus" NOT NULL DEFAULT 'ACTIVE',
+    "joinedAt" TIMESTAMP(3),
+    "notes" VARCHAR(2000),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "deletedAt" TIMESTAMP(3),
+
+    CONSTRAINT "Member_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Prospect" (
+    "id" UUID NOT NULL,
+    "organizationId" UUID NOT NULL,
+    "ownerId" UUID NOT NULL,
+    "locationId" UUID,
+    "firstName" VARCHAR(100) NOT NULL,
+    "lastName" VARCHAR(100) NOT NULL,
+    "email" VARCHAR(255),
+    "phone" VARCHAR(50),
+    "source" "ProspectSource" NOT NULL DEFAULT 'WALK_IN',
+    "status" "ProspectStatus" NOT NULL DEFAULT 'NEW',
+    "priority" "ProspectPriority" NOT NULL DEFAULT 'MEDIUM',
+    "score" INTEGER NOT NULL DEFAULT 0,
+    "value" DECIMAL(12,2),
+    "fitnessGoal" VARCHAR(200),
+    "followUpAt" TIMESTAMP(3),
+    "convertedMemberId" UUID,
+    "convertedMembershipId" UUID,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "deletedAt" TIMESTAMP(3),
+
+    CONSTRAINT "Prospect_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ProspectActivity" (
+    "id" UUID NOT NULL,
+    "prospectId" UUID NOT NULL,
     "authorId" UUID NOT NULL,
     "type" "ActivityType" NOT NULL,
     "subject" VARCHAR(200) NOT NULL,
@@ -170,44 +263,7 @@ CREATE TABLE "LeadActivity" (
     "occurredAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "LeadActivity_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "Contact" (
-    "id" UUID NOT NULL,
-    "organizationId" UUID NOT NULL,
-    "ownerId" UUID NOT NULL,
-    "firstName" VARCHAR(100) NOT NULL,
-    "lastName" VARCHAR(100) NOT NULL,
-    "email" VARCHAR(255),
-    "phone" VARCHAR(50),
-    "position" VARCHAR(100),
-    "companyId" UUID,
-    "address" VARCHAR(500),
-    "notes" VARCHAR(2000),
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-    "deletedAt" TIMESTAMP(3),
-
-    CONSTRAINT "Contact_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "Company" (
-    "id" UUID NOT NULL,
-    "organizationId" UUID NOT NULL,
-    "name" VARCHAR(200) NOT NULL,
-    "industry" VARCHAR(100),
-    "website" VARCHAR(200),
-    "employees" INTEGER,
-    "revenueRange" VARCHAR(50),
-    "address" VARCHAR(500),
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-    "deletedAt" TIMESTAMP(3),
-
-    CONSTRAINT "Company_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "ProspectActivity_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -235,44 +291,66 @@ CREATE TABLE "PipelineStage" (
     "isLost" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "deletedAt" TIMESTAMP(3),
 
     CONSTRAINT "PipelineStage_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "Deal" (
+CREATE TABLE "Membership" (
     "id" UUID NOT NULL,
     "organizationId" UUID NOT NULL,
     "pipelineId" UUID NOT NULL,
     "stageId" UUID NOT NULL,
     "ownerId" UUID NOT NULL,
-    "contactId" UUID,
-    "companyId" UUID,
+    "memberId" UUID,
+    "planId" UUID,
+    "locationId" UUID,
     "title" VARCHAR(200) NOT NULL,
     "value" DECIMAL(12,2) NOT NULL,
+    "monthlyValue" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "billingCycle" "BillingCycle" NOT NULL DEFAULT 'MONTHLY',
+    "status" "MembershipStatus" NOT NULL DEFAULT 'PENDING',
     "probability" INTEGER NOT NULL DEFAULT 0,
     "expectedCloseAt" TIMESTAMP(3),
+    "startDate" TIMESTAMP(3),
+    "endDate" TIMESTAMP(3),
     "wonAt" TIMESTAMP(3),
     "lostAt" TIMESTAMP(3),
+    "cancelledAt" TIMESTAMP(3),
     "wonReason" VARCHAR(500),
-    "lostReason" VARCHAR(500),
+    "cancelReason" VARCHAR(500),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
 
-    CONSTRAINT "Deal_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Membership_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "DealStageHistory" (
+CREATE TABLE "MembershipStageHistory" (
     "id" UUID NOT NULL,
-    "dealId" UUID NOT NULL,
+    "membershipId" UUID NOT NULL,
     "fromStageId" UUID,
     "toStageId" UUID NOT NULL,
     "changedById" UUID NOT NULL,
     "changedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "DealStageHistory_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "MembershipStageHistory_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "CheckIn" (
+    "id" UUID NOT NULL,
+    "organizationId" UUID NOT NULL,
+    "memberId" UUID NOT NULL,
+    "locationId" UUID NOT NULL,
+    "method" "CheckInMethod" NOT NULL DEFAULT 'FRONT_DESK',
+    "checkedInAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "durationMinutes" INTEGER,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "CheckIn_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -280,9 +358,12 @@ CREATE TABLE "Ticket" (
     "id" UUID NOT NULL,
     "organizationId" UUID NOT NULL,
     "ticketNumber" VARCHAR(50) NOT NULL,
-    "customerEmail" VARCHAR(255) NOT NULL,
-    "customerName" VARCHAR(100) NOT NULL,
+    "reporterName" VARCHAR(100) NOT NULL,
+    "reporterEmail" VARCHAR(255) NOT NULL,
+    "memberId" UUID,
+    "locationId" UUID,
     "ownerId" UUID,
+    "category" "TicketCategory" NOT NULL DEFAULT 'OTHER',
     "priority" "TicketPriority" NOT NULL DEFAULT 'MEDIUM',
     "status" "TicketStatus" NOT NULL DEFAULT 'NEW',
     "subject" VARCHAR(200) NOT NULL,
@@ -408,11 +489,11 @@ CREATE TABLE "WorkflowExecution" (
 CREATE TABLE "Subscription" (
     "id" UUID NOT NULL,
     "organizationId" UUID NOT NULL,
-    "plan" "SubscriptionPlan" NOT NULL DEFAULT 'FREE',
+    "plan" "SubscriptionPlan" NOT NULL DEFAULT 'STARTER',
     "status" "SubscriptionStatus" NOT NULL DEFAULT 'TRIAL',
     "currentPeriodEnd" TIMESTAMP(3),
-    "quotaLeads" INTEGER NOT NULL DEFAULT 1000,
-    "quotaUsers" INTEGER NOT NULL DEFAULT 5,
+    "quotaMembers" INTEGER NOT NULL DEFAULT 500,
+    "quotaStaff" INTEGER NOT NULL DEFAULT 5,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -449,13 +530,13 @@ CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 CREATE INDEX "User_deletedAt_idx" ON "User"("deletedAt");
 
 -- CreateIndex
-CREATE INDEX "Membership_organizationId_idx" ON "Membership"("organizationId");
+CREATE INDEX "TeamMembership_organizationId_idx" ON "TeamMembership"("organizationId");
 
 -- CreateIndex
-CREATE INDEX "Membership_deletedAt_idx" ON "Membership"("deletedAt");
+CREATE INDEX "TeamMembership_deletedAt_idx" ON "TeamMembership"("deletedAt");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Membership_userId_organizationId_key" ON "Membership"("userId", "organizationId");
+CREATE UNIQUE INDEX "TeamMembership_userId_organizationId_key" ON "TeamMembership"("userId", "organizationId");
 
 -- CreateIndex
 CREATE INDEX "Role_organizationId_idx" ON "Role"("organizationId");
@@ -482,6 +563,15 @@ CREATE INDEX "EmailVerificationToken_userId_idx" ON "EmailVerificationToken"("us
 CREATE INDEX "EmailVerificationToken_token_idx" ON "EmailVerificationToken"("token");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "RefreshToken_tokenId_key" ON "RefreshToken"("tokenId");
+
+-- CreateIndex
+CREATE INDEX "RefreshToken_userId_idx" ON "RefreshToken"("userId");
+
+-- CreateIndex
+CREATE INDEX "RefreshToken_expiresAt_idx" ON "RefreshToken"("expiresAt");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Invitation_token_key" ON "Invitation"("token");
 
 -- CreateIndex
@@ -491,46 +581,58 @@ CREATE INDEX "Invitation_organizationId_idx" ON "Invitation"("organizationId");
 CREATE INDEX "Invitation_token_idx" ON "Invitation"("token");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Lead_convertedToContactId_key" ON "Lead"("convertedToContactId");
+CREATE INDEX "Location_organizationId_idx" ON "Location"("organizationId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Lead_convertedToDealId_key" ON "Lead"("convertedToDealId");
+CREATE INDEX "Location_deletedAt_idx" ON "Location"("deletedAt");
 
 -- CreateIndex
-CREATE INDEX "Lead_organizationId_idx" ON "Lead"("organizationId");
+CREATE INDEX "MembershipPlan_organizationId_idx" ON "MembershipPlan"("organizationId");
 
 -- CreateIndex
-CREATE INDEX "Lead_ownerId_idx" ON "Lead"("ownerId");
+CREATE INDEX "MembershipPlan_deletedAt_idx" ON "MembershipPlan"("deletedAt");
 
 -- CreateIndex
-CREATE INDEX "Lead_status_idx" ON "Lead"("status");
+CREATE INDEX "Member_organizationId_idx" ON "Member"("organizationId");
 
 -- CreateIndex
-CREATE INDEX "Lead_deletedAt_idx" ON "Lead"("deletedAt");
+CREATE INDEX "Member_ownerId_idx" ON "Member"("ownerId");
 
 -- CreateIndex
-CREATE INDEX "LeadActivity_leadId_idx" ON "LeadActivity"("leadId");
+CREATE INDEX "Member_locationId_idx" ON "Member"("locationId");
 
 -- CreateIndex
-CREATE INDEX "LeadActivity_authorId_idx" ON "LeadActivity"("authorId");
+CREATE INDEX "Member_status_idx" ON "Member"("status");
 
 -- CreateIndex
-CREATE INDEX "Contact_organizationId_idx" ON "Contact"("organizationId");
+CREATE INDEX "Member_deletedAt_idx" ON "Member"("deletedAt");
 
 -- CreateIndex
-CREATE INDEX "Contact_ownerId_idx" ON "Contact"("ownerId");
+CREATE UNIQUE INDEX "Prospect_convertedMemberId_key" ON "Prospect"("convertedMemberId");
 
 -- CreateIndex
-CREATE INDEX "Contact_companyId_idx" ON "Contact"("companyId");
+CREATE UNIQUE INDEX "Prospect_convertedMembershipId_key" ON "Prospect"("convertedMembershipId");
 
 -- CreateIndex
-CREATE INDEX "Contact_deletedAt_idx" ON "Contact"("deletedAt");
+CREATE INDEX "Prospect_organizationId_idx" ON "Prospect"("organizationId");
 
 -- CreateIndex
-CREATE INDEX "Company_organizationId_idx" ON "Company"("organizationId");
+CREATE INDEX "Prospect_ownerId_idx" ON "Prospect"("ownerId");
 
 -- CreateIndex
-CREATE INDEX "Company_deletedAt_idx" ON "Company"("deletedAt");
+CREATE INDEX "Prospect_locationId_idx" ON "Prospect"("locationId");
+
+-- CreateIndex
+CREATE INDEX "Prospect_status_idx" ON "Prospect"("status");
+
+-- CreateIndex
+CREATE INDEX "Prospect_deletedAt_idx" ON "Prospect"("deletedAt");
+
+-- CreateIndex
+CREATE INDEX "ProspectActivity_prospectId_idx" ON "ProspectActivity"("prospectId");
+
+-- CreateIndex
+CREATE INDEX "ProspectActivity_authorId_idx" ON "ProspectActivity"("authorId");
 
 -- CreateIndex
 CREATE INDEX "Pipeline_organizationId_idx" ON "Pipeline"("organizationId");
@@ -545,25 +647,40 @@ CREATE INDEX "PipelineStage_pipelineId_idx" ON "PipelineStage"("pipelineId");
 CREATE INDEX "PipelineStage_key_idx" ON "PipelineStage"("key");
 
 -- CreateIndex
-CREATE INDEX "Deal_organizationId_idx" ON "Deal"("organizationId");
+CREATE INDEX "Membership_organizationId_idx" ON "Membership"("organizationId");
 
 -- CreateIndex
-CREATE INDEX "Deal_pipelineId_idx" ON "Deal"("pipelineId");
+CREATE INDEX "Membership_pipelineId_idx" ON "Membership"("pipelineId");
 
 -- CreateIndex
-CREATE INDEX "Deal_stageId_idx" ON "Deal"("stageId");
+CREATE INDEX "Membership_stageId_idx" ON "Membership"("stageId");
 
 -- CreateIndex
-CREATE INDEX "Deal_ownerId_idx" ON "Deal"("ownerId");
+CREATE INDEX "Membership_ownerId_idx" ON "Membership"("ownerId");
 
 -- CreateIndex
-CREATE INDEX "Deal_deletedAt_idx" ON "Deal"("deletedAt");
+CREATE INDEX "Membership_memberId_idx" ON "Membership"("memberId");
 
 -- CreateIndex
-CREATE INDEX "DealStageHistory_dealId_idx" ON "DealStageHistory"("dealId");
+CREATE INDEX "Membership_status_idx" ON "Membership"("status");
 
 -- CreateIndex
-CREATE INDEX "DealStageHistory_changedAt_idx" ON "DealStageHistory"("changedAt");
+CREATE INDEX "Membership_deletedAt_idx" ON "Membership"("deletedAt");
+
+-- CreateIndex
+CREATE INDEX "MembershipStageHistory_membershipId_idx" ON "MembershipStageHistory"("membershipId");
+
+-- CreateIndex
+CREATE INDEX "MembershipStageHistory_changedAt_idx" ON "MembershipStageHistory"("changedAt");
+
+-- CreateIndex
+CREATE INDEX "CheckIn_organizationId_checkedInAt_idx" ON "CheckIn"("organizationId", "checkedInAt");
+
+-- CreateIndex
+CREATE INDEX "CheckIn_memberId_idx" ON "CheckIn"("memberId");
+
+-- CreateIndex
+CREATE INDEX "CheckIn_locationId_idx" ON "CheckIn"("locationId");
 
 -- CreateIndex
 CREATE INDEX "Ticket_organizationId_idx" ON "Ticket"("organizationId");
@@ -579,6 +696,9 @@ CREATE INDEX "Ticket_status_idx" ON "Ticket"("status");
 
 -- CreateIndex
 CREATE INDEX "Ticket_deletedAt_idx" ON "Ticket"("deletedAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Ticket_organizationId_ticketNumber_key" ON "Ticket"("organizationId", "ticketNumber");
 
 -- CreateIndex
 CREATE INDEX "TicketComment_ticketId_idx" ON "TicketComment"("ticketId");
@@ -647,10 +767,10 @@ CREATE INDEX "AuditLog_entityType_entityId_idx" ON "AuditLog"("entityType", "ent
 CREATE INDEX "AuditLog_createdAt_idx" ON "AuditLog"("createdAt");
 
 -- AddForeignKey
-ALTER TABLE "Membership" ADD CONSTRAINT "Membership_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "TeamMembership" ADD CONSTRAINT "TeamMembership_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Membership" ADD CONSTRAINT "Membership_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "TeamMembership" ADD CONSTRAINT "TeamMembership_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Role" ADD CONSTRAINT "Role_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -662,40 +782,49 @@ ALTER TABLE "PasswordResetToken" ADD CONSTRAINT "PasswordResetToken_userId_fkey"
 ALTER TABLE "EmailVerificationToken" ADD CONSTRAINT "EmailVerificationToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "RefreshToken" ADD CONSTRAINT "RefreshToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Invitation" ADD CONSTRAINT "Invitation_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Invitation" ADD CONSTRAINT "Invitation_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Lead" ADD CONSTRAINT "Lead_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Location" ADD CONSTRAINT "Location_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Lead" ADD CONSTRAINT "Lead_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "MembershipPlan" ADD CONSTRAINT "MembershipPlan_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Lead" ADD CONSTRAINT "Lead_convertedToContactId_fkey" FOREIGN KEY ("convertedToContactId") REFERENCES "Contact"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Member" ADD CONSTRAINT "Member_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Lead" ADD CONSTRAINT "Lead_convertedToDealId_fkey" FOREIGN KEY ("convertedToDealId") REFERENCES "Deal"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Member" ADD CONSTRAINT "Member_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "LeadActivity" ADD CONSTRAINT "LeadActivity_leadId_fkey" FOREIGN KEY ("leadId") REFERENCES "Lead"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Member" ADD CONSTRAINT "Member_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "Location"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "LeadActivity" ADD CONSTRAINT "LeadActivity_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Prospect" ADD CONSTRAINT "Prospect_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Contact" ADD CONSTRAINT "Contact_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Prospect" ADD CONSTRAINT "Prospect_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Contact" ADD CONSTRAINT "Contact_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Prospect" ADD CONSTRAINT "Prospect_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "Location"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Contact" ADD CONSTRAINT "Contact_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Prospect" ADD CONSTRAINT "Prospect_convertedMemberId_fkey" FOREIGN KEY ("convertedMemberId") REFERENCES "Member"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Company" ADD CONSTRAINT "Company_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Prospect" ADD CONSTRAINT "Prospect_convertedMembershipId_fkey" FOREIGN KEY ("convertedMembershipId") REFERENCES "Membership"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ProspectActivity" ADD CONSTRAINT "ProspectActivity_prospectId_fkey" FOREIGN KEY ("prospectId") REFERENCES "Prospect"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ProspectActivity" ADD CONSTRAINT "ProspectActivity_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Pipeline" ADD CONSTRAINT "Pipeline_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -704,37 +833,55 @@ ALTER TABLE "Pipeline" ADD CONSTRAINT "Pipeline_organizationId_fkey" FOREIGN KEY
 ALTER TABLE "PipelineStage" ADD CONSTRAINT "PipelineStage_pipelineId_fkey" FOREIGN KEY ("pipelineId") REFERENCES "Pipeline"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Deal" ADD CONSTRAINT "Deal_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Membership" ADD CONSTRAINT "Membership_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Deal" ADD CONSTRAINT "Deal_pipelineId_fkey" FOREIGN KEY ("pipelineId") REFERENCES "Pipeline"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Membership" ADD CONSTRAINT "Membership_pipelineId_fkey" FOREIGN KEY ("pipelineId") REFERENCES "Pipeline"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Deal" ADD CONSTRAINT "Deal_stageId_fkey" FOREIGN KEY ("stageId") REFERENCES "PipelineStage"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Membership" ADD CONSTRAINT "Membership_stageId_fkey" FOREIGN KEY ("stageId") REFERENCES "PipelineStage"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Deal" ADD CONSTRAINT "Deal_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Membership" ADD CONSTRAINT "Membership_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Deal" ADD CONSTRAINT "Deal_contactId_fkey" FOREIGN KEY ("contactId") REFERENCES "Contact"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Membership" ADD CONSTRAINT "Membership_memberId_fkey" FOREIGN KEY ("memberId") REFERENCES "Member"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Deal" ADD CONSTRAINT "Deal_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Membership" ADD CONSTRAINT "Membership_planId_fkey" FOREIGN KEY ("planId") REFERENCES "MembershipPlan"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "DealStageHistory" ADD CONSTRAINT "DealStageHistory_dealId_fkey" FOREIGN KEY ("dealId") REFERENCES "Deal"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Membership" ADD CONSTRAINT "Membership_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "Location"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "DealStageHistory" ADD CONSTRAINT "DealStageHistory_fromStageId_fkey" FOREIGN KEY ("fromStageId") REFERENCES "PipelineStage"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "MembershipStageHistory" ADD CONSTRAINT "MembershipStageHistory_membershipId_fkey" FOREIGN KEY ("membershipId") REFERENCES "Membership"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "DealStageHistory" ADD CONSTRAINT "DealStageHistory_toStageId_fkey" FOREIGN KEY ("toStageId") REFERENCES "PipelineStage"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "MembershipStageHistory" ADD CONSTRAINT "MembershipStageHistory_fromStageId_fkey" FOREIGN KEY ("fromStageId") REFERENCES "PipelineStage"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "DealStageHistory" ADD CONSTRAINT "DealStageHistory_changedById_fkey" FOREIGN KEY ("changedById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "MembershipStageHistory" ADD CONSTRAINT "MembershipStageHistory_toStageId_fkey" FOREIGN KEY ("toStageId") REFERENCES "PipelineStage"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "MembershipStageHistory" ADD CONSTRAINT "MembershipStageHistory_changedById_fkey" FOREIGN KEY ("changedById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CheckIn" ADD CONSTRAINT "CheckIn_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CheckIn" ADD CONSTRAINT "CheckIn_memberId_fkey" FOREIGN KEY ("memberId") REFERENCES "Member"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CheckIn" ADD CONSTRAINT "CheckIn_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "Location"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Ticket" ADD CONSTRAINT "Ticket_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Ticket" ADD CONSTRAINT "Ticket_memberId_fkey" FOREIGN KEY ("memberId") REFERENCES "Member"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Ticket" ADD CONSTRAINT "Ticket_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "Location"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Ticket" ADD CONSTRAINT "Ticket_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;

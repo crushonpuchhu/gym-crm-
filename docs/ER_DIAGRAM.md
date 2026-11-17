@@ -1,11 +1,13 @@
-# ER DIAGRAM — SALESFLOW CRM (text)
+# ER DIAGRAM — GYMFLOW MEMBER CRM (text)
 
-Organization 1 —* Membership —* User (many-to-many via Membership)
-Organization 1 —* Lead
-Organization 1 —* Contact
-Organization 1 —* Company
+Organization (gym brand) 1 —* TeamMembership —* User (many-to-many via TeamMembership)
+Organization 1 —* Location (club)
+Organization 1 —* MembershipPlan
+Organization 1 —* Prospect
+Organization 1 —* Member
+Organization 1 —* Membership
+Organization 1 —* CheckIn
 Organization 1 —* Pipeline
-Organization 1 —* Deal
 Organization 1 —* Ticket
 Organization 1 —* Task
 Organization 1 —* Activity
@@ -16,29 +18,42 @@ Organization 1 —* AuditLog
 Organization 1 —* Invitation
 Organization 1 —* Role
 
-User 1 —* LeadActivity (author)
+Location 1 —* Member
+
+User 1 —* Prospect (owner)
+User 1 —* Member (owner)
+User 1 —* Membership (owner)
+User 1 —* ProspectActivity (author)
+User 1 —* Ticket (owner)
 User 1 —* TicketComment (author)
-User 1 —* DealStageHistory (changedBy)
+User 1 —* MembershipStageHistory (changedBy)
 User 1 —* Task (owner)
 User 1 —* Activity (actor)
 User 1 —* Notification (recipient)
 User 1 —* AuditLog (actor)
 User 1 —* Invitation (createdBy)
 
-Lead 1 —* LeadActivity
-Lead *—1 Contact (converted)
-Lead *—1 Deal (converted)
-Contact 1 —* Deal
-Company 1 —* Deal
-Company 1 —* Contact
+MembershipPlan 1 —* Membership
+Member 1 —* Membership
+Member 1 —* CheckIn
+Member 1 —* Ticket
+Member 1 —* Prospect (converted member, 1:1)
+
+Prospect 1 —* ProspectActivity
+Prospect 1 —0..1 Member (converted)
+Prospect 1 —0..1 Membership (converted)
+
 Pipeline 1 —* PipelineStage
-Pipeline 1 —* Deal
-PipelineStage 1 —* Deal
-Deal 1 —* DealStageHistory
+Pipeline 1 —* Membership
+PipelineStage 1 —* Membership
+Stage 1 —* MembershipStageHistory (from/to)
+Membership 1 —* MembershipStageHistory
+
 Ticket 1 —* TicketComment
 TicketComment 1 —* TicketAttachment
-Task *—* polymorphic link (relatedEntityType/relatedEntityId) to Lead/Contact/Company/Deal/Ticket
+
+Task *—* polymorphic link (relatedEntityType/relatedEntityId) to Prospect/Member/Membership/Ticket
 
 Workflow 1 —* WorkflowExecution
 
-Soft delete: deletedAt nullable on all tenant entities.
+Soft delete: `deletedAt` nullable on all tenant entities.

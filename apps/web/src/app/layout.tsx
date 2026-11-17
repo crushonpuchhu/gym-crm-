@@ -4,8 +4,8 @@ import { ReactNode } from "react";
 import { AuthProvider } from "@/lib/auth";
 
 export const metadata: Metadata = {
-  title: "SalesFlow CRM",
-  description: "Customer relationship and sales management platform",
+  title: "GymFlow — Member CRM for gym brands",
+  description: "Multi-tenant gym CRM for prospects, members, membership plans, check-ins, support and retention reporting.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

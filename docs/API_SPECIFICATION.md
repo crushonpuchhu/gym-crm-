@@ -1,129 +1,127 @@
-# API SPECIFICATION — SALESFLOW CRM
+# API SPECIFICATION — GYMFLOW MEMBER CRM
 
 ## Base
-/v1 mounted at /api/v1. JSON envelope: { data, error, meta }. Errors: { code, message, field? }.
+`/api/v1`. Success envelope: `{ success: true, data }`. Error envelope: `{ success: false, error: { code, message, field? } }`.
 
-## Auth — /api/v1/auth
-POST /register — body { email, password, name, organizationName } -> creates user + org + membership Owner
-POST /login — body { email, password } -> access token + refresh cookie
-POST /logout — clear refresh cookie
-POST /refresh — rotate access token from refresh cookie
-POST /forgot-password — body { email } -> reset token emailed
-POST /reset-password — body { token, password }
-POST /verify-email — body { token }
-GET /me — current user + memberships
+All routes except public auth routes require a bearer access token. Tenant scope comes from the JWT, never from the request body.
 
-## Organizations — /api/v1/organizations
-GET /list — user's organizations
-GET /:id — profile
-PATCH /:id — settings
-POST /:id/invitations — body { email, role }
-POST /invitations/:token/accept
+## Auth — `/api/v1/auth`
+- `POST /register` — body `{ email, password, name, organizationName }` → user + gym brand + ORG_OWNER team membership
+- `POST /login` — body `{ email, password }` → access token + refresh cookie
+- `POST /logout` — clear refresh cookie
+- `POST /refresh` — rotate access token from refresh cookie
+- `POST /forgot-password` — body `{ email }`
+- `POST /reset-password` — body `{ token, password }`
+- `POST /verify-email` — body `{ token }`
+- `GET /me` — current user + team memberships
 
-## Users — /api/v1/users
-GET / — list org users (pagination)
-GET /:id — profile
-PATCH /:id — update
-DELETE /:id — deactivate
-POST /:id/role — change role (owner/admin only)
+## Organizations — `/api/v1/organizations`
+- `GET /list` — organizations for the current user
+- `GET /:id` — brand profile
+- `PATCH /:id` — settings (name, currency, timezone, status)
+- `POST /:id/invitations` — body `{ email, role }` (requires `manage_users`)
 
-## Roles & Permissions — /api/v1/roles
-GET / — list roles
-POST / — create role
-PATCH /:id — update permissions
-GET /permissions — list all permissions
+## Staff — `/api/v1/users`
+- `GET /` — staff list with role (returns an array)
+- `GET /:id` — one staff member with role
+- `PATCH /:id/role` — body `{ role }` (requires `manage_users`; cannot change self)
+- `DELETE /:id` — deactivate staff membership (requires `manage_users`; cannot deactivate self)
 
-## Leads — /api/v1/leads
-GET / — list with search/filter/sort/pagination
-POST / — create
-GET /:id — detail
-PATCH /:id — update
-DELETE /:id — soft delete
-POST /bulk — bulk update/delete
-POST /:id/convert — convert to contact+company+deal
-POST /import — CSV import
+## Roles — `/api/v1/roles`
+- `GET /` — roles in this brand
+- `POST /` — create role
+- `PATCH /:id` — update permissions
 
-## Contacts — /api/v1/contacts
-GET / — list
-POST / — create
-GET /:id — detail
-PATCH /:id — update
-DELETE /:id — soft delete
+## Clubs — `/api/v1/locations`
+- `GET /` — list with member/check-in/contract counts (pagination)
+- `POST /` — create club (name, address, city, region, phone, capacity, opensAt, closesAt)
+- `GET /:id` — detail with counts
+- `PATCH /:id` — update
+- `DELETE /:id` — archive (409 while members are assigned)
 
-## Companies — /api/v1/companies
-GET / — list
-POST / — create
-GET /:id — detail
-PATCH /:id — update
-DELETE /:id — soft delete
+## Plans — `/api/v1/plans`
+- `GET /` — plan catalogue with contract counts
+- `POST /` — create `{ name, description, price, billingCycle, durationDays, color }`
+- `PATCH /:id` — update or pause
+- `DELETE /:id` — archive (409 while open memberships use it)
 
-## Pipelines — /api/v1/pipelines
-GET / — list org pipelines
-POST / — create
-PATCH /:id — update stages/order
-DELETE /:id — delete (if no deals)
+## Prospects — `/api/v1/prospects`
+- `GET /` — list with `search`, `status`, `locationId`, `ownerId`, `sortBy`, `sortOrder`, pagination
+- `POST /` — create (validated by `createProspectSchema`)
+- `GET /:id` — detail + activity trail
+- `PATCH /:id` — update
+- `DELETE /:id` — soft delete
+- `POST /:id/convert` — create member + opening membership, mark JOINED (409 if already converted)
+- `POST /import` — body `{ csv }`, header `firstname,lastname,email,phone,source,priority,value,fitnessgoal`
 
-## Stages — /api/v1/stages
-GET /:pipelineId — list
-POST / — create
-PATCH /:id — update
-DELETE /:id — delete
+## Members — `/api/v1/members`
+- `GET /` — list with `search`, `status`, `locationId`, pagination; includes latest contract
+- `POST /` — create member
+- `GET /:id` — detail + contracts + recent check-ins + tickets
+- `PATCH /:id` — update
+- `DELETE /:id` — archive and mark CANCELLED
 
-## Deals — /api/v1/deals
-GET / — list
-POST / — create
-GET /:id — detail + stage history
-PATCH /:id — update (incl. stage move -> creates DealStageHistory)
-DELETE /:id — soft delete
+## Memberships — `/api/v1/memberships`
+- `GET /` — list with `pipelineId`, `stageId`, `ownerId`, `status`, `search`; returns `weightedRevenue`
+- `POST /` — create contract (pipeline, stage, member, plan, club, title, value, monthlyValue, cycle)
+- `GET /:id` — detail + stage history
+- `PATCH /:id` — update; a stage move writes history, the won stage sets `wonAt` + ACTIVE status and activates the member, the lost stage cancels the contract
+- `DELETE /:id` — soft delete
 
-## Tickets — /api/v1/tickets
-GET / — list with filters
-POST / — create (generates ticket number)
-GET /:id — detail + comments
-PATCH /:id — update
-POST /:id/comments — add comment (internal or customer-visible)
-POST /:id/assign — assign owner
-POST /:id/escalate — escalate priority/SLA
+## Check-ins — `/api/v1/checkins`
+- `GET /` — list with `date`, `sinceDays`, `locationId`, `memberId`, `limit`; returns `todayCount`
+- `POST /` — log a check-in `{ memberId, locationId?, method, durationMinutes? }` (409 for CANCELLED/EXPIRED members)
 
-## Tasks — /api/v1/tasks
-GET / — list
-POST / — create
-PATCH /:id — update/complete
-DELETE /:id — delete
+## Pipelines — `/api/v1/pipelines`
+- `GET /`, `POST /`, `PATCH /:id`, `DELETE /:id` (delete blocked while contracts exist)
 
-## Activities — /api/v1/activities
-GET / — list (timeline) filterable by entity
-POST / — log activity
+## Stages — `/api/v1/stages`
+- `GET /:pipelineId`, `POST /`, `PATCH /:id`, `DELETE /:id` (delete blocked while contracts exist)
 
-## Notifications — /api/v1/notifications
-GET / — list unread/read
-PATCH /:id/read — mark read
-PATCH /read-all — mark all read
+## Tickets — `/api/v1/tickets`
+- `GET /` — filters: status, priority, category, owner, search; internal comments filtered by permission
+- `POST /` — create `{ reporterEmail, reporterName, memberId?, locationId?, category, subject, description, priority }`; numbers are `GF-nnnn`
+- `GET /:id` — detail + comments
+- `PATCH /:id` — status, priority, category, owner
+- `POST /:id/comments` — body `{ body, isInternal }`
+- `POST /:id/assign` — body `{ ownerId }`
 
-## Workflows — /api/v1/workflows
-GET / — list
-POST / — create
-PATCH /:id — toggle active
-POST /:id/test — dry-run execution
-GET /:id/executions — execution log
+## Tasks — `/api/v1/tasks`
+- `GET /`, `POST /`, `PATCH /:id`, `DELETE /:id`
 
-## Reports — /api/v1/reports
-GET /dashboard — summary stats
-GET /sales-by-month — grouped
-GET /leads-by-source — grouped
-GET /conversion — rate
-GET /salesperson-performance — per user
-GET /pipeline — stage distribution + weighted revenue
-GET /ticket-resolution — time stats
-GET /export/:report — CSV
+## Activities — `/api/v1/activities`
+- `GET /` — timeline, filterable by entity
+- `POST /` — log an activity (CALL, TOUR, EMAIL, TASK, NOTE, STATUS_CHANGE, ASSIGNMENT, CHECK_IN)
 
-## Subscriptions — /api/v1/subscriptions
-GET / — current plan + entitlements
-POST /:plan — upgrade/downgrade (test mode)
+## Notifications — `/api/v1/notifications`
+- `GET /` — list with read state
+- `PATCH /:id/read` — mark one read
+- `PATCH /read-all` — mark all read
 
-## Admin — /api/v1/admin
-GET /audit-logs — audit trail
-GET /health — health check
+## Workflows — `/api/v1/workflows`
+- `GET /` — rules with condition and actions
+- `POST /` — create
+- `PATCH /:id` — update or toggle
+- `POST /:id/test` — dry-run
+- `GET /:id/executions` — execution log
+
+## Reports — `/api/v1/reports`
+- `GET /dashboard` — totalProspects, totalMembers, activeMembers, trialMembers, totalMemberships, totalTickets, openTickets, checkInsToday, mrr
+- `GET /joins-by-month` — signed contract value per month (last 12 months)
+- `GET /prospects-by-source` — grouped counts
+- `GET /conversion` — `{ total, converted, rate }` for prospects
+- `GET /checkins-by-day?days=30` — attendance series (local calendar days)
+- `GET /retention` — active, paused, cancelled, trial, expired, churnRate
+- `GET /staff-performance` — MRR and contract value per advisor
+- `GET /export/:report` — CSV for `prospects`, `memberships`, `members`, `tickets`, `checkins`
+
+## Subscriptions — `/api/v1/subscriptions`
+- `GET /` — current plan, status, `quotaMembers`, `quotaStaff`, period end
+- `POST /:plan` — switch STARTER / GROWTH / SCALE, resets quotas and syncs the organization plan (test mode)
+
+## Admin — `/api/v1/admin`
+- `GET /audit-logs` — audit trail (permission-gated)
+- `GET /health` — health check
 
 ## Auth middleware
-All routes except auth public routes require valid access token. Tenant scope enforced by membership lookup. Role/permission checked per endpoint.
+`authenticate` validates the access token, `resolveTenant` resolves the organization, `requireOrg` rejects a missing tenant, `requirePermission` gates administration endpoints. Tenant scope is enforced by membership lookup; role checks apply to staff, organization administration, audit logs and internal ticket comments.

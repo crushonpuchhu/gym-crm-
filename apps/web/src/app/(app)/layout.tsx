@@ -1,23 +1,26 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ReactNode, Suspense, useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import {
-  LayoutDashboard, Users, UserRound, Building2, KanbanSquare, TicketCheck,
+  LayoutDashboard, UserPlus, Users, MapPin, KanbanSquare, TicketCheck,
   CheckSquare, BarChart3, Workflow, Settings, Bell, CreditCard, LogOut, Search, Menu, X,
+  Dumbbell, ClipboardList, QrCode,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/leads", label: "Leads", icon: UserRound },
-  { href: "/contacts", label: "Contacts", icon: Users },
-  { href: "/companies", label: "Companies", icon: Building2 },
-  { href: "/deals", label: "Pipeline", icon: KanbanSquare },
-  { href: "/tickets", label: "Tickets", icon: TicketCheck },
+  { href: "/prospects", label: "Prospects", icon: UserPlus },
+  { href: "/members", label: "Members", icon: Users },
+  { href: "/memberships", label: "Memberships", icon: KanbanSquare },
+  { href: "/plans", label: "Plans", icon: ClipboardList },
+  { href: "/checkins", label: "Check-ins", icon: QrCode },
+  { href: "/locations", label: "Clubs", icon: MapPin },
+  { href: "/tickets", label: "Support", icon: TicketCheck },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/reports", label: "Reports", icon: BarChart3 },
-  { href: "/workflows", label: "Workflows", icon: Workflow },
+  { href: "/workflows", label: "Automations", icon: Workflow },
 ];
 
 export default function AppLayout({ children }: { children: ReactNode }) {
@@ -43,16 +46,16 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       {sidebarOpen && <button className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} aria-label="Close menu" />}
       <aside className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-ink-950 text-slate-300 transition-transform lg:static lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="flex h-16 items-center gap-2 border-b border-white/10 px-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-600 text-sm font-black text-white">SF</div>
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-600 text-white"><Dumbbell size={18} /></div>
           <div>
-            <p className="text-sm font-bold text-white">SalesFlow</p>
-            <p className="text-[10px] uppercase tracking-widest text-slate-500">CRM Suite</p>
+            <p className="text-sm font-bold text-white">GymFlow</p>
+            <p className="text-[10px] uppercase tracking-widest text-slate-500">Member CRM</p>
           </div>
           <button className="ml-auto rounded p-1 text-slate-500 hover:text-white lg:hidden" onClick={() => setSidebarOpen(false)} aria-label="Close menu"><X size={18} /></button>
         </div>
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           {NAV.map(({ href, label, icon: Icon }) => {
-            const active = pathname.startsWith(href);
+            const active = pathname === href || pathname.startsWith(`${href}/`);
             return (
               <Link
                 key={href}
@@ -85,7 +88,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <button className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="Open menu"><Menu size={20} /></button>
           <div className="relative hidden w-96 md:block">
             <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input className="input !pl-9" placeholder="Search records, people, deals…" aria-label="Search" />
+            <input className="input !pl-9" placeholder="Search members, prospects, contracts…" aria-label="Search" />
           </div>
           <div className="ml-auto flex items-center gap-2">
             <Link href="/notifications" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="Notifications">

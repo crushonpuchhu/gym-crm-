@@ -33,7 +33,7 @@ export const env = {
   SMTP_PASS: process.env.SMTP_PASS || "",
   EMAIL_FROM: process.env.EMAIL_FROM || "noreply@example.com",
   S3_ENDPOINT: process.env.S3_ENDPOINT || "",
-  S3_BUCKET: process.env.S3_BUCKET || "salesflow",
+  S3_BUCKET: process.env.S3_BUCKET || "gymflow",
   S3_ACCESS_KEY: process.env.S3_ACCESS_KEY || "",
   S3_SECRET_KEY: process.env.S3_SECRET_KEY || "",
   S3_REGION: process.env.S3_REGION || "us-east-1",

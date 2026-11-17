@@ -13,12 +13,14 @@ import authRoutes from "./routes/auth";
 import orgRoutes from "./routes/organizations";
 import userRoutes from "./routes/users";
 import roleRoutes from "./routes/roles";
-import leadRoutes from "./routes/leads";
-import contactRoutes from "./routes/contacts";
-import companyRoutes from "./routes/companies";
+import prospectRoutes from "./routes/prospects";
+import memberRoutes from "./routes/members";
+import locationRoutes from "./routes/locations";
+import planRoutes from "./routes/plans";
+import checkInRoutes from "./routes/checkins";
 import pipelineRoutes from "./routes/pipelines";
 import stageRoutes from "./routes/stages";
-import dealRoutes from "./routes/deals";
+import membershipRoutes from "./routes/memberships";
 import ticketRoutes from "./routes/tickets";
 import taskRoutes from "./routes/tasks";
 import activityRoutes from "./routes/activities";
@@ -45,7 +47,7 @@ export function createApp() {
 
   app.use(rateLimit({ windowMs: 60 * 1000, max: 100 }));
 
-  app.get("/health", (_req, res) => res.json({ ok: true, service: "salesflow-api" }));
+  app.get("/health", (_req, res) => res.json({ ok: true, service: "gymflow-api" }));
 
   app.use(auditMiddleware);
 
@@ -53,12 +55,14 @@ export function createApp() {
   app.use("/api/v1/organizations", authenticate, resolveTenant, requireOrg, orgRoutes);
   app.use("/api/v1/users", authenticate, resolveTenant, requireOrg, userRoutes);
   app.use("/api/v1/roles", authenticate, resolveTenant, requireOrg, roleRoutes);
-  app.use("/api/v1/leads", authenticate, resolveTenant, requireOrg, leadRoutes);
-  app.use("/api/v1/contacts", authenticate, resolveTenant, requireOrg, contactRoutes);
-  app.use("/api/v1/companies", authenticate, resolveTenant, requireOrg, companyRoutes);
+  app.use("/api/v1/prospects", authenticate, resolveTenant, requireOrg, prospectRoutes);
+  app.use("/api/v1/members", authenticate, resolveTenant, requireOrg, memberRoutes);
+  app.use("/api/v1/locations", authenticate, resolveTenant, requireOrg, locationRoutes);
+  app.use("/api/v1/plans", authenticate, resolveTenant, requireOrg, planRoutes);
+  app.use("/api/v1/checkins", authenticate, resolveTenant, requireOrg, checkInRoutes);
   app.use("/api/v1/pipelines", authenticate, resolveTenant, requireOrg, pipelineRoutes);
   app.use("/api/v1/stages", authenticate, resolveTenant, requireOrg, stageRoutes);
-  app.use("/api/v1/deals", authenticate, resolveTenant, requireOrg, dealRoutes);
+  app.use("/api/v1/memberships", authenticate, resolveTenant, requireOrg, membershipRoutes);
   app.use("/api/v1/tickets", authenticate, resolveTenant, requireOrg, ticketRoutes);
   app.use("/api/v1/tasks", authenticate, resolveTenant, requireOrg, taskRoutes);
   app.use("/api/v1/activities", authenticate, resolveTenant, requireOrg, activityRoutes);

@@ -54,7 +54,7 @@ export default function NotificationsPage() {
         </div>
         {data.unread > 0 && <button className="btn-secondary !text-xs" onClick={() => void markAllRead()}><CheckCheck size={14} /> Mark all read</button>}
       </div>
-      {data.items.length === 0 && <EmptyState title="No notifications" hint="Assignments, SLA warnings and deal updates will appear here." />}
+      {data.items.length === 0 && <EmptyState title="No notifications" hint="Trial reminders, renewals and ticket updates will appear here." />}
       <div className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
         {data.items.map((n) => (
           <button key={n.id} onClick={() => void markRead(n.id)} className={`flex w-full items-start gap-3 p-4 text-left transition hover:bg-slate-50 ${n.readAt ? "opacity-60" : "bg-accent-50/40"}`}>

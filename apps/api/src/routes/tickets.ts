@@ -7,8 +7,11 @@ import { AuthedRequest, hasPermission } from "../middleware/auth";
 
 const router = Router();
 const ticketSchema = z.object({
-  customerEmail: z.string().email(),
-  customerName: z.string().min(1).max(100),
+  reporterEmail: z.string().email(),
+  reporterName: z.string().min(1).max(100),
+  memberId: z.string().uuid().optional(),
+  locationId: z.string().uuid().optional(),
+  category: z.enum(["BILLING", "EQUIPMENT", "CLASS_BOOKING", "ACCESS", "CLEANLINESS", "STAFF", "OTHER"]).default("OTHER"),
   subject: z.string().min(1).max(200),
   description: z.string().min(1),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).default("MEDIUM"),
@@ -24,7 +27,7 @@ function canSeeInternalComments(req: AuthedRequest) {
 
 /** Ticket owners must be members of the current tenant. */
 async function isOrgMember(orgId: string, userId: string) {
-  const membership = await prisma.membership.findFirst({
+  const membership = await prisma.teamMembership.findFirst({
     where: { organizationId: orgId, userId, deletedAt: null },
     select: { id: true },
   });
@@ -57,6 +60,8 @@ router.get("/", async (req: AuthedRequest, res) => {
       orderBy: { updatedAt: "desc" },
       include: {
         owner: { select: { id: true, name: true } },
+        member: { select: { id: true, firstName: true, lastName: true } },
+        location: { select: { id: true, name: true } },
         comments: {
           take: 5,
           orderBy: { createdAt: "desc" },
@@ -85,8 +90,9 @@ router.post("/", async (req: AuthedRequest, res) => {
     try {
       ticket = await prisma.ticket.create({
         data: {
-          organizationId: req.orgId!, ticketNumber: `TK-${counter}`,
-          customerEmail: data.customerEmail, customerName: data.customerName,
+          organizationId: req.orgId!, ticketNumber: `GF-${counter}`,
+          reporterEmail: data.reporterEmail, reporterName: data.reporterName,
+          memberId: data.memberId ?? null, locationId: data.locationId ?? null, category: data.category,
           subject: data.subject, description: data.description, priority: data.priority.toUpperCase() as any,
           slaDueAt: new Date(Date.now() + 4 * 60 * 60 * 1000),
         },
@@ -111,6 +117,8 @@ router.get("/:id", async (req: AuthedRequest, res) => {
     where: { id: req.params.id, organizationId: req.orgId!, deletedAt: null },
     include: {
       owner: { select: { id: true, name: true } },
+      member: { select: { id: true, firstName: true, lastName: true } },
+      location: { select: { id: true, name: true } },
       comments: {
         orderBy: { createdAt: "asc" },
         where: includeInternal ? {} : { isInternal: false },
@@ -129,6 +137,7 @@ router.patch("/:id", async (req: AuthedRequest, res) => {
     subject: z.string().max(200).optional(),
     description: z.string().optional(),
     priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional(),
+    category: z.enum(["BILLING", "EQUIPMENT", "CLASS_BOOKING", "ACCESS", "CLEANLINESS", "STAFF", "OTHER"]).optional(),
     status: z.enum(["NEW", "OPEN", "PENDING", "IN_PROGRESS", "RESOLVED", "CLOSED"]).optional(),
     ownerId: z.string().optional(),
   }).parse(req.body);

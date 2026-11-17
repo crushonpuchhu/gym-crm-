@@ -1,10 +1,10 @@
-# IMPLEMENTATION PLAN — SALESFLOW CRM
+# IMPLEMENTATION PLAN — GYMFLOW MEMBER CRM
 
 Order (dependency-aware):
 1. Foundation: repo init, package installs, prisma schema, docker-compose, .env.example
 2. Auth + orgs + membership + RBAC (middleware, registration, login, invites)
-3. Leads + contacts + companies (CRUD, search, filter, pagination, conversion)
-4. Pipelines + deals + kanban (stages, stage history, weighted revenue)
+3. Locations (clubs) + membership plans + prospects (CRUD, search, filter, pagination, conversion, CSV import)
+4. Members + memberships + kanban (stages, stage history, weighted value, activation)
 5. Tickets + comments + attachments + SLA
 6. Tasks + activities + notifications
 7. Workflows + background jobs (BullMQ) + email

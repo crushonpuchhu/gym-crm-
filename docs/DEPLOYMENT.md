@@ -1,4 +1,4 @@
-# DEPLOYMENT — SALESFLOW CRM
+# DEPLOYMENT — GYMFLOW MEMBER CRM
 
 ## Local development
 1. `cp .env.example .env` and fill values (placeholders ok for dev).

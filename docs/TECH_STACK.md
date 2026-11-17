@@ -1,4 +1,4 @@
-# TECH STACK — SALESFLOW CRM
+# TECH STACK — GYMFLOW MEMBER CRM
 
 ## Monorepo (single git repo)
 - apps/web — Next.js App Router, React 18, TypeScript, Tailwind CSS, shadcn/ui, Lucide, React Hook Form, Zod, TanStack Table, Recharts, @dnd-kit (Kanban), date-fns
