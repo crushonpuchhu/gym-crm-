@@ -1,16 +1,21 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { FormField } from "@/components/ui";
 import { Dumbbell } from "lucide-react";
 
 export default function RegisterPage() {
-  const { register } = useAuth();
+  const { register, user, loading } = useAuth();
   const router = useRouter();
   const [form, setForm] = useState({ email: "", password: "", name: "", organizationName: "" });
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // Already signed in: registration would create a second brand for the same account.
+  useEffect(() => {
+    if (!loading && user) router.replace("/dashboard");
+  }, [loading, user, router]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +31,14 @@ export default function RegisterPage() {
     }
   };
 
+  if (loading || user) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-ink-950">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-accent-400" />
+      </main>
+    );
+  }
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-ink-950 px-4">
       <div className="w-full max-w-md">
@@ -33,8 +46,7 @@ export default function RegisterPage() {
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-accent-600 text-white"><Dumbbell size={22} /></div>
           <h1 className="text-2xl font-bold text-white">GymFlow</h1>
           <p className="mt-1 text-sm text-slate-400">Set up your gym brand workspace</p>
-        </div>
-        <form onSubmit={submit} className="card space-y-4 p-6">
+        </div>        <form onSubmit={submit} className="card space-y-4 p-6">
           <FormField label="Gym brand name">
             <input className="input" value={form.organizationName} onChange={(e) => setForm({ ...form, organizationName: e.target.value })} required />
           </FormField>

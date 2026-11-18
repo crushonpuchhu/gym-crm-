@@ -957,6 +957,26 @@
   cursor: progress;
 }
 
+.sfx .si-submit-link {
+  display: block;
+  margin-top: 16px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.sfx .si-foot button {
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.sfx .si-foot button:hover {
+  color: var(--ink);
+}
+
 .sfx .si-demo {
   display: flex;
   flex-wrap: wrap;

@@ -1,5 +1,8 @@
 // In-memory access token; refresh via httpOnly cookie through the Next rewrite proxy.
 let accessToken: string | null = null;
+// One in-flight refresh at a time: rotating concurrently would revoke the token
+// the other caller is about to use and sign the user out at random.
+let refreshInFlight: Promise<string | null> | null = null;
 
 export function setAccessToken(token: string | null) {
   accessToken = token;
@@ -8,16 +11,29 @@ export function getAccessToken() {
   return accessToken;
 }
 
-async function refreshSession(): Promise<string | null> {
-  const res = await fetch("/api/v1/auth/refresh", {
-    method: "POST",
-    credentials: "include",
-  });
-  if (!res.ok) return null;
-  const body = await res.json();
-  const token = body?.data?.accessToken ?? null;
-  accessToken = token;
-  return token;
+export function refreshAccessToken(): Promise<string | null> {
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = (async () => {
+    try {
+      const res = await fetch("/api/v1/auth/refresh", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        accessToken = null;
+        return null;
+      }
+      const body = await res.json();
+      accessToken = body?.data?.accessToken ?? null;
+      return accessToken;
+    } catch {
+      accessToken = null;
+      return null;
+    } finally {
+      refreshInFlight = null;
+    }
+  })();
+  return refreshInFlight;
 }
 
 export async function api<T = any>(path: string, init: RequestInit = {}): Promise<T> {
@@ -33,9 +49,15 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
     });
 
   let res = await doFetch(accessToken);
-  if (res.status === 401) {
-    const token = await refreshSession();
-    if (!token) throw new ApiError("session_expired", "Session expired", 401);
+  // Auth routes report their own 401 (bad credentials, expired refresh token).
+  // Retrying them would replace the real message with "Session expired".
+  const isAuthRoute = path.startsWith("/auth/");
+  if (res.status === 401 && !isAuthRoute) {
+    const token = await refreshAccessToken();
+    if (!token) {
+      if (typeof window !== "undefined") window.dispatchEvent(new Event("auth:expired"));
+      throw new ApiError("session_expired", "Session expired", 401);
+    }
     res = await doFetch(token);
   }
   const body = await res.json().catch(() => ({}));

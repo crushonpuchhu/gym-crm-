@@ -2,7 +2,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { EmptyState, ErrorState, LoadingSkeleton, Modal, FormField, PaginationBar, StatusBadge } from "@/components/ui";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Search, Trash2 } from "lucide-react";
 
 interface Member {
   id: string;
@@ -22,6 +22,7 @@ export default function MembersPage() {
   const [data, setData] = useState<MemberList | null>(null);
   const [locations, setLocations] = useState<Location[]>([]);
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", locationId: "", status: "ACTIVE", fitnessGoal: "" });
@@ -30,7 +31,9 @@ export default function MembersPage() {
   const load = async () => {
     setError("");
     try {
-      setData(await api<MemberList>(`/members?page=${page}&limit=15`));
+      const params = new URLSearchParams({ page: String(page), limit: "15" });
+      if (search.trim()) params.set("search", search.trim());
+      setData(await api<MemberList>(`/members?${params.toString()}`));
     } catch (err: any) {
       setError(err?.message || "Failed to load members");
     }
@@ -38,7 +41,24 @@ export default function MembersPage() {
 
   useEffect(() => {
     void load();
-  }, [page]);
+  }, [page, search]);
+
+  // The shell search submits ?search=; pick it up without useSearchParams
+  // so this page can stay statically prerendered.
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search).get("search");
+    if (query) setSearch(query);
+  }, []);
+
+  // The shell search may push while this page is already mounted.
+  useEffect(() => {
+    const onSearch = (event: Event) => {
+      setPage(1);
+      setSearch((event as CustomEvent<string>).detail ?? "");
+    };
+    window.addEventListener("gym:search", onSearch);
+    return () => window.removeEventListener("gym:search", onSearch);
+  }, []);
 
   useEffect(() => {
     api<{ items: Location[] }>("/locations?limit=50").then((r) => setLocations(r.items)).catch(() => undefined);
@@ -74,11 +94,23 @@ export default function MembersPage() {
           <h1 className="text-xl font-bold text-ink-900">Members</h1>
           <p className="text-xs text-slate-500">{data?.total ?? 0} people on record</p>
         </div>
-        <button className="btn-primary" onClick={() => setModalOpen(true)}><Plus size={16} /> New member</button>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              className="input !w-64 !pl-9"
+              placeholder="Search name, email, phone…"
+              value={search}
+              onChange={(e) => { setPage(1); setSearch(e.target.value); }}
+              aria-label="Search the member list"
+            />
+          </div>
+          <button className="btn-primary" onClick={() => setModalOpen(true)}><Plus size={16} /> New member</button>
+        </div>
       </div>
       {error && <ErrorState message={error} onRetry={() => void load()} />}
       {!data && !error && <LoadingSkeleton />}
-      {data && data.items.length === 0 && <EmptyState title="No members yet" hint="Create the first member or convert a prospect." />}
+      {data && data.items.length === 0 && (search ? <EmptyState title="No matches" hint={`Nobody matches “${search}”. Try a different name, email or phone.`} /> : <EmptyState title="No members yet" hint="Create the first member or convert a prospect." />)}
       {data && data.items.length > 0 && (
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">

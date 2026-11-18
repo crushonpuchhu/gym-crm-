@@ -28,10 +28,18 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
   }, [loading, user, router]);
+
+  /** Clear the session, then leave the app shell so Back cannot reopen it. */
+  const signOut = async () => {
+    await logout();
+    router.replace("/login");
+    router.refresh();
+  };
 
   if (loading || !user) {
     return (
@@ -78,7 +86,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <Link href="/subscriptions" className="mb-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 hover:bg-white/5 hover:text-slate-100">
             <CreditCard size={17} /> Subscription
           </Link>
-          <button onClick={() => void logout()} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-rose-300 hover:bg-rose-500/10">
+          <button onClick={() => void signOut()} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-rose-300 hover:bg-rose-500/10">
             <LogOut size={17} /> Sign out
           </button>
         </div>
@@ -88,7 +96,20 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <button className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="Open menu"><Menu size={20} /></button>
           <div className="relative hidden w-96 md:block">
             <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input className="input !pl-9" placeholder="Search members, prospects, contracts…" aria-label="Search" />
+            <input
+              className="input !pl-9"
+              placeholder="Search members…"
+              aria-label="Search members"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return;
+                const query = search.trim();
+                // Same-route pushes keep the page mounted, so tell it directly.
+                window.dispatchEvent(new CustomEvent("gym:search", { detail: query }));
+                router.push(query ? `/members?search=${encodeURIComponent(query)}` : "/members");
+              }}
+            />
           </div>
           <div className="ml-auto flex items-center gap-2">
             <Link href="/notifications" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="Notifications">

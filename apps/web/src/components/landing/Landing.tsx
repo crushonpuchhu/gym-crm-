@@ -251,8 +251,14 @@ const DEMO_ACCOUNTS = [
   { email: "rep@demo.com", label: "Advisor" },
 ];
 
-function SignInPanel({ revealed }: { revealed: boolean }) {
-  const { login } = useAuth();
+function SignInPanel({
+  revealed,
+  user,
+}: {
+  revealed: boolean;
+  user: { name: string; email: string } | null;
+}) {
+  const { login, logout } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -283,60 +289,81 @@ function SignInPanel({ revealed }: { revealed: boolean }) {
     <div className={`si-inner${revealed ? " si-on" : ""}`}>
       <div className="si-card">
         <span className="si-kick mono">Members' entrance</span>
-        <h2 className="si-title">Sign in</h2>
-        <p className="si-sub">
-          Same account as the app. Pick a demo role to look around the seeded brand.
-        </p>
-        <form className="si-form" onSubmit={submit}>
-          <label className="si-field">
-            <span className="si-label mono">Email</span>
-            <input
-              className="si-in"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="you@yourgym.com"
-              autoComplete="email"
-              required
-            />
-          </label>
-          <label className="si-field">
-            <span className="si-label mono">Password</span>
-            <input
-              className="si-in"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="••••••••"
-              autoComplete="current-password"
-              required
-            />
-          </label>
-          {error ? (
-            <p className="si-err" role="alert">
-              {error}
+        {user ? (
+          <>
+            <h2 className="si-title">You're in</h2>
+            <p className="si-sub">
+              Signed in as <b>{user.name}</b>. Open the workspace to pick up where you
+              left off.
             </p>
-          ) : null}
-          <button className="si-submit" type="submit" disabled={busy}>
-            {busy ? "Signing in…" : "Open the workspace"}
-          </button>
-        </form>
-        <div className="si-demo">
-          <span className="si-label mono">Demo · password123</span>
-          {DEMO_ACCOUNTS.map((account) => (
-            <button
-              key={account.email}
-              type="button"
-              onClick={() => useDemo(account.email)}
-            >
-              {account.label}
-            </button>
-          ))}
-        </div>
-        <div className="si-foot">
-          <a href="/register">Create a gym workspace</a>
-          <a href="/login">Full sign-in page</a>
-        </div>
+            <a className="si-submit si-submit-link" href="/dashboard">
+              Open the workspace
+            </a>
+            <div className="si-foot">
+              <button type="button" onClick={() => void logout()}>
+                Sign out
+              </button>
+              <a href="/login">Switch account</a>
+            </div>
+          </>
+        ) : (
+          <>
+            <h2 className="si-title">Sign in</h2>
+            <p className="si-sub">
+              Same account as the app. Pick a demo role to look around the seeded brand.
+            </p>
+            <form className="si-form" onSubmit={submit}>
+              <label className="si-field">
+                <span className="si-label mono">Email</span>
+                <input
+                  className="si-in"
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="you@yourgym.com"
+                  autoComplete="email"
+                  required
+                />
+              </label>
+              <label className="si-field">
+                <span className="si-label mono">Password</span>
+                <input
+                  className="si-in"
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  required
+                />
+              </label>
+              {error ? (
+                <p className="si-err" role="alert">
+                  {error}
+                </p>
+              ) : null}
+              <button className="si-submit" type="submit" disabled={busy}>
+                {busy ? "Signing in…" : "Open the workspace"}
+              </button>
+            </form>
+            <div className="si-demo">
+              <span className="si-label mono">Demo · password123</span>
+              {DEMO_ACCOUNTS.map((account) => (
+                <button
+                  key={account.email}
+                  type="button"
+                  onClick={() => useDemo(account.email)}
+                >
+                  {account.label}
+                </button>
+              ))}
+            </div>
+            <div className="si-foot">
+              <a href="/register">Create a gym workspace</a>
+              <a href="/login">Full sign-in page</a>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -345,6 +372,7 @@ function SignInPanel({ revealed }: { revealed: boolean }) {
 export default function Landing() {
   const rootRef = useRef<HTMLDivElement>(null);
   const worldRef = useRef<World | null>(null);
+  const { user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [active, setActive] = useState<number | null>(null);
@@ -420,8 +448,8 @@ export default function Landing() {
             <span>{brand.second}</span>
           </button>
           <div className="bar-right">
-            <a className="bar-link mono" href="/login">
-              Sign in
+            <a className="bar-link mono" href={user ? "/dashboard" : "/login"}>
+              {user ? "Dashboard" : "Sign in"}
             </a>
             <button
               className="burger"
@@ -982,7 +1010,7 @@ export default function Landing() {
               data-f="0,0"
             >
               <div className="si-wrap">
-                <SignInPanel revealed={signinRevealed} />
+                <SignInPanel revealed={signinRevealed} user={user} />
               </div>
             </div>
           </section>
@@ -1032,7 +1060,9 @@ export default function Landing() {
               </ol>
             </nav>
             <div className="menu-sub mono">
-              <a href="/login">Sign in</a>
+              <a href={user ? "/dashboard" : "/login"}>
+                {user ? "Dashboard" : "Sign in"}
+              </a>
               <a href="/register">Create workspace</a>
               <a href={contact.email ? `mailto:${contact.email}` : "#contact"}>
                 {contact.email}

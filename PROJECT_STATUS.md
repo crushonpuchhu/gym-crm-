@@ -50,6 +50,14 @@ Fresh single migration: `20261117224417_gymflow_init`. Old CRM migrations were r
 - BullMQ workers (email, SLA warnings, reminders) — Redis wired, workers not built
 - Socket.IO real-time — out of scope this milestone
 
+## Session handling
+- `/login` and `/register` redirect to `/dashboard` when a session already exists, so Back cannot reopen the form.
+- The landing header, menu and end-of-page card switch to `Dashboard` / “You're in” when signed in.
+- Sign out revokes the refresh cookie first (4s timeout), then clears local state, replaces the route and refreshes the RSC cache.
+- `(app)` layout guards every page; a 401 that cannot refresh dispatches `auth:expired` and clears the session.
+- Refresh is single-flight: concurrent 401s share one token rotation instead of revoking each other.
+- `pageshow` with `persisted` re-checks the session, covering browser back/forward cache.
+
 ## Known limitations
 - Class scheduling, door/turnstile hardware and direct-debit mandates are out of scope; check-ins are logged through the API.
 - Audit middleware logs `POST undefined` for unrouted paths (cosmetic).

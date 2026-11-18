@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from "react";
-import { api, setAccessToken } from "./api";
+import { api, refreshAccessToken, setAccessToken } from "./api";
 
 export interface SessionUser {
   id: string;
@@ -28,18 +28,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch("/api/v1/auth/refresh", { method: "POST", credentials: "include" });
-      if (!res.ok) {
+      const token = await refreshAccessToken();
+      if (!token) {
+        setAccessToken(null);
         setUser(null);
+        setOrganizationId(null);
         return;
       }
-      const body = await res.json();
-      setAccessToken(body?.data?.accessToken ?? null);
       const me = await api<{ user: SessionUser; memberships: Array<{ organizationId: string }> }>("/auth/me");
       setUser(me.user);
       setOrganizationId(me.memberships?.[0]?.organizationId ?? null);
     } catch {
       setUser(null);
+      setOrganizationId(null);
       setAccessToken(null);
     } finally {
       setLoading(false);
@@ -48,6 +49,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void refresh();
+  }, [refresh]);
+
+  // A protected call failed and the refresh token is gone: drop the session.
+  useEffect(() => {
+    const clear = () => {
+      setAccessToken(null);
+      setUser(null);
+      setOrganizationId(null);
+    };
+    // Back/forward cache restores the old DOM without re-running the provider.
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) void refresh();
+    };
+    window.addEventListener("auth:expired", clear);
+    window.addEventListener("pageshow", onPageShow);
+    return () => {
+      window.removeEventListener("auth:expired", clear);
+      window.removeEventListener("pageshow", onPageShow);
+    };
   }, [refresh]);
 
   const login = useCallback(async (email: string, password: string) => {
@@ -74,10 +94,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    await api("/auth/logout", { method: "POST" }).catch(() => undefined);
-    setAccessToken(null);
-    setUser(null);
-    setOrganizationId(null);
+    // Revoke the refresh cookie first; if the request hangs, give up after 4s.
+    // Clearing local state before that would leave a valid cookie behind, so a
+    // reload would silently sign the user back in.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+    try {
+      await api("/auth/logout", { method: "POST", signal: controller.signal });
+    } catch {
+      // Network failure: the local session still ends.
+    } finally {
+      clearTimeout(timer);
+      setAccessToken(null);
+      setUser(null);
+      setOrganizationId(null);
+    }
   }, []);
 
   return (

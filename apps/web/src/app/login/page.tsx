@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { FormField } from "@/components/ui";
@@ -13,12 +13,17 @@ const DEMO_ACCOUNTS = [
 ];
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, user, loading } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // Already signed in (deep link or browser Back): go straight to the app.
+  useEffect(() => {
+    if (!loading && user) router.replace("/dashboard");
+  }, [loading, user, router]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +44,14 @@ export default function LoginPage() {
     setPassword("password123");
     setError("");
   };
+
+  if (loading || user) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-ink-950">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-accent-400" />
+      </main>
+    );
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-ink-950 px-4 py-10">
