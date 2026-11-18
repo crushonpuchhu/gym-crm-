@@ -839,6 +839,176 @@
   color: var(--ink);
 }
 
+/* Sign-in panel ---------------------------------------------------------- */
+
+.sfx .si-wrap {
+  width: min(430px, 88vw);
+}
+
+.sfx .si-inner {
+  opacity: 0;
+  transform: translateY(30px) scale(0.985);
+  transition:
+    opacity 0.72s cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 0.72s cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: opacity, transform;
+}
+
+.sfx .si-inner.si-on {
+  opacity: 1;
+  transform: none;
+}
+
+.sfx .si-card {
+  border: 1px solid var(--hair);
+  border-radius: 18px;
+  background: var(--bg);
+  padding: clamp(20px, 2.4vw, 28px);
+  box-shadow: 0 30px 70px -40px rgba(11, 18, 32, 0.55);
+}
+
+.sfx .si-kick {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sfx .si-title {
+  margin: 6px 0 0;
+  font-family: var(--display-bold);
+  font-size: clamp(28px, 3vw, 36px);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.sfx .si-sub {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.sfx .si-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.sfx .si-field {
+  display: grid;
+  gap: 4px;
+}
+
+.sfx .si-label {
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sfx .si-in {
+  width: 100%;
+  border: 1px solid var(--hair);
+  border-radius: 10px;
+  background: transparent;
+  padding: 10px 12px;
+  font: 13px/1.4 var(--body);
+  color: var(--ink);
+  transition: border-color 0.2s ease;
+}
+
+.sfx .si-in::placeholder {
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+.sfx .si-in:focus-visible {
+  outline: 2px solid var(--line);
+  outline-offset: 1px;
+  border-color: var(--line);
+}
+
+.sfx .si-err {
+  font-size: 11.5px;
+  color: #b91c1c;
+}
+
+.sfx .si-submit {
+  border: 0;
+  border-radius: 10px;
+  background: var(--line);
+  color: #fff;
+  padding: 11px 14px;
+  font: 600 13px/1.2 var(--body);
+  cursor: pointer;
+  transition: filter 0.2s ease;
+}
+
+.sfx .si-submit:hover {
+  filter: brightness(1.08);
+}
+
+.sfx .si-submit:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.sfx .si-demo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.sfx .si-demo button {
+  border: 1px solid var(--hair);
+  border-radius: 999px;
+  background: transparent;
+  padding: 5px 10px;
+  font: 10px/1 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.sfx .si-demo button:hover {
+  border-color: var(--line);
+  color: var(--line);
+}
+
+.sfx .si-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 16px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.sfx .si-foot a:hover {
+  color: var(--ink);
+}
+
+@media (max-width: 640px) {
+  .sfx .si-wrap {
+    width: min(430px, 78vw);
+  }
+
+  .sfx .si-card {
+    padding: 20px 16px;
+  }
+}
+
 /* Product panel ---------------------------------------------------------- */
 
 .sfx #product {
@@ -1561,5 +1731,11 @@ div.sf-menu a:focus-visible {
   .sfx #spacer,
   .sfx #hud {
     display: none !important;
+  }
+
+  .sfx .si-inner {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }

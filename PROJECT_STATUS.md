@@ -34,6 +34,7 @@ Fresh single migration: `20261117224417_gymflow_init`. Old CRM migrations were r
 - Scroll-driven 3D "world" layout: sections are stops on a path, DOM elements projected from world coordinates, canvas draws the indigo path, theme interpolates cream → ink navy on dark stops.
 - Engine: `apps/web/src/components/landing/world.ts` (TypeScript, original) — depth unit, piecewise camera, perspective projection, Catmull-Rom anchors, HUD rail, intro pull-back, counter, letter fill, product clip-path panel.
 - Content rebranded for gym brands: brand, stats, milestones, five modules (Prospects, Memberships, Check-ins, Automation, Reports), six gym customer stories, product panel, contact.
+- Final stop `#signin` reveals a sign-in card (email, password, demo quick-fill) that fades up when the visitor reaches the end of the page; submitting signs in and opens `/dashboard`.
 - Styles: `landing.css` — paper ground `#eceae2`, ink navy `#0b1220`, indigo `#4338ca`, orange `#f47920`.
 - Responsive: per-stop anchors, per-element mobile overrides, viewport clamp, reduced-motion fallback.
 

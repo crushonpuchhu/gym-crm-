@@ -22,6 +22,8 @@ import {
   work,
 } from "./content";
 import { createWorld, type World } from "./world";
+import { useAuth } from "@/lib/auth";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -243,12 +245,110 @@ function VideoPanel() {
   );
 }
 
+const DEMO_ACCOUNTS = [
+  { email: "owner@demo.com", label: "Owner" },
+  { email: "manager@demo.com", label: "Club manager" },
+  { email: "rep@demo.com", label: "Advisor" },
+];
+
+function SignInPanel({ revealed }: { revealed: boolean }) {
+  const { login } = useAuth();
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      await login(email, password);
+      router.replace("/dashboard");
+    } catch (err: any) {
+      setError(err?.message || "Sign in failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const useDemo = (demoEmail: string) => {
+    setEmail(demoEmail);
+    setPassword("password123");
+    setError("");
+  };
+
+  return (
+    <div className={`si-inner${revealed ? " si-on" : ""}`}>
+      <div className="si-card">
+        <span className="si-kick mono">Members' entrance</span>
+        <h2 className="si-title">Sign in</h2>
+        <p className="si-sub">
+          Same account as the app. Pick a demo role to look around the seeded brand.
+        </p>
+        <form className="si-form" onSubmit={submit}>
+          <label className="si-field">
+            <span className="si-label mono">Email</span>
+            <input
+              className="si-in"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@yourgym.com"
+              autoComplete="email"
+              required
+            />
+          </label>
+          <label className="si-field">
+            <span className="si-label mono">Password</span>
+            <input
+              className="si-in"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="••••••••"
+              autoComplete="current-password"
+              required
+            />
+          </label>
+          {error ? (
+            <p className="si-err" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <button className="si-submit" type="submit" disabled={busy}>
+            {busy ? "Signing in…" : "Open the workspace"}
+          </button>
+        </form>
+        <div className="si-demo">
+          <span className="si-label mono">Demo · password123</span>
+          {DEMO_ACCOUNTS.map((account) => (
+            <button
+              key={account.email}
+              type="button"
+              onClick={() => useDemo(account.email)}
+            >
+              {account.label}
+            </button>
+          ))}
+        </div>
+        <div className="si-foot">
+          <a href="/register">Create a gym workspace</a>
+          <a href="/login">Full sign-in page</a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Landing() {
   const rootRef = useRef<HTMLDivElement>(null);
   const worldRef = useRef<World | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [active, setActive] = useState<number | null>(null);
+  const [signinRevealed, setSigninRevealed] = useState(false);
 
   useIsoLayoutEffect(() => {
     const root = rootRef.current;
@@ -258,6 +358,21 @@ export default function Landing() {
     return () => {
       worldRef.current?.destroy();
       worldRef.current = null;
+    };
+  }, []);
+
+  /** Reveal the sign-in card once the visitor reaches the end of the page. */
+  useEffect(() => {
+    const onScroll = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      setSigninRevealed(max > 0 && window.scrollY >= max - 620);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
     };
   }, []);
 
@@ -845,6 +960,29 @@ export default function Landing() {
                   </a>
                 ))}
                 <span>{contact.copyright}</span>
+              </div>
+            </div>
+          </section>
+
+          <section
+            className="st"
+            id="signin"
+            data-label="Sign in"
+            data-gap="2.2"
+            data-hold="1.4"
+            data-ease="1"
+            data-a="0,0"
+            data-ma="0,0"
+          >
+            <div
+              className="el"
+              data-p="0,0.02"
+              data-mp="0,0.02"
+              data-z="0.06"
+              data-f="0,0"
+            >
+              <div className="si-wrap">
+                <SignInPanel revealed={signinRevealed} />
               </div>
             </div>
           </section>
