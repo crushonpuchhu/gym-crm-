@@ -52,7 +52,7 @@ New to the model? Read [`DEMO_GUIDE.md`](DEMO_GUIDE.md) — object definitions, 
 - **Subscription** — GymFlow's own plan for the brand: STARTER / GROWTH / SCALE with member and staff quotas.
 
 ## Docs
-See `docs/` — ARCHITECTURE, DATABASE_DESIGN, API_SPECIFICATION, SECURITY, DEPLOYMENT, TESTING.
+See `docs/` — ARCHITECTURE, DATABASE_DESIGN, API_SPECIFICATION, SECURITY, DEPLOYMENT, TESTING, ACCESS_CONTROL, PLATFORM_ADMIN.
 
 ## Tests
 ```bash

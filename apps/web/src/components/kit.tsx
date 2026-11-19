@@ -168,6 +168,7 @@ export function StatCard({
 
 const STATUS_TONE: Record<string, ToneName | "neutral"> = {
   ACTIVE: "emerald",
+  SUSPENDED: "rose",
   JOINED: "emerald",
   WON: "emerald",
   RESOLVED: "emerald",

@@ -25,14 +25,33 @@ const publicUserSelect = {
   name: true,
   emailVerified: true,
   avatarUrl: true,
+  isPlatformAdmin: true,
 } as const;
 
-async function getOrgContext(userId: string) {
-  const m = await prisma.teamMembership.findFirst({
-    where: { userId, deletedAt: null },
-    select: { organizationId: true, role: true },
+async function getOrgContext(userId: string, preferredOrgId?: string) {
+  const memberships = await prisma.teamMembership.findMany({
+    where: { userId, deletedAt: null, organization: { deletedAt: null } },
+    select: { organizationId: true, role: true, organization: { select: { status: true } } },
+    orderBy: { createdAt: "asc" },
   });
-  return m;
+  return memberships.find((m) => m.organizationId === preferredOrgId) ?? memberships[0];
+}
+
+/** Slug collision used to make the second gym with the same name fail. */
+async function uniqueSlug(name: string) {
+  const base = name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "gym";
+  let slug = base;
+  let suffix = 2;
+  while (await prisma.organization.findUnique({ where: { slug }, select: { id: true } })) {
+    slug = `${base}-${suffix}`;
+    suffix += 1;
+  }
+  return slug;
 }
 
 function refreshCookieOptions() {
@@ -46,8 +65,8 @@ function refreshCookieOptions() {
 }
 
 /** Issue a refresh token and persist its session so it can be revoked. */
-async function issueRefreshToken(userId: string) {
-  const { token, jti } = signRefresh({ userId });
+async function issueRefreshToken(userId: string, orgId?: string) {
+  const { token, jti } = signRefresh({ userId, orgId });
   await prisma.refreshToken.create({
     data: {
       userId,
@@ -80,12 +99,13 @@ router.post(
     if (existing) return err(res, "conflict", "Email already registered", 409, "email");
 
     const passwordHash = await hash(password);
+    const slug = await uniqueSlug(organizationName);
     const result = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: { email, passwordHash, name, emailVerified: false },
       });
       const org = await tx.organization.create({
-        data: { name: organizationName, slug: organizationName.toLowerCase().replace(/\s+/g, "-"), status: "active" },
+        data: { name: organizationName, slug, status: "active" },
       });
       await tx.teamMembership.create({
         data: { userId: user.id, organizationId: org.id, role: "ORG_OWNER" },
@@ -100,7 +120,7 @@ router.post(
     });
 
     const access = signAccess({ userId: result.user.id, orgId: result.org.id });
-    const refresh = await issueRefreshToken(result.user.id);
+    const refresh = await issueRefreshToken(result.user.id, result.org.id);
     res.cookie("refresh_token", refresh, refreshCookieOptions());
     await audit({
       orgId: result.org.id,
@@ -125,14 +145,22 @@ router.post(
     if (!user || !(await compare(password, user.passwordHash))) {
       return err(res, "auth_invalid", "Invalid credentials", 401);
     }
-    const membership = await getOrgContext(user.id);
-    if (!membership) return err(res, "auth_invalid", "No organization membership", 401);
+    const found = await getOrgContext(user.id);
+    const membership = found?.organization.status === "active" ? found : undefined;
+    if (!membership && !user.isPlatformAdmin) {
+      if (found) return err(res, "org_suspended", "This gym brand is suspended", 403);
+      return err(res, "auth_invalid", "No organization membership", 401);
+    }
 
-    const access = signAccess({ userId: user.id, orgId: membership.organizationId });
-    const refresh = await issueRefreshToken(user.id);
+    // Platform operators may have no brand; their token simply omits orgId.
+    const access = signAccess({
+      userId: user.id,
+      ...(membership ? { orgId: membership.organizationId } : {}),
+    });
+    const refresh = await issueRefreshToken(user.id, membership?.organizationId);
     res.cookie("refresh_token", refresh, refreshCookieOptions());
     await audit({
-      orgId: membership.organizationId,
+      orgId: membership?.organizationId,
       userId: user.id,
       action: "auth_login",
       entityType: "user",
@@ -141,7 +169,12 @@ router.post(
       userAgent: req.get("user-agent"),
     });
     const safeUser = await prisma.user.findUnique({ where: { id: user.id }, select: publicUserSelect });
-    return ok(res, { accessToken: access, user: safeUser, organizationId: membership.organizationId });
+    return ok(res, {
+      accessToken: access,
+      user: safeUser,
+      organizationId: membership?.organizationId ?? null,
+      isPlatformAdmin: user.isPlatformAdmin,
+    });
   },
 );
 
@@ -160,15 +193,26 @@ router.post("/refresh", async (req, res) => {
     if (!session || session.revokedAt || session.expiresAt < new Date()) {
       return err(res, "auth_invalid", "Session expired", 401);
     }
-    const user = await prisma.user.findFirst({ where: { id: decoded.userId, deletedAt: null }, select: { id: true } });
+    const user = await prisma.user.findFirst({
+      where: { id: decoded.userId, deletedAt: null },
+      select: { id: true, isPlatformAdmin: true },
+    });
     if (!user) return err(res, "auth_invalid", "User not found", 401);
-    const membership = await getOrgContext(user.id);
-    if (!membership) return err(res, "auth_invalid", "No membership", 401);
+    // Keep the brand the session was using; fall back to the first membership.
+    const found = await getOrgContext(user.id, decoded.orgId);
+    const membership = found?.organization.status === "active" ? found : undefined;
+    if (!membership && !user.isPlatformAdmin) {
+      if (found) return err(res, "org_suspended", "This gym brand is suspended", 403);
+      return err(res, "auth_invalid", "No membership", 401);
+    }
 
     // rotate: revoke the used token, issue a new one
     await prisma.refreshToken.update({ where: { id: session.id }, data: { revokedAt: new Date() } });
-    const access = signAccess({ userId: user.id, orgId: membership.organizationId });
-    const newRefresh = await issueRefreshToken(user.id);
+    const access = signAccess({
+      userId: user.id,
+      ...(membership ? { orgId: membership.organizationId } : {}),
+    });
+    const newRefresh = await issueRefreshToken(user.id, membership?.organizationId);
     res.cookie("refresh_token", newRefresh, refreshCookieOptions());
     return ok(res, { accessToken: access });
   } catch {
@@ -325,7 +369,7 @@ router.post("/invitations/:token/accept", async (req, res) => {
   }
 
   const access = signAccess({ userId, orgId: invitation.organizationId });
-  const refresh = await issueRefreshToken(userId);
+  const refresh = await issueRefreshToken(userId, invitation.organizationId);
   res.cookie("refresh_token", refresh, refreshCookieOptions());
   await audit({
     orgId: invitation.organizationId,

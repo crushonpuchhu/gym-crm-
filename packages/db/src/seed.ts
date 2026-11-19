@@ -23,6 +23,7 @@ const prisma = new PrismaClient();
 
 const DEMO_SLUG = "iron-atlas";
 const PASSWORD = "password123";
+const PLATFORM_ADMIN_EMAIL = "platform@gymflow.app";
 const PASSWORD_HASH = bcrypt.hashSync(PASSWORD, 12);
 
 /* Deterministic pseudo-random so the demo dataset is identical on every reseed. */
@@ -176,6 +177,20 @@ async function main() {
       data: { userId: user.id, organizationId: org.id, role: entry.role },
     });
   }
+
+  // Vendor-side operator: no gym membership, so it can never read tenant records
+  // by accident. The platform console is its only surface.
+  await prisma.user.upsert({
+    where: { email: PLATFORM_ADMIN_EMAIL },
+    update: { passwordHash: PASSWORD_HASH, name: "GymFlow HQ", isPlatformAdmin: true, deletedAt: null },
+    create: {
+      email: PLATFORM_ADMIN_EMAIL,
+      passwordHash: PASSWORD_HASH,
+      name: "GymFlow HQ",
+      emailVerified: true,
+      isPlatformAdmin: true,
+    },
+  });
 
   const owner = users["owner@demo.com"];
   const manager = users["manager@demo.com"];
@@ -845,6 +860,7 @@ async function main() {
   };
   console.log("Gym demo data ready:", counts);
   console.log("Login with any of:", usersSeed.map((u) => `${u.email} / ${PASSWORD}`).join(", "));
+  console.log(`Platform console: ${PLATFORM_ADMIN_EMAIL} / ${PASSWORD} → /platform`);
 }
 
 main()

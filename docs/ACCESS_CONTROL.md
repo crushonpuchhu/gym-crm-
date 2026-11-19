@@ -5,6 +5,12 @@ GymFlow is multi-tenant by **organization**. One organization is one gym brand
 `User`; access to a brand is granted by a `TeamMembership` row that joins the
 user to the organization with exactly one role.
 
+There are two separate control planes. Gym staff manage one brand through
+`TeamMembership`; GymFlow's own operators manage the product through
+`User.isPlatformAdmin` and the `/platform` console. A gym owner never sees the
+vendor console, and a platform admin has no tenant records unless a gym gives
+them a staff seat. See `docs/PLATFORM_ADMIN.md`.
+
 ```
 User ──< TeamMembership >── Organization
                 │

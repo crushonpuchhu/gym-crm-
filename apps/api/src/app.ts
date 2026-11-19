@@ -5,7 +5,7 @@ import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import { env } from "./config/env";
-import { authenticate, resolveTenant, requireOrg, requirePermission } from "./middleware/auth";
+import { authenticate, resolveTenant, requireOrg, requirePermission, requirePlatformAdmin } from "./middleware/auth";
 import { errorHandler, notFound } from "./middleware/error";
 import { auditMiddleware } from "./middleware/audit";
 import { validate } from "./middleware/validation";
@@ -14,6 +14,7 @@ import orgRoutes from "./routes/organizations";
 import userRoutes from "./routes/users";
 import roleRoutes from "./routes/roles";
 import invitationRoutes from "./routes/invitations";
+import platformRoutes from "./routes/platform";
 import prospectRoutes from "./routes/prospects";
 import memberRoutes from "./routes/members";
 import locationRoutes from "./routes/locations";
@@ -73,6 +74,8 @@ export function createApp() {
   app.use("/api/v1/reports", authenticate, resolveTenant, requireOrg, reportRoutes);
   app.use("/api/v1/subscriptions", authenticate, resolveTenant, requireOrg, subscriptionRoutes);
   app.use("/api/v1/admin", authenticate, resolveTenant, requireOrg, adminRoutes);
+  // Vendor console: no tenant context, platform-admin gate only.
+  app.use("/api/v1/platform", authenticate, requirePlatformAdmin, platformRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

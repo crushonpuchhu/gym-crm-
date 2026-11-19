@@ -36,7 +36,7 @@ export default function LoginPage() {
 }
 
 function LoginView() {
-  const { login, user, loading } = useAuth();
+  const { login, user, memberships, loading } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,18 +44,20 @@ function LoginView() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // Already signed in (deep link or browser Back): go straight to the app.
+  // Already signed in (deep link or browser Back): go straight to the right surface.
   useEffect(() => {
-    if (!loading && user) router.replace("/dashboard");
-  }, [loading, user, router]);
+    if (loading || !user) return;
+    const platformOnly = user.isPlatformAdmin && memberships.length === 0;
+    router.replace(platformOnly ? "/platform" : "/dashboard");
+  }, [loading, user, memberships, router]);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setBusy(true);
     setError("");
     try {
-      await login(email, password);
-      router.replace("/dashboard");
+      const session = await login(email, password);
+      router.replace(session.isPlatformAdmin && !session.organizationId ? "/platform" : "/dashboard");
     } catch (err: any) {
       setError(err?.message || "Sign in failed");
     } finally {

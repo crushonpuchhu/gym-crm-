@@ -10,6 +10,8 @@ export interface AuthedRequest extends Request {
   userId?: string;
   orgId?: string;
   role?: string;
+  orgStatus?: string;
+  isPlatformAdmin?: boolean;
   memberships?: Array<{ organizationId: string; role: string }>;
 }
 
@@ -47,13 +49,20 @@ export async function resolveTenant(req: AuthedRequest, res: Response, next: Nex
   if (!req.userId) return next();
   try {
     const memberships = await prisma.teamMembership.findMany({
-      where: { userId: req.userId, deletedAt: null },
-      select: { organizationId: true, role: true },
+      where: { userId: req.userId, deletedAt: null, organization: { deletedAt: null } },
+      select: {
+        organizationId: true,
+        role: true,
+        organization: { select: { status: true } },
+      },
     });
-    req.memberships = memberships;
-    if (!req.orgId && memberships[0]) req.orgId = memberships[0].organizationId;
+    req.memberships = memberships.map((m) => ({ organizationId: m.organizationId, role: m.role }));
+    if (!req.orgId && req.memberships[0]) req.orgId = req.memberships[0].organizationId;
     const current = memberships.find((m) => m.organizationId === req.orgId);
-    if (current) req.role = current.role;
+    if (current) {
+      req.role = current.role;
+      req.orgStatus = current.organization.status;
+    }
     next();
   } catch {
     next();
@@ -65,6 +74,9 @@ export function requireOrg(req: AuthedRequest, res: Response, next: NextFunction
   if (!req.memberships?.some((m) => m.organizationId === req.orgId)) {
     return err(res, "forbidden", "Not a member of this organization", 403);
   }
+  if (req.orgStatus && req.orgStatus !== "active") {
+    return err(res, "org_suspended", "This gym brand is suspended", 403);
+  }
   next();
 }
 
@@ -73,9 +85,34 @@ export function requirePermission(permission: string) {
     if (!req.orgId) return err(res, "org_required", "No organization context", 400);
     const membership = req.memberships?.find((m) => m.organizationId === req.orgId);
     if (!membership) return err(res, "forbidden", "Not a member of this organization", 403);
+    if (req.orgStatus && req.orgStatus !== "active") {
+      return err(res, "org_suspended", "This gym brand is suspended", 403);
+    }
     if (!hasPermission(membership.role, permission)) {
       return err(res, "forbidden", "Insufficient permission", 403);
     }
     next();
   };
+}
+
+/**
+ * Vendor-side operator gate.
+ *
+ * Checked against the database rather than a token claim, so revoking platform
+ * access takes effect on the next request. Platform admins are deliberately not
+ * given tenant routes; this only unlocks `/api/v1/platform`.
+ */
+export async function requirePlatformAdmin(req: AuthedRequest, res: Response, next: NextFunction) {
+  if (!req.userId) return err(res, "auth_required", "Authentication required", 401);
+  try {
+    const user = await prisma.user.findFirst({
+      where: { id: req.userId, deletedAt: null },
+      select: { isPlatformAdmin: true },
+    });
+    if (!user?.isPlatformAdmin) return err(res, "forbidden", "Platform access only", 403);
+    req.isPlatformAdmin = true;
+    next();
+  } catch {
+    return err(res, "forbidden", "Platform access only", 403);
+  }
 }

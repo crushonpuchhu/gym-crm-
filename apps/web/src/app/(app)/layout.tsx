@@ -28,6 +28,7 @@ import {
   CheckSquare,
   ClipboardList,
   Dumbbell,
+  Globe,
   KanbanSquare,
   LayoutDashboard,
   LogOut,
@@ -103,6 +104,7 @@ function SidebarContent({
   onSignOut,
   userName,
   userEmail,
+  isPlatformAdmin,
   search,
   onSearch,
   onSearchSubmit,
@@ -112,11 +114,15 @@ function SidebarContent({
   onSignOut: () => void;
   userName: string;
   userEmail: string;
+  isPlatformAdmin: boolean;
   search: string;
   onSearch: (value: string) => void;
   onSearchSubmit: () => void;
 }) {
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const footerNav = isPlatformAdmin
+    ? [{ href: "/platform", label: "Platform console", icon: Globe }, ...FOOTER_NAV]
+    : FOOTER_NAV;
   return (
     <Stack sx={{ height: "100%", py: 2 }} spacing={1}>
       <Brand />
@@ -185,7 +191,7 @@ function SidebarContent({
       </List>
       <Divider sx={{ mx: 2 }} />
       <List sx={{ px: 1.5 }}>
-        {FOOTER_NAV.map(({ href, label, icon: Icon }) => {
+        {footerNav.map(({ href, label, icon: Icon }) => {
           const active = isActive(href);
           return (
             <ListItemButton
@@ -253,7 +259,9 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
-  }, [loading, user, router]);
+    // Vendor staff with no brand never belong in the tenant shell.
+    if (!loading && user?.isPlatformAdmin && memberships.length === 0) router.replace("/platform");
+  }, [loading, user, memberships, router]);
 
   /** Clear the session, then leave the app shell so Back cannot reopen it. */
   const signOut = async () => {
@@ -296,6 +304,7 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
       onSignOut={() => void signOut()}
       userName={user.name}
       userEmail={user.email}
+      isPlatformAdmin={!!user.isPlatformAdmin}
       search={search}
       onSearch={setSearch}
       onSearchSubmit={() => {

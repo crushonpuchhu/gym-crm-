@@ -7,6 +7,8 @@ export interface SessionUser {
   email: string;
   name: string;
   emailVerified: boolean;
+  /** GymFlow vendor staff: unlocks /platform and has no brand membership. */
+  isPlatformAdmin?: boolean;
 }
 
 export interface OrgMembership {
@@ -20,7 +22,10 @@ interface AuthContextType {
   role: string | null;
   memberships: OrgMembership[];
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (
+    email: string,
+    password: string,
+  ) => Promise<{ isPlatformAdmin: boolean; organizationId: string | null }>;
   register: (input: { email: string; password: string; name: string; organizationName: string }) => Promise<void>;
   acceptInvitation: (token: string, input: { name?: string; password: string }) => Promise<void>;
   switchOrg: (organizationId: string) => Promise<void>;
@@ -85,14 +90,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const login = useCallback(async (email: string, password: string) => {
-    const data = await api<{ accessToken: string; user: SessionUser; organizationId: string }>("/auth/login", {
+    const data = await api<{
+      accessToken: string;
+      user: SessionUser;
+      organizationId: string | null;
+      isPlatformAdmin: boolean;
+    }>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
     setAccessToken(data.accessToken);
     setUser(data.user);
-    setOrganizationId(data.organizationId);
+    setOrganizationId(data.organizationId ?? null);
     setMemberships(await api<OrgMembership[]>("/auth/memberships"));
+    return { isPlatformAdmin: !!data.isPlatformAdmin, organizationId: data.organizationId ?? null };
   }, []);
 
   const register = useCallback(
