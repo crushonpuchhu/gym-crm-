@@ -283,7 +283,7 @@ export function EmptyState({ title, hint, action }: { title: string; hint?: stri
 
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <Paper sx={{ borderRadius: 3, p: 4, textAlign: "center", borderColor: "rgba(255,255,255,0.16)" }}>
+    <Paper sx={{ borderRadius: 3, p: 4, textAlign: "center", borderColor: "rgba(140,165,220,0.22)" }}>
       <Typography sx={{ fontWeight: 600 }}>{message}</Typography>
       {onRetry ? (
         <Button variant="outlined" size="small" sx={{ mt: 2 }} onClick={onRetry}>
@@ -357,7 +357,7 @@ export function PaginationBar({
       direction="row"
       alignItems="center"
       justifyContent="space-between"
-      sx={{ px: 2, py: 1.5, borderTop: "1px solid rgba(255,255,255,0.08)" }}
+      sx={{ px: 2, py: 1.5, borderTop: "1px solid rgba(140,165,220,0.12)" }}
     >
       <Typography variant="caption" sx={{ color: "text.secondary" }}>
         {total} records · page {page} of {last}

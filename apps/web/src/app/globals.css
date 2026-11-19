@@ -2,45 +2,45 @@
 @tailwind components;
 @tailwind utilities;
 
-/* The CRM app surfaces set their own MUI monochrome theme; the landing page
-   paints its own paper palette inside `.sfx`, so this is only the app ground. */
+/* The CRM app surfaces set their own MUI navy theme; the landing page paints
+   its own paper palette inside `.sfx`, so this is only the app ground. */
 :root {
   color-scheme: dark;
 }
 
 body {
-  @apply bg-[#08080a] text-[#f5f5f6] antialiased;
+  @apply bg-[#04060f] text-[#eef2fb] antialiased;
 }
 
 @layer components {
   .card {
-    @apply rounded-xl border border-white/10 bg-[#111114];
+    @apply rounded-xl border border-[#8ca5dc]/15 bg-[#0a101d];
   }
   .input {
-    @apply w-full rounded-lg border border-white/15 bg-[#17171b] px-3 py-2 text-sm text-[#f5f5f6] outline-none transition placeholder:text-white/35 focus:border-white/60;
+    @apply w-full rounded-lg border border-[#8ca5dc]/20 bg-[#0c1424] px-3 py-2 text-sm text-[#eef2fb] outline-none transition placeholder:text-[#8ca5dc]/40 focus:border-[#4b7cf2];
   }
   .label {
-    @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-[#94949c];
+    @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-[#909db6];
   }
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition focus:outline-none disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-primary {
-    @apply btn bg-[#f5f5f6] text-[#0a0a0b] hover:bg-white;
+    @apply btn bg-[#3f6fe0] text-white hover:bg-[#3a67d6];
   }
   .btn-secondary {
-    @apply btn border border-white/15 bg-transparent text-[#f5f5f6] hover:border-white/35 hover:bg-white/5;
+    @apply btn border border-[#8ca5dc]/25 bg-transparent text-[#eef2fb] hover:border-[#4b7cf2]/60 hover:bg-[#4b7cf2]/10;
   }
   .btn-danger {
-    @apply btn border border-white/20 bg-white/10 text-[#f5f5f6] hover:bg-white/15;
+    @apply btn border border-[#e06d92]/35 bg-[#e06d92]/10 text-[#eef2fb] hover:bg-[#e06d92]/20;
   }
   .badge {
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
   }
   .th {
-    @apply px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-[#8d8d95];
+    @apply px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-[#8c99b4];
   }
   .td {
-    @apply px-4 py-3 text-sm text-[#e6e6e9];
+    @apply px-4 py-3 text-sm text-[#dbe4f7];
   }
 }

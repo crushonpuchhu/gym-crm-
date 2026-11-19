@@ -4,8 +4,7 @@ import { Box, Button, Checkbox, FormControlLabel, MenuItem, TextField, Typograph
 import { Stack } from "@/components/mui-stack";
 import { api } from "@/lib/api";
 import { EmptyState, ErrorState, LoadingSkeleton, Modal, PageHeader, Panel } from "@/components/kit";
-import { DndContext, DragEndEvent, useDraggable, useDroppable } from "@dnd-kit/core";
-import { KanbanSquare, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { TONES, toneAt } from "@/palette";
 
 interface Stage { id: string; name: string; order: number; probability: number; isWon: boolean; isLost: boolean }
@@ -32,97 +31,6 @@ const cycleMonths: Record<string, number> = { MONTHLY: 1, QUARTERLY: 3, ANNUAL: 
 const CYCLES = ["MONTHLY", "QUARTERLY", "ANNUAL", "ONE_TIME"];
 const EMPTY_FORM = { memberId: "", planId: "", locationId: "", title: "", monthlyValue: "", billingCycle: "MONTHLY" };
 
-function KanbanCard({ contract }: { contract: Contract }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: contract.id });
-  return (
-    <Box
-      ref={setNodeRef}
-      {...attributes}
-      {...listeners}
-      sx={{
-        cursor: "grab",
-        borderRadius: 2,
-        border: "1px solid rgba(255,255,255,0.09)",
-        backgroundColor: "rgba(255,255,255,0.035)",
-        p: 1.5,
-        opacity: isDragging ? 0.5 : 1,
-        "&:active": { cursor: "grabbing" },
-      }}
-    >
-      <Typography sx={{ fontSize: 13.5, fontWeight: 600 }}>
-        {contract.member ? `${contract.member.firstName} ${contract.member.lastName}` : contract.title}
-      </Typography>
-      <Typography variant="caption" sx={{ color: "text.secondary", display: "block", mt: 0.25 }}>
-        {contract.plan?.name || "No plan"} · {contract.location?.name || "No club"}
-      </Typography>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 1 }}>
-        <Typography variant="body2" sx={{ fontWeight: 650 }}>
-          ${Number(contract.monthlyValue).toLocaleString()}/mo
-        </Typography>
-        <Typography variant="caption" sx={{ color: "text.disabled", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-          {contract.probability}% · {contract.owner?.name || "unassigned"}
-        </Typography>
-      </Stack>
-    </Box>
-  );
-}
-
-function KanbanColumn({ stage, contracts, index }: { stage: Stage; contracts: Contract[]; index: number }) {
-  const accent = TONES[toneAt(index)];
-  const { setNodeRef, isOver } = useDroppable({ id: stage.id });
-  const monthly = contracts.reduce((s, d) => s + Number(d.monthlyValue), 0);
-  return (
-    <Box
-      ref={setNodeRef}
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        width: 288,
-        flexShrink: 0,
-        borderRadius: 3,
-        border: "1px solid",
-        borderColor: isOver ? accent.main : "rgba(255,255,255,0.08)",
-        backgroundColor: isOver ? accent.soft : "rgba(255,255,255,0.02)",
-        backgroundImage: `linear-gradient(180deg, ${accent.soft}, transparent 32%)`,
-        p: 1.5,
-        transition: "border-color 150ms, background-color 150ms",
-      }}
-    >
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5, pb: 1.25, borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-        <Box>
-          <Stack direction="row" spacing={0.9} alignItems="center">
-            <Box sx={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: accent.main, flexShrink: 0 }} />
-            <Typography sx={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-              {stage.name}
-            </Typography>
-          </Stack>
-          <Typography variant="caption" sx={{ color: "text.secondary" }}>
-            {stage.probability}% close prob
-          </Typography>
-        </Box>
-        <Typography
-          variant="caption"
-          sx={{ border: "1px solid rgba(255,255,255,0.1)", borderRadius: 999, px: 1, py: 0.4, color: "text.secondary" }}
-        >
-          {contracts.length} · ${Math.round(monthly).toLocaleString()}/mo
-        </Typography>
-      </Stack>
-      <Stack spacing={1} sx={{ flex: 1 }}>
-        {contracts.map((d) => (
-          <KanbanCard key={d.id} contract={d} />
-        ))}
-        {contracts.length === 0 && (
-          <Box sx={{ border: "1px dashed rgba(255,255,255,0.12)", borderRadius: 2, p: 1.5, textAlign: "center" }}>
-            <Typography variant="caption" sx={{ color: "text.disabled" }}>
-              Drop contracts here
-            </Typography>
-          </Box>
-        )}
-      </Stack>
-    </Box>
-  );
-}
-
 export default function MembershipsPage() {
   const [pipelines, setPipelines] = useState<Pipeline[] | null>(null);
   const [contracts, setContracts] = useState<ContractList | null>(null);
@@ -136,6 +44,7 @@ export default function MembershipsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState("");
+  const [movingId, setMovingId] = useState("");
 
   const loadOptions = async () => {
     try {
@@ -187,12 +96,11 @@ export default function MembershipsPage() {
 
   const activePipeline = pipelines?.find((p) => p.id === pipelineId);
 
-  const onDragEnd = async (event: DragEndEvent) => {
-    const id = String(event.active.id);
-    const stageId = event.over?.id ? String(event.over.id) : null;
-    if (!stageId) return;
+  const moveContract = async (id: string, stageId: string) => {
     const contract = contracts?.items.find((d) => d.id === id);
     if (!contract || contract.stageId === stageId) return;
+    setMovingId(id);
+    setNotice("");
     try {
       const updated = await api<Contract>(`/memberships/${id}`, { method: "PATCH", body: JSON.stringify({ stageId }) });
       setNotice(
@@ -204,7 +112,9 @@ export default function MembershipsPage() {
       );
       if (pipelineId) await loadBoard(pipelineId, openOnly);
     } catch (err: any) {
-      alert(err?.message || "Failed to move membership");
+      setNotice(err?.message || "Failed to move membership");
+    } finally {
+      setMovingId("");
     }
   };
 
@@ -312,25 +222,26 @@ export default function MembershipsPage() {
       />
 
       {notice && (
-        <Panel sx={{ mb: 2, p: 1.5, borderColor: "rgba(255,255,255,0.16)" }}>
+        <Panel sx={{ mb: 2, p: 1.5, borderColor: "rgba(75,124,242,0.35)" }}>
           <Typography variant="body2" sx={{ color: "text.secondary" }}>
             {notice}
           </Typography>
         </Panel>
       )}
 
-      <DndContext onDragEnd={onDragEnd}>
-        <Box sx={{ display: "flex", gap: 2, overflowX: "auto", pb: 2 }}>
-          {activePipeline?.stages.map((stage, index) => (
-            <KanbanColumn
-              key={stage.id}
-              stage={stage}
-              index={index}
-              contracts={contracts.items.filter((d) => d.stageId === stage.id)}
-            />
-          ))}
-        </Box>
-      </DndContext>
+      <Box sx={{ display: "flex", gap: 2, overflowX: "auto", pb: 2 }}>
+        {activePipeline?.stages.map((stage, index) => (
+          <KanbanColumn
+            key={stage.id}
+            stage={stage}
+            index={index}
+            stages={activePipeline.stages}
+            contracts={contracts.items.filter((d) => d.stageId === stage.id)}
+            onMove={moveContract}
+            movingId={movingId}
+          />
+        ))}
+      </Box>
 
       <Modal open={modalOpen} title="New membership" onClose={() => setModalOpen(false)}>
         <Box component="form" onSubmit={createContract}>
@@ -388,6 +299,140 @@ export default function MembershipsPage() {
           </Stack>
         </Box>
       </Modal>
+    </Box>
+  );
+}
+
+function KanbanCard({
+  contract,
+  stages,
+  onMove,
+  moving,
+}: {
+  contract: Contract;
+  stages: Stage[];
+  onMove: (id: string, stageId: string) => void;
+  moving: boolean;
+}) {
+  return (
+    <Box
+      sx={{
+        borderRadius: 2,
+        border: "1px solid rgba(140,165,220,0.14)",
+        backgroundColor: "rgba(140,165,220,0.05)",
+        p: 1.5,
+        opacity: moving ? 0.55 : 1,
+        pointerEvents: moving ? "none" : "auto",
+        transition: "opacity 150ms",
+      }}
+    >
+      <Typography sx={{ fontSize: 13.5, fontWeight: 600 }}>
+        {contract.member ? `${contract.member.firstName} ${contract.member.lastName}` : contract.title}
+      </Typography>
+      <Typography variant="caption" sx={{ color: "text.secondary", display: "block", mt: 0.25 }}>
+        {contract.plan?.name || "No plan"} · {contract.location?.name || "No club"}
+      </Typography>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 1 }}>
+        <Typography variant="body2" sx={{ fontWeight: 650 }}>
+          ${Number(contract.monthlyValue).toLocaleString()}/mo
+        </Typography>
+        <Typography variant="caption" sx={{ color: "text.secondary", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          {contract.probability}% · {contract.owner?.name || "unassigned"}
+        </Typography>
+      </Stack>
+      <TextField
+        select
+        size="small"
+        fullWidth
+        label="Stage"
+        value={contract.stageId}
+        disabled={moving}
+        onChange={(e) => onMove(contract.id, e.target.value)}
+        slotProps={{ htmlInput: { "aria-label": `Move ${contract.title} to another stage` } }}
+        sx={{
+          mt: 1.25,
+          "& .MuiOutlinedInput-root": { backgroundColor: "rgba(140,165,220,0.06)" },
+          "& .MuiInputLabel-root": { fontSize: 11 },
+        }}
+      >
+        {stages.map((s) => (
+          <MenuItem key={s.id} value={s.id} sx={{ fontSize: 13 }}>
+            {s.name}
+          </MenuItem>
+        ))}
+      </TextField>
+    </Box>
+  );
+}
+
+function KanbanColumn({
+  stage,
+  contracts,
+  index,
+  stages,
+  onMove,
+  movingId,
+}: {
+  stage: Stage;
+  contracts: Contract[];
+  index: number;
+  stages: Stage[];
+  onMove: (id: string, stageId: string) => void;
+  movingId: string;
+}) {
+  const accent = TONES[toneAt(index)];
+  const monthly = contracts.reduce((s, d) => s + Number(d.monthlyValue), 0);
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        width: 288,
+        flexShrink: 0,
+        borderRadius: 3,
+        border: "1px solid rgba(140,165,220,0.14)",
+        backgroundColor: "rgba(140,165,220,0.03)",
+        backgroundImage: `linear-gradient(180deg, ${accent.soft}, transparent 32%)`,
+        p: 1.5,
+      }}
+    >
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5, pb: 1.25, borderBottom: "1px solid rgba(140,165,220,0.12)" }}>
+        <Box>
+          <Stack direction="row" spacing={0.9} alignItems="center">
+            <Box sx={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: accent.main, flexShrink: 0 }} />
+            <Typography sx={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+              {stage.name}
+            </Typography>
+          </Stack>
+          <Typography variant="caption" sx={{ color: "text.secondary" }}>
+            {stage.probability}% close prob
+          </Typography>
+        </Box>
+        <Typography
+          variant="caption"
+          sx={{ border: "1px solid rgba(140,165,220,0.16)", borderRadius: 999, px: 1, py: 0.4, color: "text.secondary" }}
+        >
+          {contracts.length} · ${Math.round(monthly).toLocaleString()}/mo
+        </Typography>
+      </Stack>
+      <Stack spacing={1} sx={{ flex: 1 }}>
+        {contracts.map((d) => (
+          <KanbanCard
+            key={d.id}
+            contract={d}
+            stages={stages}
+            onMove={onMove}
+            moving={movingId === d.id}
+          />
+        ))}
+        {contracts.length === 0 && (
+          <Box sx={{ border: "1px dashed rgba(140,165,220,0.18)", borderRadius: 2, p: 1.5, textAlign: "center" }}>
+            <Typography variant="caption" sx={{ color: "text.disabled" }}>
+              No contracts at this stage
+            </Typography>
+          </Box>
+        )}
+      </Stack>
     </Box>
   );
 }

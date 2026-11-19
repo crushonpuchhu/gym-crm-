@@ -6,7 +6,6 @@ import { ReactNode, useEffect, useState } from "react";
 import {
   Avatar,
   Box,
-  Chip,
   CssBaseline,
   Divider,
   Drawer,
@@ -75,9 +74,10 @@ function Brand() {
           width: 40,
           height: 40,
           borderRadius: 2.5,
-          border: "1px solid rgba(132,146,205,0.4)",
-          background: "linear-gradient(160deg, rgba(132,146,205,0.9), rgba(175,147,200,0.85))",
-          color: "#0a0a0b",
+          border: "1px solid rgba(75,124,242,0.45)",
+          background: "linear-gradient(160deg, #4b7cf2, #3e71ec)",
+          color: "#ffffff",
+          boxShadow: "0 6px 18px rgba(75,124,242,0.28)",
         }}
       >
         <Dumbbell size={18} strokeWidth={2.1} />
@@ -85,18 +85,6 @@ function Brand() {
       <Box sx={{ minWidth: 0 }}>
         <Stack direction="row" spacing={1} alignItems="center">
           <Typography sx={{ fontWeight: 700, fontSize: 15, letterSpacing: "-0.01em" }}>GymFlow</Typography>
-          <Chip
-            label="Beta"
-            size="small"
-            sx={{
-              height: 18,
-              fontSize: 9,
-              px: 0.5,
-              backgroundColor: "rgba(132,146,205,0.16)",
-              color: "#aeb8e0",
-              boxShadow: "inset 0 0 0 1px rgba(132,146,205,0.22)",
-            }}
-          />
         </Stack>
         <Typography variant="caption" sx={{ color: "text.secondary" }}>
           Member CRM
@@ -150,7 +138,7 @@ function SidebarContent({
                 <InputAdornment position="end">
                   <Box
                     sx={{
-                      border: "1px solid rgba(255,255,255,0.14)",
+                      border: "1px solid rgba(140,165,220,0.2)",
                       borderRadius: 1,
                       px: 0.75,
                       py: 0.25,
@@ -165,7 +153,7 @@ function SidebarContent({
               ),
             },
           }}
-          sx={{ "& .MuiOutlinedInput-root": { backgroundColor: "#17171b" } }}
+          sx={{ "& .MuiOutlinedInput-root": { backgroundColor: "#0c1424" } }}
         />
       </Box>
       <List sx={{ px: 1.5, pt: 1, flex: 1, overflowY: "auto" }}>
@@ -180,7 +168,7 @@ function SidebarContent({
               onClick={onNavigate}
               sx={{
                 mb: 0.5,
-                border: active ? "1px solid rgba(132,146,205,0.35)" : "1px solid transparent",
+                border: active ? "1px solid rgba(75,124,242,0.4)" : "1px solid transparent",
               }}
             >
               <ListItemIcon>
@@ -204,7 +192,7 @@ function SidebarContent({
               onClick={onNavigate}
               sx={{
                 mb: 0.5,
-                border: active ? "1px solid rgba(132,146,205,0.35)" : "1px solid transparent",
+                border: active ? "1px solid rgba(75,124,242,0.4)" : "1px solid transparent",
               }}
             >
               <ListItemIcon>
@@ -214,7 +202,7 @@ function SidebarContent({
             </ListItemButton>
           );
         })}
-        <ListItemButton onClick={onSignOut} sx={{ color: "#c9c9cf" }}>
+        <ListItemButton onClick={onSignOut} sx={{ color: "#c6d0e6" }}>
           <ListItemIcon sx={{ color: "inherit" }}>
             <LogOut size={17} strokeWidth={1.9} />
           </ListItemIcon>
@@ -227,10 +215,10 @@ function SidebarContent({
           spacing={1.25}
           alignItems="center"
           sx={{
-            border: "1px solid rgba(255,255,255,0.09)",
+            border: "1px solid rgba(140,165,220,0.14)",
             borderRadius: 3,
             p: 1.25,
-            backgroundColor: "rgba(255,255,255,0.03)",
+            backgroundColor: "rgba(140,165,220,0.05)",
           }}
         >
           <Avatar sx={{ width: 32, height: 32, fontSize: 12 }}>
@@ -288,7 +276,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               width: 30,
               height: 30,
               borderRadius: "50%",
-              border: "2px solid rgba(255,255,255,0.12)",
+              border: "2px solid rgba(140,165,220,0.18)",
               borderTopColor: "#f5f5f6",
               animation: "spin 0.8s linear infinite",
               "@keyframes spin": { to: { transform: "rotate(360deg)" } },
@@ -331,7 +319,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               position: "sticky",
               top: 0,
               height: "100vh",
-              borderRight: "1px solid rgba(255,255,255,0.07)",
+              borderRight: "1px solid rgba(140,165,220,0.1)",
               backgroundColor: "rgba(10,10,12,0.72)",
               backdropFilter: "blur(14px)",
             }}
@@ -365,7 +353,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               gap: 1.5,
               height: 68,
               px: { xs: 2, lg: 3.5 },
-              borderBottom: "1px solid rgba(255,255,255,0.07)",
+              borderBottom: "1px solid rgba(140,165,220,0.1)",
               backgroundColor: "rgba(8,8,10,0.78)",
               backdropFilter: "blur(14px)",
             }}

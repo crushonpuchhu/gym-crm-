@@ -125,7 +125,7 @@ export default function LocationsPage() {
                   </Typography>
                 ) : null}
               </Stack>
-              <Stack direction="row" flexWrap="wrap" gap={2} sx={{ mt: 2, pt: 1.5, borderTop: "1px solid rgba(255,255,255,0.07)", color: "text.secondary" }}>
+              <Stack direction="row" flexWrap="wrap" gap={2} sx={{ mt: 2, pt: 1.5, borderTop: "1px solid rgba(140,165,220,0.1)", color: "text.secondary" }}>
                 <Stack direction="row" spacing={0.75} alignItems="center">
                   <Users size={12} />
                   <Typography variant="caption">

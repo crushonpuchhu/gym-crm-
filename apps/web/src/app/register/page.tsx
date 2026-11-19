@@ -58,8 +58,8 @@ export default function RegisterPage() {
               width: 30,
               height: 30,
               borderRadius: "50%",
-              border: "2px solid rgba(255,255,255,0.12)",
-              borderTopColor: "#f5f5f6",
+              border: "2px solid rgba(140,165,220,0.18)",
+              borderTopColor: "#4b7cf2",
               animation: "spin 0.8s linear infinite",
               "@keyframes spin": { to: { transform: "rotate(360deg)" } },
             }}
@@ -82,8 +82,10 @@ export default function RegisterPage() {
                 width: 46,
                 height: 46,
                 borderRadius: 3,
-                border: "1px solid rgba(255,255,255,0.14)",
-                background: "linear-gradient(160deg, rgba(255,255,255,0.16), rgba(255,255,255,0.02))",
+                border: "1px solid rgba(75,124,242,0.45)",
+                background: "linear-gradient(160deg, #4b7cf2, #3e71ec)",
+                color: "#ffffff",
+                boxShadow: "0 8px 24px rgba(75,124,242,0.3)",
               }}
             >
               <Dumbbell size={20} />
@@ -143,7 +145,7 @@ export default function RegisterPage() {
             <Divider sx={{ my: 2.5 }} />
             <Typography variant="body2" sx={{ color: "text.secondary", textAlign: "center" }}>
               Have an account?{" "}
-              <Box component={Link} href="/login" sx={{ color: "#f5f5f6", fontWeight: 600, textDecoration: "none" }}>
+              <Box component={Link} href="/login" sx={{ color: "#abc5f3", fontWeight: 600, textDecoration: "none" }}>
                 Sign in
               </Box>
             </Typography>

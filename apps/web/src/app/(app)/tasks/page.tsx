@@ -83,9 +83,9 @@ export default function TasksPage() {
                 sx={{
                   px: 2,
                   py: 1.75,
-                  borderBottom: "1px solid rgba(255,255,255,0.06)",
+                  borderBottom: "1px solid rgba(140,165,220,0.08)",
                   "&:last-of-type": { borderBottom: "none" },
-                  "&:hover": { backgroundColor: "rgba(255,255,255,0.025)" },
+                  "&:hover": { backgroundColor: "rgba(140,165,220,0.025)" },
                 }}
               >
                 <IconButton

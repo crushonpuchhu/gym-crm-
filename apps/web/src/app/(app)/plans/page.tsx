@@ -147,7 +147,7 @@ export default function PlansPage() {
                 {CYCLE_LABEL[plan.billingCycle]}
               </Box>
             </Typography>
-            <Stack direction="row" spacing={2} flexWrap="wrap" sx={{ mt: 2, pt: 1.75, borderTop: "1px solid rgba(255,255,255,0.07)", color: "text.secondary" }}>
+            <Stack direction="row" spacing={2} flexWrap="wrap" sx={{ mt: 2, pt: 1.75, borderTop: "1px solid rgba(140,165,220,0.1)", color: "text.secondary" }}>
               <Stack direction="row" spacing={0.75} alignItems="center">
                 <CalendarDays size={12} />
                 <Typography variant="caption">{plan.durationDays} days</Typography>

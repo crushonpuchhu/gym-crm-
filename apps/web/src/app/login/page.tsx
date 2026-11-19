@@ -70,8 +70,8 @@ export default function LoginPage() {
               width: 30,
               height: 30,
               borderRadius: "50%",
-              border: "2px solid rgba(255,255,255,0.12)",
-              borderTopColor: "#f5f5f6",
+              border: "2px solid rgba(140,165,220,0.18)",
+              borderTopColor: "#4b7cf2",
               animation: "spin 0.8s linear infinite",
               "@keyframes spin": { to: { transform: "rotate(360deg)" } },
             }}
@@ -102,8 +102,10 @@ export default function LoginPage() {
                 width: 46,
                 height: 46,
                 borderRadius: 3,
-                border: "1px solid rgba(255,255,255,0.14)",
-                background: "linear-gradient(160deg, rgba(255,255,255,0.16), rgba(255,255,255,0.02))",
+                border: "1px solid rgba(75,124,242,0.45)",
+                background: "linear-gradient(160deg, #4b7cf2, #3e71ec)",
+                color: "#ffffff",
+                boxShadow: "0 8px 24px rgba(75,124,242,0.3)",
               }}
             >
               <Dumbbell size={20} />
@@ -164,7 +166,7 @@ export default function LoginPage() {
 
           <Typography variant="body2" sx={{ color: "text.secondary", textAlign: "center", mt: 2.5 }}>
             New gym brand?{" "}
-            <Box component={Link} href="/register" sx={{ color: "#f5f5f6", fontWeight: 600, textDecoration: "none" }}>
+            <Box component={Link} href="/register" sx={{ color: "#abc5f3", fontWeight: 600, textDecoration: "none" }}>
               Create an account
             </Box>
           </Typography>
