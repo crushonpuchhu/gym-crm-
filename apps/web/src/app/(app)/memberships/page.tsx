@@ -96,7 +96,7 @@ function KanbanColumn({ stage, contracts, index }: { stage: Stage; contracts: Co
               {stage.name}
             </Typography>
           </Stack>
-          <Typography variant="caption" sx={{ color: "text.disabled" }}>
+          <Typography variant="caption" sx={{ color: "text.secondary" }}>
             {stage.probability}% close prob
           </Typography>
         </Box>

@@ -219,7 +219,7 @@ export default function TicketsPage() {
                         sx={{
                           borderRadius: 999,
                           border: "1px solid",
-                          borderColor: active ? "rgba(119,134,248,0.6)" : "rgba(255,255,255,0.12)",
+                          borderColor: active ? "rgba(132,146,205,0.6)" : "rgba(255,255,255,0.12)",
                           backgroundColor: active ? TONES.indigo.soft : "transparent",
                           color: active ? TONES.indigo.main : "text.secondary",
                           px: 1.25,
@@ -228,7 +228,7 @@ export default function TicketsPage() {
                           fontWeight: 700,
                           letterSpacing: "0.06em",
                           cursor: "pointer",
-                          "&:hover": { borderColor: "rgba(119,134,248,0.5)", color: "#dfe3ff" },
+                          "&:hover": { borderColor: "rgba(132,146,205,0.5)", color: "#d3d9f0" },
                         }}
                       >
                         {s.replaceAll("_", " ")}
@@ -286,9 +286,9 @@ export default function TicketsPage() {
                     type="submit"
                     aria-label="Send reply"
                     sx={{
-                      backgroundImage: "linear-gradient(135deg, #7786f8 0%, #9a89f8 100%)",
+                      backgroundImage: "linear-gradient(135deg, #8492cd 0%, #a08fc0 100%)",
                       color: "#0a0a0b",
-                      "&:hover": { backgroundImage: "linear-gradient(135deg, #8b98ff 0%, #ab9bff 100%)" },
+                      "&:hover": { backgroundImage: "linear-gradient(135deg, #9faadb 0%, #b5a4d4 100%)" },
                     }}
                   >
                     <Send size={16} />

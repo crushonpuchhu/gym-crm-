@@ -22,19 +22,19 @@ export const theme = createTheme({
       disabled: "#5b5b64",
     },
     primary: {
-      main: "#7786f8",
-      light: "#a3acff",
-      dark: "#5b68d8",
+      main: "#8492cd",
+      light: "#aeb8e0",
+      dark: "#6d7cb8",
       contrastText: "#0a0a0b",
     },
     secondary: {
-      main: "#b584f5",
+      main: "#af93c8",
       contrastText: "#0a0a0b",
     },
-    success: { main: "#45d39f" },
-    warning: { main: "#f7c04a" },
-    error: { main: "#f06a93" },
-    info: { main: "#53d3ea" },
+    success: { main: "#74b499" },
+    warning: { main: "#cdae7a" },
+    error: { main: "#cc8e9b" },
+    info: { main: "#72abb6" },
     action: {
       hover: "rgba(255, 255, 255, 0.06)",
       selected: "rgba(255, 255, 255, 0.09)",
@@ -69,9 +69,9 @@ export const theme = createTheme({
         body: {
           backgroundColor: "#08080a",
           backgroundImage:
-            "radial-gradient(1100px 640px at 8% -14%, rgba(119,134,248,0.16), transparent 62%), radial-gradient(880px 520px at 92% -6%, rgba(181,132,245,0.13), transparent 58%), radial-gradient(760px 520px at 60% 108%, rgba(83,211,234,0.07), transparent 62%)",
+            "radial-gradient(1100px 640px at 8% -14%, rgba(132,146,205,0.16), transparent 62%), radial-gradient(880px 520px at 92% -6%, rgba(175,147,200,0.13), transparent 58%), radial-gradient(760px 520px at 60% 108%, rgba(114,171,182,0.07), transparent 62%)",
           backgroundAttachment: "fixed",
-          "& ::selection": { backgroundColor: "rgba(119,134,248,0.35)" },
+          "& ::selection": { backgroundColor: "rgba(132,146,205,0.35)" },
         },
       },
     },
@@ -90,24 +90,24 @@ export const theme = createTheme({
         root: { borderRadius: 10, paddingInline: 16, minHeight: 36 },
         sizeSmall: { minHeight: 30, paddingInline: 12, fontSize: 12 },
         contained: {
-          backgroundImage: "linear-gradient(135deg, #7786f8 0%, #9a89f8 100%)",
+          backgroundImage: "linear-gradient(135deg, #8492cd 0%, #a08fc0 100%)",
           color: "#0a0a0b",
           "&:hover": {
-            backgroundImage: "linear-gradient(135deg, #8b98ff 0%, #ab9bff 100%)",
+            backgroundImage: "linear-gradient(135deg, #9faadb 0%, #b5a4d4 100%)",
           },
         },
         outlined: {
           borderColor: "rgba(255,255,255,0.16)",
           color: "#f5f5f6",
           "&:hover": {
-            borderColor: "rgba(119,134,248,0.55)",
-            backgroundColor: "rgba(119,134,248,0.1)",
-            color: "#e3e6ff",
+            borderColor: "rgba(132,146,205,0.55)",
+            backgroundColor: "rgba(132,146,205,0.1)",
+            color: "#d3d9f0",
           },
         },
         text: {
           color: "#f5f5f6",
-          "&:hover": { backgroundColor: "rgba(119,134,248,0.1)", color: "#e3e6ff" },
+          "&:hover": { backgroundColor: "rgba(132,146,205,0.1)", color: "#d3d9f0" },
         },
       },
     },
@@ -116,7 +116,7 @@ export const theme = createTheme({
         root: {
           borderRadius: 10,
           color: "#b9b9c0",
-          "&:hover": { backgroundColor: "rgba(119,134,248,0.14)", color: "#a3acff" },
+          "&:hover": { backgroundColor: "rgba(132,146,205,0.14)", color: "#aeb8e0" },
         },
       },
     },
@@ -138,7 +138,7 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           "&:last-child td": { borderBottom: "none" },
-          "&:hover": { backgroundColor: "rgba(119,134,248,0.05)" },
+          "&:hover": { backgroundColor: "rgba(132,146,205,0.05)" },
         },
       },
     },
@@ -168,7 +168,7 @@ export const theme = createTheme({
           "& .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.12)" },
           "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.24)" },
           "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-            borderColor: "rgba(119,134,248,0.75)",
+            borderColor: "rgba(132,146,205,0.75)",
             borderWidth: 1,
           },
         },
@@ -185,7 +185,7 @@ export const theme = createTheme({
     },
     MuiFormLabel: {
       styleOverrides: {
-        root: { fontSize: 12.5, color: "#94949c", "&.Mui-focused": { color: "#a3acff" } },
+        root: { fontSize: 12.5, color: "#94949c", "&.Mui-focused": { color: "#aeb8e0" } },
       },
     },
     MuiSelect: {
@@ -236,10 +236,10 @@ export const theme = createTheme({
           minHeight: 42,
           color: "#a5a5ad",
           "&.Mui-selected": {
-            backgroundColor: "rgba(119,134,248,0.16)",
-            color: "#dfe3ff",
-            "& .MuiListItemIcon-root": { color: "#a3acff" },
-            "&:hover": { backgroundColor: "rgba(119,134,248,0.22)" },
+            backgroundColor: "rgba(132,146,205,0.16)",
+            color: "#d3d9f0",
+            "& .MuiListItemIcon-root": { color: "#aeb8e0" },
+            "&:hover": { backgroundColor: "rgba(132,146,205,0.22)" },
           },
         },
       },
@@ -283,9 +283,9 @@ export const theme = createTheme({
           paddingInline: 12,
           paddingBlock: 4,
           "&.Mui-selected": {
-            backgroundImage: "linear-gradient(135deg, #7786f8 0%, #9a89f8 100%)",
+            backgroundImage: "linear-gradient(135deg, #8492cd 0%, #a08fc0 100%)",
             color: "#0a0a0b",
-            "&:hover": { backgroundImage: "linear-gradient(135deg, #8b98ff 0%, #ab9bff 100%)" },
+            "&:hover": { backgroundImage: "linear-gradient(135deg, #9faadb 0%, #b5a4d4 100%)" },
           },
         },
       },
@@ -294,7 +294,7 @@ export const theme = createTheme({
       styleOverrides: {
         root: { backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 999, height: 6 },
         bar: {
-          backgroundImage: "linear-gradient(90deg, #7786f8 0%, #b584f5 100%)",
+          backgroundImage: "linear-gradient(90deg, #8492cd 0%, #af93c8 100%)",
           borderRadius: 999,
         },
       },
@@ -321,13 +321,13 @@ export const theme = createTheme({
     MuiAvatar: {
       styleOverrides: {
         root: {
-          backgroundImage: "linear-gradient(135deg, #4d59c9 0%, #7c5bd6 100%)",
+          backgroundImage: "linear-gradient(135deg, #5a6690 0%, #8a6fa8 100%)",
           color: "#f5f5f6",
           fontWeight: 600,
         },
       },
     },
-    MuiTabs: { styleOverrides: { indicator: { backgroundColor: "#7786f8", height: 2 } } },
+    MuiTabs: { styleOverrides: { indicator: { backgroundColor: "#8492cd", height: 2 } } },
     MuiTab: {
       styleOverrides: {
         root: {
@@ -335,18 +335,18 @@ export const theme = createTheme({
           fontSize: 13,
           fontWeight: 600,
           color: "#8d8d95",
-          "&.Mui-selected": { color: "#a3acff" },
+          "&.Mui-selected": { color: "#aeb8e0" },
         },
       },
     },
     MuiBadge: {
-      styleOverrides: { badge: { backgroundColor: "#7786f8", color: "#0a0a0b", fontWeight: 700 } },
+      styleOverrides: { badge: { backgroundColor: "#8492cd", color: "#0a0a0b", fontWeight: 700 } },
     },
     MuiSwitch: {
       styleOverrides: {
         root: {
-          "& .MuiSwitch-switchBase.Mui-checked": { color: "#7786f8" },
-          "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { backgroundColor: "#7786f8" },
+          "& .MuiSwitch-switchBase.Mui-checked": { color: "#8492cd" },
+          "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { backgroundColor: "#8492cd" },
         },
         track: { backgroundColor: "rgba(255,255,255,0.2)" },
       },
@@ -355,10 +355,10 @@ export const theme = createTheme({
       styleOverrides: { label: { fontSize: 13, color: "#c9c9cf" } },
     },
     MuiCheckbox: {
-      styleOverrides: { root: { color: "rgba(255,255,255,0.4)", "&.Mui-checked": { color: "#7786f8" } } },
+      styleOverrides: { root: { color: "rgba(255,255,255,0.4)", "&.Mui-checked": { color: "#8492cd" } } },
     },
     MuiRadio: {
-      styleOverrides: { root: { color: "rgba(255,255,255,0.4)", "&.Mui-checked": { color: "#7786f8" } } },
+      styleOverrides: { root: { color: "rgba(255,255,255,0.4)", "&.Mui-checked": { color: "#8492cd" } } },
     },
     MuiTablePagination: {
       styleOverrides: {

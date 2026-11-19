@@ -75,8 +75,8 @@ function Brand() {
           width: 40,
           height: 40,
           borderRadius: 2.5,
-          border: "1px solid rgba(119,134,248,0.4)",
-          background: "linear-gradient(160deg, rgba(119,134,248,0.9), rgba(181,132,245,0.85))",
+          border: "1px solid rgba(132,146,205,0.4)",
+          background: "linear-gradient(160deg, rgba(132,146,205,0.9), rgba(175,147,200,0.85))",
           color: "#0a0a0b",
         }}
       >
@@ -92,9 +92,9 @@ function Brand() {
               height: 18,
               fontSize: 9,
               px: 0.5,
-              backgroundColor: "rgba(119,134,248,0.16)",
-              color: "#a3acff",
-              boxShadow: "inset 0 0 0 1px rgba(119,134,248,0.22)",
+              backgroundColor: "rgba(132,146,205,0.16)",
+              color: "#aeb8e0",
+              boxShadow: "inset 0 0 0 1px rgba(132,146,205,0.22)",
             }}
           />
         </Stack>
@@ -180,7 +180,7 @@ function SidebarContent({
               onClick={onNavigate}
               sx={{
                 mb: 0.5,
-                border: active ? "1px solid rgba(119,134,248,0.35)" : "1px solid transparent",
+                border: active ? "1px solid rgba(132,146,205,0.35)" : "1px solid transparent",
               }}
             >
               <ListItemIcon>
@@ -204,7 +204,7 @@ function SidebarContent({
               onClick={onNavigate}
               sx={{
                 mb: 0.5,
-                border: active ? "1px solid rgba(119,134,248,0.35)" : "1px solid transparent",
+                border: active ? "1px solid rgba(132,146,205,0.35)" : "1px solid transparent",
               }}
             >
               <ListItemIcon>

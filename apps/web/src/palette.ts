@@ -1,18 +1,18 @@
 /**
  * GymFlow accent palette.
  *
- * Six hues derived from one seed (indigo, the CRM accent) at a shared
- * saturation/lightness so every tone carries the same visual weight on the
- * near-black ground. Each tone ships a `main` for text, strokes and bars, and a
+ * Six muted hues derived from one seed (indigo, the CRM accent) at a shared
+ * low saturation and lightness, so every tone carries the same visual weight on
+ * the near-black ground without turning neon. Each tone ships a `main` for text, strokes and bars, and a
  * `soft` wash for icon chips and card glows.
  */
 export const TONES = {
-  indigo: { main: "#7786f8", soft: "rgba(119, 134, 248, 0.15)", glow: "rgba(119, 134, 248, 0.22)" },
-  violet: { main: "#b584f5", soft: "rgba(181, 132, 245, 0.15)", glow: "rgba(181, 132, 245, 0.22)" },
-  cyan: { main: "#53d3ea", soft: "rgba(83, 211, 234, 0.14)", glow: "rgba(83, 211, 234, 0.2)" },
-  emerald: { main: "#45d39f", soft: "rgba(69, 211, 159, 0.14)", glow: "rgba(69, 211, 159, 0.2)" },
-  amber: { main: "#f7c04a", soft: "rgba(247, 192, 74, 0.14)", glow: "rgba(247, 192, 74, 0.2)" },
-  rose: { main: "#f06a93", soft: "rgba(240, 106, 147, 0.14)", glow: "rgba(240, 106, 147, 0.2)" },
+  indigo: { main: "#8492cd", soft: "rgba(132, 146, 205, 0.15)", glow: "rgba(132, 146, 205, 0.22)" },
+  violet: { main: "#af93c8", soft: "rgba(175, 147, 200, 0.15)", glow: "rgba(175, 147, 200, 0.22)" },
+  cyan: { main: "#72abb6", soft: "rgba(114, 171, 182, 0.14)", glow: "rgba(114, 171, 182, 0.2)" },
+  emerald: { main: "#74b499", soft: "rgba(116, 180, 153, 0.14)", glow: "rgba(116, 180, 153, 0.2)" },
+  amber: { main: "#cdae7a", soft: "rgba(205, 174, 122, 0.14)", glow: "rgba(205, 174, 122, 0.2)" },
+  rose: { main: "#cc8e9b", soft: "rgba(204, 142, 155, 0.14)", glow: "rgba(204, 142, 155, 0.2)" },
 } as const;
 
 export type ToneName = keyof typeof TONES;
@@ -32,9 +32,9 @@ export const SERIES: string[] = [
 /** Nine-step expansion for pies and legends with more categories than hues. */
 export const SERIES_9: string[] = [
   ...SERIES,
-  "#c9d2ff",
-  "#a4e9c9",
-  "#ffd7a1",
+  "#aeb8e0",
+  "#9acbb7",
+  "#dfc89f",
 ];
 
 /** Same order, low-alpha fills for stacked or area work. */

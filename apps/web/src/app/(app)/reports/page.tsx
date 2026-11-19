@@ -137,8 +137,8 @@ export default function ReportsPage() {
                 <BarChart data={joins}>
                   <defs>
                     <linearGradient id="reportMonthBars" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#9aa6ff" />
-                      <stop offset="100%" stopColor="#6370e0" />
+                      <stop offset="0%" stopColor="#a2add7" />
+                      <stop offset="100%" stopColor="#6d7aab" />
                     </linearGradient>
                   </defs>
                   <CartesianGrid stroke={CHART.grid} strokeDasharray="3 3" vertical={false} />
