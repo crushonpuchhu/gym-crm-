@@ -1,7 +1,28 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
+import {
+  Box,
+  Button,
+  Checkbox,
+  FormControlLabel,
+  IconButton,
+  InputAdornment,
+  MenuItem,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { Stack } from "@/components/mui-stack";
 import { api } from "@/lib/api";
-import { StatusBadge, PriorityBadge, EmptyState, ErrorState, LoadingSkeleton, Modal, FormField } from "@/components/ui";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingSkeleton,
+  Modal,
+  PageHeader,
+  Panel,
+  PriorityChip,
+  StatusChip,
+} from "@/components/kit";
 import { Inbox, Plus, Send } from "lucide-react";
 
 interface Comment { id: string; body: string; isInternal: boolean; createdAt: string; author: { name: string } }
@@ -9,6 +30,9 @@ interface Ticket { id: string; ticketNumber: string; subject: string; reporterNa
 interface TicketList { items: Ticket[]; total: number }
 
 const STATUS_FLOW = ["NEW", "OPEN", "PENDING", "IN_PROGRESS", "RESOLVED", "CLOSED"];
+const CATEGORIES = ["BILLING", "EQUIPMENT", "CLASS_BOOKING", "ACCESS", "CLEANLINESS", "STAFF", "OTHER"];
+const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"];
+const EMPTY_FORM = { reporterEmail: "", reporterName: "", category: "OTHER", subject: "", description: "", priority: "MEDIUM" };
 
 export default function TicketsPage() {
   const [data, setData] = useState<TicketList | null>(null);
@@ -17,7 +41,7 @@ export default function TicketsPage() {
   const [comment, setComment] = useState("");
   const [isInternal, setIsInternal] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({ reporterEmail: "", reporterName: "", category: "OTHER", subject: "", description: "", priority: "MEDIUM" });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState("");
 
   const load = async () => {
@@ -47,7 +71,7 @@ export default function TicketsPage() {
     try {
       await api("/tickets", { method: "POST", body: JSON.stringify(form) });
       setModalOpen(false);
-      setForm({ reporterEmail: "", reporterName: "", category: "OTHER", subject: "", description: "", priority: "MEDIUM" });
+      setForm(EMPTY_FORM);
       await load();
     } catch (err: any) {
       setFormError(err?.message || "Failed to create ticket");
@@ -81,100 +105,239 @@ export default function TicketsPage() {
   if (!data) return <LoadingSkeleton />;
 
   return (
-    <div className="grid h-[calc(100vh-7rem)] grid-cols-1 gap-4 lg:grid-cols-5">
-      <div className="card col-span-2 flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between border-b border-slate-200 p-4">
-          <div className="flex items-center gap-2">
-            <Inbox size={17} className="text-accent-600" />
-            <p className="text-sm font-bold text-ink-900">Member support · {data.total}</p>
-          </div>
-          <button className="btn-primary !px-3 !py-1.5 text-xs" onClick={() => setModalOpen(true)}><Plus size={14} /> New</button>
-        </div>
-        <div className="flex-1 divide-y divide-slate-100 overflow-y-auto">
-          {data.items.length === 0 && <EmptyState title="No tickets" hint="Inbound support requests will appear here." />}
-          {data.items.map((t) => (
-            <button key={t.id} onClick={() => void openTicket(t.id)} className={`flex w-full flex-col gap-1 p-4 text-left transition hover:bg-slate-50 ${selected?.id === t.id ? "bg-accent-50" : ""}`}>
-              <div className="flex w-full items-center justify-between gap-2">
-                <span className="text-[10px] font-mono font-bold text-slate-400">{t.ticketNumber}</span>
-                <PriorityBadge priority={t.priority} />
-              </div>
-              <p className="line-clamp-1 text-sm font-semibold text-slate-800">{t.subject}</p>
-              <div className="flex items-center gap-2">
-                <StatusBadge status={t.status} />
-                <span className="text-[10px] text-slate-400">{t.reporterName}</span>
-                <span className="ml-auto rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-500">{t.category.replaceAll("_", " ")}</span>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
+    <Box>
+      <PageHeader
+        title="Support inbox"
+        subtitle={`${data.total} member conversations`}
+        actions={
+          <Button variant="contained" startIcon={<Plus size={14} />} onClick={() => setModalOpen(true)}>
+            New ticket
+          </Button>
+        }
+      />
 
-      <div className="card col-span-3 flex flex-col overflow-hidden">
-        {!selected ? (
-          <div className="flex flex-1 items-center justify-center text-sm text-slate-400">Select a ticket to view the conversation</div>
-        ) : (
-          <>
-            <div className="border-b border-slate-200 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="text-[10px] font-mono font-bold uppercase text-slate-400">{selected.ticketNumber}</p>
-                  <p className="text-base font-bold text-ink-900">{selected.subject}</p>
-                  <p className="text-xs text-slate-500">{selected.reporterName} · {selected.reporterEmail}{selected.location ? ` · ${selected.location.name}` : ""}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <StatusBadge status={selected.status} />
-                  <PriorityBadge priority={selected.priority} />
-                </div>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-1">
-                {STATUS_FLOW.map((s) => (
-                  <button key={s} onClick={() => void setStatus(s)} className={`rounded-full border px-2 py-1 text-[10px] font-bold transition ${selected.status === s ? "border-accent-600 bg-accent-600 text-white" : "border-slate-200 text-slate-500 hover:border-accent-400"}`}>{s.replaceAll("_", " ")}</button>
+      <Box
+        sx={{
+          display: "grid",
+          gap: 2,
+          gridTemplateColumns: { xs: "1fr", lg: "2fr 3fr" },
+          alignItems: "start",
+        }}
+      >
+        <Panel padded={false} sx={{ display: "flex", flexDirection: "column", height: "calc(100vh - 14rem)", minHeight: 460 }}>
+          <Stack direction="row" alignItems="center" spacing={1} sx={{ p: 2, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+            <Inbox size={16} color="#8d8d95" />
+            <Typography sx={{ fontWeight: 600, fontSize: 13.5 }}>Member support · {data.total}</Typography>
+          </Stack>
+          <Box sx={{ flex: 1, overflowY: "auto" }}>
+            {data.items.length === 0 && <EmptyState title="No tickets" hint="Inbound support requests will appear here." />}
+            {data.items.map((t) => {
+              const active = selected?.id === t.id;
+              return (
+                <Box
+                  key={t.id}
+                  component="button"
+                  onClick={() => void openTicket(t.id)}
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 0.75,
+                    width: "100%",
+                    textAlign: "left",
+                    px: 2,
+                    py: 1.75,
+                    background: active ? "rgba(255,255,255,0.06)" : "transparent",
+                    border: "none",
+                    borderBottom: "1px solid rgba(255,255,255,0.06)",
+                    color: "inherit",
+                    cursor: "pointer",
+                    "&:hover": { background: "rgba(255,255,255,0.04)" },
+                  }}
+                >
+                  <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+                    <Typography sx={{ fontFamily: "Geist Mono, monospace", fontSize: 10, fontWeight: 700, color: "text.disabled" }}>
+                      {t.ticketNumber}
+                    </Typography>
+                    <PriorityChip priority={t.priority} />
+                  </Stack>
+                  <Typography noWrap sx={{ fontSize: 13.5, fontWeight: 600 }}>
+                    {t.subject}
+                  </Typography>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <StatusChip status={t.status} />
+                    <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                      {t.reporterName}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{ ml: "auto", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 1, px: 0.75, color: "text.disabled" }}
+                    >
+                      {t.category.replaceAll("_", " ")}
+                    </Typography>
+                  </Stack>
+                </Box>
+              );
+            })}
+          </Box>
+        </Panel>
+
+        <Panel padded={false} sx={{ display: "flex", flexDirection: "column", height: "calc(100vh - 14rem)", minHeight: 460 }}>
+          {!selected ? (
+            <Box sx={{ flex: 1, display: "grid", placeItems: "center", p: 4 }}>
+              <Typography variant="body2" sx={{ color: "text.disabled" }}>
+                Select a ticket to view the conversation
+              </Typography>
+            </Box>
+          ) : (
+            <>
+              <Box sx={{ p: 2, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={2} flexWrap="wrap">
+                  <Box>
+                    <Typography sx={{ fontFamily: "Geist Mono, monospace", fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "text.disabled" }}>
+                      {selected.ticketNumber}
+                    </Typography>
+                    <Typography sx={{ fontSize: 16, fontWeight: 650 }}>{selected.subject}</Typography>
+                    <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                      {selected.reporterName} · {selected.reporterEmail}
+                      {selected.location ? ` · ${selected.location.name}` : ""}
+                    </Typography>
+                  </Box>
+                  <Stack direction="row" spacing={1}>
+                    <StatusChip status={selected.status} />
+                    <PriorityChip priority={selected.priority} />
+                  </Stack>
+                </Stack>
+                <Stack direction="row" flexWrap="wrap" gap={0.75} sx={{ mt: 2 }}>
+                  {STATUS_FLOW.map((s) => {
+                    const active = selected.status === s;
+                    return (
+                      <Box
+                        key={s}
+                        component="button"
+                        onClick={() => void setStatus(s)}
+                        sx={{
+                          borderRadius: 999,
+                          border: "1px solid",
+                          borderColor: active ? "#f5f5f6" : "rgba(255,255,255,0.12)",
+                          backgroundColor: active ? "#f5f5f6" : "transparent",
+                          color: active ? "#0a0a0b" : "text.secondary",
+                          px: 1.25,
+                          py: 0.4,
+                          fontSize: 10,
+                          fontWeight: 700,
+                          letterSpacing: "0.06em",
+                          cursor: "pointer",
+                          "&:hover": { borderColor: "rgba(255,255,255,0.4)" },
+                        }}
+                      >
+                        {s.replaceAll("_", " ")}
+                      </Box>
+                    );
+                  })}
+                </Stack>
+              </Box>
+
+              <Stack spacing={1.5} sx={{ flex: 1, overflowY: "auto", p: 2 }}>
+                {(selected.comments || []).map((c) => (
+                  <Box
+                    key={c.id}
+                    sx={{
+                      maxWidth: "82%",
+                      alignSelf: c.isInternal ? "flex-end" : "flex-start",
+                      borderRadius: 2.5,
+                      p: 1.75,
+                      fontSize: 13,
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      backgroundColor: c.isInternal ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.03)",
+                    }}
+                  >
+                    <Typography sx={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "text.disabled", mb: 0.75 }}>
+                      {c.author?.name} · {new Date(c.createdAt).toLocaleString()}
+                      {c.isInternal ? " · internal note" : ""}
+                    </Typography>
+                    {c.body}
+                  </Box>
                 ))}
-              </div>
-            </div>
-            <div className="flex-1 space-y-3 overflow-y-auto p-4">
-              {(selected.comments || []).map((c) => (
-                <div key={c.id} className={`max-w-[80%] rounded-xl p-3 text-sm ${c.isInternal ? "ml-auto bg-amber-50 text-amber-900" : "bg-slate-100 text-slate-700"}`}>
-                  <p className="mb-1 text-[10px] font-bold uppercase tracking-wide opacity-70">{c.author?.name} · {new Date(c.createdAt).toLocaleString()}{c.isInternal ? " · internal note" : ""}</p>
-                  {c.body}
-                </div>
-              ))}
-              {(selected.comments || []).length === 0 && <p className="pt-8 text-center text-xs text-slate-400">No conversation yet. First response starts the SLA clock.</p>}
-            </div>
-            <form onSubmit={addComment} className="border-t border-slate-200 p-3">
-              <div className="flex items-center gap-2">
-                <input className="input flex-1" placeholder="Write a reply…" value={comment} onChange={(e) => setComment(e.target.value)} required aria-label="Reply" />
-                <label className="flex cursor-pointer items-center gap-1 text-[10px] font-bold uppercase text-slate-500">
-                  <input type="checkbox" checked={isInternal} onChange={(e) => setIsInternal(e.target.checked)} /> Internal
-                </label>
-                <button type="submit" className="btn-primary !px-3" aria-label="Send reply"><Send size={16} /></button>
-              </div>
-            </form>
-          </>
-        )}
-      </div>
+                {(selected.comments || []).length === 0 && (
+                  <Typography variant="body2" sx={{ color: "text.disabled", textAlign: "center", pt: 6 }}>
+                    No conversation yet. First response starts the SLA clock.
+                  </Typography>
+                )}
+              </Stack>
+
+              <Box component="form" onSubmit={addComment} sx={{ borderTop: "1px solid rgba(255,255,255,0.08)", p: 1.5 }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <TextField
+                    size="small"
+                    fullWidth
+                    placeholder="Write a reply…"
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    required
+                    slotProps={{ htmlInput: { "aria-label": "Reply" } }}
+                  />
+                  <FormControlLabel
+                    control={<Checkbox size="small" checked={isInternal} onChange={(e) => setIsInternal(e.target.checked)} />}
+                    label="Internal"
+                    sx={{ mr: 0, whiteSpace: "nowrap" }}
+                  />
+                  <IconButton type="submit" aria-label="Send reply" sx={{ backgroundColor: "#f5f5f6", color: "#0a0a0b", "&:hover": { backgroundColor: "#ffffff" } }}>
+                    <Send size={16} />
+                  </IconButton>
+                </Stack>
+              </Box>
+            </>
+          )}
+        </Panel>
+      </Box>
 
       <Modal open={modalOpen} title="New ticket" onClose={() => setModalOpen(false)}>
-        <form onSubmit={createTicket} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <FormField label="Member name"><input className="input" value={form.reporterName} onChange={(e) => setForm({ ...form, reporterName: e.target.value })} required /></FormField>
-            <FormField label="Member email"><input className="input" type="email" value={form.reporterEmail} onChange={(e) => setForm({ ...form, reporterEmail: e.target.value })} required /></FormField>
-          </div>
-          <FormField label="Category">
-            <select className="input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-              <option>BILLING</option><option>EQUIPMENT</option><option>CLASS_BOOKING</option><option>ACCESS</option><option>CLEANLINESS</option><option>STAFF</option><option>OTHER</option>
-            </select>
-          </FormField>
-          <FormField label="Subject"><input className="input" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} required /></FormField>
-          <FormField label="Description"><textarea className="input min-h-20" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} required /></FormField>
-          <FormField label="Priority"><select className="input" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}><option>LOW</option><option>MEDIUM</option><option>HIGH</option><option>URGENT</option></select></FormField>
-          {formError && <p className="text-sm text-rose-600">{formError}</p>}
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" className="btn-secondary" onClick={() => setModalOpen(false)}>Cancel</button>
-            <button type="submit" className="btn-primary">Create ticket</button>
-          </div>
-        </form>
+        <Box component="form" onSubmit={createTicket}>
+          <Stack spacing={2}>
+            <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" } }}>
+              <TextField required label="Member name" size="small" value={form.reporterName} onChange={(e) => setForm({ ...form, reporterName: e.target.value })} />
+              <TextField required label="Member email" type="email" size="small" value={form.reporterEmail} onChange={(e) => setForm({ ...form, reporterEmail: e.target.value })} />
+            </Box>
+            <TextField select label="Category" size="small" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+              {CATEGORIES.map((category) => (
+                <MenuItem key={category} value={category}>
+                  {category.replaceAll("_", " ")}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField required label="Subject" size="small" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} />
+            <TextField
+              required
+              label="Description"
+              size="small"
+              multiline
+              minRows={3}
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+            />
+            <TextField select label="Priority" size="small" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}>
+              {PRIORITIES.map((priority) => (
+                <MenuItem key={priority} value={priority}>
+                  {priority}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Stack>
+          {formError && (
+            <Typography variant="body2" sx={{ color: "text.secondary", mt: 2 }}>
+              {formError}
+            </Typography>
+          )}
+          <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 3 }}>
+            <Button variant="outlined" onClick={() => setModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained">
+              Create ticket
+            </Button>
+          </Stack>
+        </Box>
       </Modal>
-    </div>
+    </Box>
   );
 }

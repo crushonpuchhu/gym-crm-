@@ -1,9 +1,11 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
+import { Box, Button, Checkbox, FormControlLabel, MenuItem, TextField, Typography } from "@mui/material";
+import { Stack } from "@/components/mui-stack";
 import { api } from "@/lib/api";
-import { ErrorState, LoadingSkeleton, Modal, FormField } from "@/components/ui";
+import { EmptyState, ErrorState, LoadingSkeleton, Modal, PageHeader, Panel } from "@/components/kit";
 import { DndContext, DragEndEvent, useDraggable, useDroppable } from "@dnd-kit/core";
-import { KanbanSquare, Plus, TriangleAlert } from "lucide-react";
+import { KanbanSquare, Plus } from "lucide-react";
 
 interface Stage { id: string; name: string; order: number; probability: number; isWon: boolean; isLost: boolean }
 interface Pipeline { id: string; name: string; isDefault: boolean; stages: Stage[] }
@@ -26,18 +28,41 @@ interface PlanMini { id: string; name: string; price: string; billingCycle: stri
 interface LocationMini { id: string; name: string }
 
 const cycleMonths: Record<string, number> = { MONTHLY: 1, QUARTERLY: 3, ANNUAL: 12, ONE_TIME: 1 };
+const CYCLES = ["MONTHLY", "QUARTERLY", "ANNUAL", "ONE_TIME"];
+const EMPTY_FORM = { memberId: "", planId: "", locationId: "", title: "", monthlyValue: "", billingCycle: "MONTHLY" };
 
 function KanbanCard({ contract }: { contract: Contract }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: contract.id });
   return (
-    <div ref={setNodeRef} {...attributes} {...listeners} className={`cursor-grab rounded-lg border border-slate-200 bg-white p-3 shadow-card active:cursor-grabbing ${isDragging ? "opacity-50" : ""}`}>
-      <p className="text-sm font-semibold text-ink-900">{contract.member ? `${contract.member.firstName} ${contract.member.lastName}` : contract.title}</p>
-      <p className="mt-0.5 text-[11px] text-slate-500">{contract.plan?.name || "No plan"} · {contract.location?.name || "No club"}</p>
-      <div className="mt-2 flex items-center justify-between">
-        <span className="text-sm font-bold text-accent-700">${Number(contract.monthlyValue).toLocaleString()}/mo</span>
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{contract.probability}% · {contract.owner?.name || "unassigned"}</span>
-      </div>
-    </div>
+    <Box
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      sx={{
+        cursor: "grab",
+        borderRadius: 2,
+        border: "1px solid rgba(255,255,255,0.09)",
+        backgroundColor: "rgba(255,255,255,0.035)",
+        p: 1.5,
+        opacity: isDragging ? 0.5 : 1,
+        "&:active": { cursor: "grabbing" },
+      }}
+    >
+      <Typography sx={{ fontSize: 13.5, fontWeight: 600 }}>
+        {contract.member ? `${contract.member.firstName} ${contract.member.lastName}` : contract.title}
+      </Typography>
+      <Typography variant="caption" sx={{ color: "text.secondary", display: "block", mt: 0.25 }}>
+        {contract.plan?.name || "No plan"} · {contract.location?.name || "No club"}
+      </Typography>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 1 }}>
+        <Typography variant="body2" sx={{ fontWeight: 650 }}>
+          ${Number(contract.monthlyValue).toLocaleString()}/mo
+        </Typography>
+        <Typography variant="caption" sx={{ color: "text.disabled", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          {contract.probability}% · {contract.owner?.name || "unassigned"}
+        </Typography>
+      </Stack>
+    </Box>
   );
 }
 
@@ -45,19 +70,48 @@ function KanbanColumn({ stage, contracts }: { stage: Stage; contracts: Contract[
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
   const monthly = contracts.reduce((s, d) => s + Number(d.monthlyValue), 0);
   return (
-    <div className={`flex w-72 shrink-0 flex-col rounded-xl border p-3 transition ${isOver ? "border-accent-400 bg-accent-50" : "border-slate-200 bg-slate-50"}`}>
-      <div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-2">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-600">{stage.name}</p>
-          <p className="text-[10px] text-slate-400">{stage.probability}% close prob</p>
-        </div>
-        <span className="rounded-full bg-white px-2 py-1 text-[10px] font-bold text-slate-500 shadow-sm">{contracts.length} · ${Math.round(monthly).toLocaleString()}/mo</span>
-      </div>
-      <div className="flex flex-1 flex-col gap-2">
-        {contracts.map((d) => <KanbanCard key={d.id} contract={d} />)}
-        {contracts.length === 0 && <p className="rounded-lg border border-dashed border-slate-200 p-3 text-center text-[10px] text-slate-400">Drop contracts here</p>}
-      </div>
-    </div>
+    <Box
+      ref={setNodeRef}
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        width: 288,
+        flexShrink: 0,
+        borderRadius: 3,
+        border: "1px solid",
+        borderColor: isOver ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.08)",
+        backgroundColor: isOver ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.02)",
+        p: 1.5,
+        transition: "border-color 150ms, background-color 150ms",
+      }}
+    >
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5, pb: 1.25, borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+        <Box>
+          <Typography sx={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>{stage.name}</Typography>
+          <Typography variant="caption" sx={{ color: "text.disabled" }}>
+            {stage.probability}% close prob
+          </Typography>
+        </Box>
+        <Typography
+          variant="caption"
+          sx={{ border: "1px solid rgba(255,255,255,0.1)", borderRadius: 999, px: 1, py: 0.4, color: "text.secondary" }}
+        >
+          {contracts.length} · ${Math.round(monthly).toLocaleString()}/mo
+        </Typography>
+      </Stack>
+      <Stack spacing={1} sx={{ flex: 1 }}>
+        {contracts.map((d) => (
+          <KanbanCard key={d.id} contract={d} />
+        ))}
+        {contracts.length === 0 && (
+          <Box sx={{ border: "1px dashed rgba(255,255,255,0.12)", borderRadius: 2, p: 1.5, textAlign: "center" }}>
+            <Typography variant="caption" sx={{ color: "text.disabled" }}>
+              Drop contracts here
+            </Typography>
+          </Box>
+        )}
+      </Stack>
+    </Box>
   );
 }
 
@@ -72,7 +126,7 @@ export default function MembershipsPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({ memberId: "", planId: "", locationId: "", title: "", monthlyValue: "", billingCycle: "MONTHLY" });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState("");
 
   const loadOptions = async () => {
@@ -187,7 +241,7 @@ export default function MembershipsPage() {
         }),
       });
       setModalOpen(false);
-      setForm({ memberId: "", planId: "", locationId: "", title: "", monthlyValue: "", billingCycle: "MONTHLY" });
+      setForm(EMPTY_FORM);
       await loadBoard(pipelineId, openOnly);
     } catch (err: any) {
       setFormError(err?.message || "Failed to create membership");
@@ -196,84 +250,131 @@ export default function MembershipsPage() {
 
   if (error) return <ErrorState message={error} onRetry={() => void load()} />;
   if (!pipelines || !contracts) return <LoadingSkeleton rows={4} />;
-  if (pipelines.length === 0) return (
-    <div className="card flex flex-col items-center gap-3 p-12 text-center">
-      <TriangleAlert size={22} className="text-amber-500" />
-      <p className="text-sm font-semibold">No pipeline configured</p>
-      <p className="max-w-sm text-xs text-slate-500">Create a pipeline with stages to start selling memberships.</p>
-      <button className="btn-primary" onClick={() => void api("/pipelines", { method: "POST", body: JSON.stringify({ name: "New Memberships", isDefault: true }) }).then(() => load())}>Create default pipeline</button>
-    </div>
-  );
+  if (pipelines.length === 0) {
+    return (
+      <EmptyState
+        title="No pipeline configured"
+        hint="Create a pipeline with stages to start selling memberships."
+        action={
+          <Button
+            variant="contained"
+            onClick={() => void api("/pipelines", { method: "POST", body: JSON.stringify({ name: "New Memberships", isDefault: true }) }).then(() => load())}
+          >
+            Create default pipeline
+          </Button>
+        }
+      />
+    );
+  }
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-xl font-bold text-ink-900"><KanbanSquare size={20} /> Membership pipeline</h1>
-          <p className="text-xs text-slate-500">
-            Weighted contract value: <span className="font-bold text-accent-700">${Math.round(contracts.weightedRevenue).toLocaleString()}</span>
-            {openOnly ? " · open contracts only" : ` · ${contracts.total} contracts`}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-600">
-            <input type="checkbox" checked={openOnly} onChange={(e) => setOpenOnly(e.target.checked)} /> Open only
-          </label>
-          <select className="input" value={pipelineId} onChange={(e) => setPipelineId(e.target.value)} aria-label="Select pipeline">
-            {pipelines.map((p) => (<option key={p.id} value={p.id}>{p.name}{p.isDefault ? " (default)" : ""}</option>))}
-          </select>
-          <button className="btn-primary" onClick={() => setModalOpen(true)}><Plus size={16} /> New membership</button>
-        </div>
-      </div>
+    <Box>
+      <PageHeader
+        title="Membership pipeline"
+        subtitle={`Weighted contract value: $${Math.round(contracts.weightedRevenue).toLocaleString()}${
+          openOnly ? " · open contracts only" : ` · ${contracts.total} contracts`
+        }`}
+        actions={
+          <>
+            <FormControlLabel
+              control={<Checkbox size="small" checked={openOnly} onChange={(e) => setOpenOnly(e.target.checked)} />}
+              label="Open only"
+              sx={{ mr: 0 }}
+            />
+            <TextField
+              select
+              size="small"
+              value={pipelineId}
+              onChange={(e) => setPipelineId(e.target.value)}
+              slotProps={{ htmlInput: { "aria-label": "Select pipeline" } }}
+              sx={{ minWidth: 190 }}
+            >
+              {pipelines.map((p) => (
+                <MenuItem key={p.id} value={p.id}>
+                  {p.name}
+                  {p.isDefault ? " (default)" : ""}
+                </MenuItem>
+              ))}
+            </TextField>
+            <Button variant="contained" startIcon={<Plus size={16} />} onClick={() => setModalOpen(true)}>
+              New membership
+            </Button>
+          </>
+        }
+      />
 
-      {notice && <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800">{notice}</p>}
+      {notice && (
+        <Panel sx={{ mb: 2, p: 1.5, borderColor: "rgba(255,255,255,0.16)" }}>
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            {notice}
+          </Typography>
+        </Panel>
+      )}
 
       <DndContext onDragEnd={onDragEnd}>
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        <Box sx={{ display: "flex", gap: 2, overflowX: "auto", pb: 2 }}>
           {activePipeline?.stages.map((stage) => (
             <KanbanColumn key={stage.id} stage={stage} contracts={contracts.items.filter((d) => d.stageId === stage.id)} />
           ))}
-        </div>
+        </Box>
       </DndContext>
 
       <Modal open={modalOpen} title="New membership" onClose={() => setModalOpen(false)}>
-        <form onSubmit={createContract} className="space-y-3">
-          <FormField label="Member">
-            <select className="input" value={form.memberId} onChange={(e) => setForm({ ...form, memberId: e.target.value })}>
-              <option value="">No member yet (walk-in offer)</option>
-              {members.map((m) => <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>)}
-            </select>
-          </FormField>
-          <div className="grid grid-cols-2 gap-3">
-            <FormField label="Plan">
-              <select className="input" value={form.planId} onChange={(e) => selectPlan(e.target.value)}>
-                <option value="">Custom</option>
-                {plans.map((p) => <option key={p.id} value={p.id}>{p.name} · ${Number(p.price)}</option>)}
-              </select>
-            </FormField>
-            <FormField label="Home club">
-              <select className="input" value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value })}>
-                <option value="">Unassigned</option>
-                {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-              </select>
-            </FormField>
-          </div>
-          <FormField label="Contract title"><input className="input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required placeholder="Priya Nair — Unlimited Monthly" /></FormField>
-          <div className="grid grid-cols-2 gap-3">
-            <FormField label="Monthly value ($)"><input className="input" type="number" min="0" value={form.monthlyValue} onChange={(e) => setForm({ ...form, monthlyValue: e.target.value })} required /></FormField>
-            <FormField label="Billing cycle">
-              <select className="input" value={form.billingCycle} onChange={(e) => setForm({ ...form, billingCycle: e.target.value })}>
-                <option>MONTHLY</option><option>QUARTERLY</option><option>ANNUAL</option><option>ONE_TIME</option>
-              </select>
-            </FormField>
-          </div>
-          {formError && <p className="text-sm text-rose-600">{formError}</p>}
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" className="btn-secondary" onClick={() => setModalOpen(false)}>Cancel</button>
-            <button type="submit" className="btn-primary">Create membership</button>
-          </div>
-        </form>
+        <Box component="form" onSubmit={createContract}>
+          <Stack spacing={2}>
+            <TextField select label="Member" size="small" value={form.memberId} onChange={(e) => setForm({ ...form, memberId: e.target.value })}>
+              <MenuItem value="">No member yet (walk-in offer)</MenuItem>
+              {members.map((m) => (
+                <MenuItem key={m.id} value={m.id}>
+                  {m.firstName} {m.lastName}
+                </MenuItem>
+              ))}
+            </TextField>
+            <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: "1fr 1fr" }}>
+              <TextField select label="Plan" size="small" value={form.planId} onChange={(e) => selectPlan(e.target.value)}>
+                <MenuItem value="">Custom</MenuItem>
+                {plans.map((p) => (
+                  <MenuItem key={p.id} value={p.id}>
+                    {p.name} · ${Number(p.price)}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField select label="Home club" size="small" value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value })}>
+                <MenuItem value="">Unassigned</MenuItem>
+                {locations.map((l) => (
+                  <MenuItem key={l.id} value={l.id}>
+                    {l.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Box>
+            <TextField required label="Contract title" size="small" placeholder="Priya Nair — Unlimited Monthly" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: "1fr 1fr" }}>
+              <TextField required label="Monthly value ($)" type="number" size="small" value={form.monthlyValue} onChange={(e) => setForm({ ...form, monthlyValue: e.target.value })} />
+              <TextField select label="Billing cycle" size="small" value={form.billingCycle} onChange={(e) => setForm({ ...form, billingCycle: e.target.value })}>
+                {CYCLES.map((cycle) => (
+                  <MenuItem key={cycle} value={cycle}>
+                    {cycle.replaceAll("_", " ")}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Box>
+          </Stack>
+          {formError && (
+            <Typography variant="body2" sx={{ color: "text.secondary", mt: 2 }}>
+              {formError}
+            </Typography>
+          )}
+          <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 3 }}>
+            <Button variant="outlined" onClick={() => setModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained">
+              Create membership
+            </Button>
+          </Stack>
+        </Box>
       </Modal>
-    </div>
+    </Box>
   );
 }

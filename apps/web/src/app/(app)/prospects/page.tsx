@@ -1,11 +1,35 @@
 "use client";
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import {
+  Box,
+  Button,
+  IconButton,
+  InputAdornment,
+  MenuItem,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  TextField,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import { Stack } from "@/components/mui-stack";
 import { api } from "@/lib/api";
 import {
-  StatusBadge, PriorityBadge, EmptyState, ErrorState, LoadingSkeleton,
-  Modal, PaginationBar, FormField,
-} from "@/components/ui";
-import { Plus, Search, Trash2, ArrowRightLeft, Filter, Upload } from "lucide-react";
+  EmptyState,
+  ErrorState,
+  LoadingSkeleton,
+  Modal,
+  PageHeader,
+  PaginationBar,
+  Panel,
+  PriorityChip,
+  StatusChip,
+  TableShell,
+} from "@/components/kit";
+import { ArrowRightLeft, Filter, Plus, Search, Trash2, Upload } from "lucide-react";
 
 interface Prospect {
   id: string;
@@ -26,6 +50,18 @@ interface Location { id: string; name: string }
 
 const STATUS_OPTIONS = ["", "NEW", "CONTACTED", "TOUR_BOOKED", "TOURED", "TRIAL", "NEGOTIATING", "JOINED", "LOST"];
 const SOURCE_OPTIONS = ["WALK_IN", "WEBSITE", "REFERRAL", "INSTAGRAM", "FACEBOOK", "GOOGLE", "EVENT", "PARTNER", "OTHER"];
+const PRIORITIES = ["LOW", "MEDIUM", "HIGH"];
+const EMPTY_FORM = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+  locationId: "",
+  source: "WALK_IN",
+  priority: "MEDIUM",
+  value: "",
+  fitnessGoal: "",
+};
 
 export default function ProspectsPage() {
   const [data, setData] = useState<ProspectList | null>(null);
@@ -39,7 +75,7 @@ export default function ProspectsPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [csvText, setCsvText] = useState("firstname,lastname,email,phone,source,priority,value,fitnessgoal\n");
   const [importResult, setImportResult] = useState("");
-  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", locationId: "", source: "WALK_IN", priority: "MEDIUM", value: "", fitnessGoal: "" });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState("");
 
   const load = useCallback(async () => {
@@ -75,7 +111,7 @@ export default function ProspectsPage() {
         }),
       });
       setModalOpen(false);
-      setForm({ firstName: "", lastName: "", email: "", phone: "", locationId: "", source: "WALK_IN", priority: "MEDIUM", value: "", fitnessGoal: "" });
+      setForm(EMPTY_FORM);
       await load();
     } catch (err: any) {
       setFormError(err?.message || "Failed to create prospect");
@@ -122,114 +158,234 @@ export default function ProspectsPage() {
   };
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-ink-900">Prospects</h1>
-          <p className="text-xs text-slate-500">{data?.total ?? 0} enquiries, trials and guest passes</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button className="btn-secondary" onClick={() => setImportOpen(true)}><Upload size={16} /> Import CSV</button>
-          <button className="btn-primary" onClick={() => setModalOpen(true)}><Plus size={16} /> New prospect</button>
-        </div>
-      </div>
+    <Box>
+      <PageHeader
+        title="Prospects"
+        subtitle={`${data?.total ?? 0} enquiries, trials and guest passes`}
+        actions={
+          <>
+            <Button variant="outlined" startIcon={<Upload size={16} />} onClick={() => setImportOpen(true)}>
+              Import CSV
+            </Button>
+            <Button variant="contained" startIcon={<Plus size={16} />} onClick={() => setModalOpen(true)}>
+              New prospect
+            </Button>
+          </>
+        }
+      />
 
-      <div className="card flex flex-wrap items-center gap-2 p-3">
-        <div className="relative min-w-56 flex-1">
-          <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input className="input !pl-9" placeholder="Search name, email, phone…" value={search} onChange={(e) => { setPage(1); setSearch(e.target.value); }} aria-label="Search prospects" />
-        </div>
-        <div className="relative">
-          <Filter size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <select className="input !pl-9" value={status} onChange={(e) => { setPage(1); setStatus(e.target.value); }} aria-label="Filter by status">
-            {STATUS_OPTIONS.map((s) => (<option key={s} value={s}>{s ? s.replaceAll("_", " ") : "All statuses"}</option>))}
-          </select>
-        </div>
-      </div>
+      <Panel padded={false} sx={{ p: 1.5, mb: 2 }}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+          <TextField
+            size="small"
+            placeholder="Search name, email, phone…"
+            value={search}
+            onChange={(e) => {
+              setPage(1);
+              setSearch(e.target.value);
+            }}
+            slotProps={{
+              htmlInput: { "aria-label": "Search prospects" },
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search size={15} />
+                  </InputAdornment>
+                ),
+              },
+            }}
+            sx={{ flex: 1, minWidth: 200 }}
+          />
+          <TextField
+            select
+            size="small"
+            value={status}
+            onChange={(e) => {
+              setPage(1);
+              setStatus(e.target.value);
+            }}
+            slotProps={{
+              htmlInput: { "aria-label": "Filter by status" },
+              select: {
+                displayEmpty: true,
+                renderValue: (selected: any) => (selected ? String(selected).replaceAll("_", " ") : "All statuses"),
+              },
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Filter size={15} />
+                  </InputAdornment>
+                ),
+              },
+            }}
+            sx={{ minWidth: 190 }}
+          >
+            {STATUS_OPTIONS.map((s) => (
+              <MenuItem key={s} value={s}>
+                {s ? s.replaceAll("_", " ") : "All statuses"}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Stack>
+      </Panel>
 
       {error && <ErrorState message={error} onRetry={() => void load()} />}
       {!data && !error && <LoadingSkeleton />}
       {data && data.items.length === 0 && <EmptyState title="No prospects found" hint="Adjust filters or add the first enquiry from the front desk." />}
       {data && data.items.length > 0 && (
-        <div className="card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="th">Prospect</th>
-                  <th className="th">Club</th>
-                  <th className="th">Goal</th>
-                  <th className="th">Status</th>
-                  <th className="th">Score</th>
-                  <th className="th">Owner</th>
-                  <th className="th text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {data.items.map((prospect) => (
-                  <tr key={prospect.id} className="hover:bg-slate-50">
-                    <td className="td">
-                      <p className="font-semibold text-slate-800">{prospect.firstName} {prospect.lastName}</p>
-                      <p className="text-xs text-slate-500">{prospect.email}</p>
-                    </td>
-                    <td className="td text-xs">{prospect.location?.name || "—"}</td>
-                    <td className="td text-xs">{prospect.fitnessGoal || "—"}</td>
-                    <td className="td">
-                      <div className="flex flex-col gap-1">
-                        <StatusBadge status={prospect.status} />
-                        <PriorityBadge priority={prospect.priority} />
-                      </div>
-                    </td>
-                    <td className="td font-mono text-xs">{prospect.score}</td>
-                    <td className="td text-xs">{prospect.owner?.name || "—"}</td>
-                    <td className="td">
-                      <div className="flex justify-end gap-1">
-                        <button title="Convert to member" className="rounded-lg p-2 text-accent-600 hover:bg-accent-50" onClick={() => void convertProspect(prospect.id)} disabled={busy} aria-label="Convert prospect"><ArrowRightLeft size={16} /></button>
-                        <button title="Delete prospect" className="rounded-lg p-2 text-rose-600 hover:bg-rose-50" onClick={() => void deleteProspect(prospect.id)} disabled={busy} aria-label="Delete prospect"><Trash2 size={16} /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <TableShell>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Prospect</TableCell>
+                <TableCell>Club</TableCell>
+                <TableCell>Goal</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Score</TableCell>
+                <TableCell>Owner</TableCell>
+                <TableCell align="right">Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {data.items.map((prospect) => (
+                <TableRow key={prospect.id} hover>
+                  <TableCell>
+                    <Typography sx={{ fontWeight: 600, fontSize: 13.5 }}>
+                      {prospect.firstName} {prospect.lastName}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                      {prospect.email || prospect.phone || "—"}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                      {prospect.location?.name || "—"}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                      {prospect.fitnessGoal || "—"}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Stack spacing={0.75} alignItems="flex-start">
+                      <StatusChip status={prospect.status} />
+                      <PriorityChip priority={prospect.priority} />
+                    </Stack>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontFamily: "Geist Mono, ui-monospace, monospace" }}>
+                      {prospect.score}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                      {prospect.owner?.name || "—"}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Tooltip title="Convert to member">
+                      <span>
+                        <IconButton aria-label="Convert prospect" disabled={busy} onClick={() => void convertProspect(prospect.id)}>
+                          <ArrowRightLeft size={16} />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title="Delete prospect">
+                      <span>
+                        <IconButton aria-label="Delete prospect" disabled={busy} onClick={() => void deleteProspect(prospect.id)}>
+                          <Trash2 size={16} />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
           <PaginationBar page={data.page} pages={data.pages} total={data.total} onPage={setPage} />
-        </div>
+        </TableShell>
       )}
 
       <Modal open={importOpen} title="Import prospects from CSV" onClose={() => setImportOpen(false)}>
-        <p className="mb-2 text-xs text-slate-500">Header row required: <code>firstname,lastname,email,phone,source,priority,value,fitnessgoal</code>. Source and priority are case-insensitive.</p>
-        <textarea className="input h-40 font-mono text-xs" value={csvText} onChange={(e) => setCsvText(e.target.value)} spellCheck={false} />
-        {importResult && <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">{importResult}</p>}
-        <div className="mt-3 flex justify-end gap-2">
-          <button className="btn-secondary" onClick={() => setImportOpen(false)}>Close</button>
-          <button className="btn-primary" onClick={() => void importCsv()}>Run import</button>
-        </div>
+        <Typography variant="body2" sx={{ color: "text.secondary", mb: 1.5 }}>
+          Header row required:{" "}
+          <Box component="code" sx={{ fontFamily: "Geist Mono, monospace", fontSize: 11.5 }}>
+            firstname,lastname,email,phone,source,priority,value,fitnessgoal
+          </Box>
+          . Source and priority are case-insensitive.
+        </Typography>
+        <TextField
+          fullWidth
+          multiline
+          minRows={8}
+          value={csvText}
+          onChange={(e) => setCsvText(e.target.value)}
+          spellCheck={false}
+          sx={{ "& textarea": { fontFamily: "Geist Mono, ui-monospace, monospace", fontSize: 12 } }}
+        />
+        {importResult && (
+          <Typography variant="body2" sx={{ mt: 1.5, color: "text.secondary", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 2, px: 1.5, py: 1 }}>
+            {importResult}
+          </Typography>
+        )}
+        <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 2.5 }}>
+          <Button variant="outlined" onClick={() => setImportOpen(false)}>
+            Close
+          </Button>
+          <Button variant="contained" onClick={() => void importCsv()}>
+            Run import
+          </Button>
+        </Stack>
       </Modal>
 
       <Modal open={modalOpen} title="New prospect" onClose={() => setModalOpen(false)}>
-        <form onSubmit={createProspect} className="grid grid-cols-2 gap-3">
-          <FormField label="First name"><input className="input" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} required /></FormField>
-          <FormField label="Last name"><input className="input" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} required /></FormField>
-          <FormField label="Email"><input className="input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></FormField>
-          <FormField label="Phone"><input className="input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></FormField>
-          <FormField label="Home club">
-            <select className="input" value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value })}>
-              <option value="">Unassigned</option>
-              {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-            </select>
-          </FormField>
-          <FormField label="How did they find us?"><select className="input" value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })}>{SOURCE_OPTIONS.map((s) => <option key={s}>{s}</option>)}</select></FormField>
-          <FormField label="Fitness goal"><input className="input" value={form.fitnessGoal} onChange={(e) => setForm({ ...form, fitnessGoal: e.target.value })} placeholder="Lose 10 kg" /></FormField>
-          <FormField label="Monthly value ($)"><input className="input" type="number" min="0" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} /></FormField>
-          <FormField label="Priority"><select className="input" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}><option>LOW</option><option>MEDIUM</option><option>HIGH</option></select></FormField>
-          {formError && <p className="col-span-2 text-sm text-rose-600">{formError}</p>}
-          <div className="col-span-2 flex justify-end gap-2 pt-2">
-            <button type="button" className="btn-secondary" onClick={() => setModalOpen(false)}>Cancel</button>
-            <button type="submit" className="btn-primary">Create prospect</button>
-          </div>
-        </form>
+        <Box component="form" onSubmit={createProspect}>
+          <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" } }}>
+            <TextField required label="First name" size="small" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
+            <TextField required label="Last name" size="small" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
+            <TextField label="Email" type="email" size="small" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            <TextField label="Phone" size="small" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+            <TextField select label="Home club" size="small" value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value })}>
+              <MenuItem value="">Unassigned</MenuItem>
+              {locations.map((l) => (
+                <MenuItem key={l.id} value={l.id}>
+                  {l.name}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField select label="How did they find us?" size="small" value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })}>
+              {SOURCE_OPTIONS.map((s) => (
+                <MenuItem key={s} value={s}>
+                  {s.replaceAll("_", " ")}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField label="Fitness goal" size="small" placeholder="Lose 10 kg" value={form.fitnessGoal} onChange={(e) => setForm({ ...form, fitnessGoal: e.target.value })} />
+            <TextField label="Monthly value ($)" type="number" size="small" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} />
+            <TextField select label="Priority" size="small" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}>
+              {PRIORITIES.map((p) => (
+                <MenuItem key={p} value={p}>
+                  {p}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Box>
+          {formError && (
+            <Typography variant="body2" sx={{ color: "text.secondary", mt: 2 }}>
+              {formError}
+            </Typography>
+          )}
+          <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 3 }}>
+            <Button variant="outlined" onClick={() => setModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained">
+              Create prospect
+            </Button>
+          </Stack>
+        </Box>
       </Modal>
-    </div>
+    </Box>
   );
 }

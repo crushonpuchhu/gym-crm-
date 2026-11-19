@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { ReactNode } from "react";
+import { AppRouterCacheProvider } from "@mui/material-nextjs/v14-appRouter";
 import { AuthProvider } from "@/lib/auth";
 
 export const metadata: Metadata = {
@@ -20,7 +21,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        {/* Emotion cache for the app surfaces; the landing page keeps its own CSS. */}
+        <AppRouterCacheProvider options={{ key: "mui" }}>
+          <AuthProvider>{children}</AuthProvider>
+        </AppRouterCacheProvider>
       </body>
     </html>
   );

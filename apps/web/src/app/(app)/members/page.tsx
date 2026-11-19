@@ -1,7 +1,32 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
+import {
+  Box,
+  Button,
+  IconButton,
+  InputAdornment,
+  MenuItem,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  TextField,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import { Stack } from "@/components/mui-stack";
 import { api } from "@/lib/api";
-import { EmptyState, ErrorState, LoadingSkeleton, Modal, FormField, PaginationBar, StatusBadge } from "@/components/ui";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingSkeleton,
+  Modal,
+  PageHeader,
+  PaginationBar,
+  StatusChip,
+  TableShell,
+} from "@/components/kit";
 import { Plus, Search, Trash2 } from "lucide-react";
 
 interface Member {
@@ -18,6 +43,17 @@ interface Member {
 interface MemberList { items: Member[]; total: number; page: number; pages: number }
 interface Location { id: string; name: string }
 
+const STATUSES = ["TRIAL", "ACTIVE", "PAUSED", "CANCELLED", "EXPIRED"];
+const EMPTY_FORM = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+  locationId: "",
+  status: "ACTIVE",
+  fitnessGoal: "",
+};
+
 export default function MembersPage() {
   const [data, setData] = useState<MemberList | null>(null);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -25,7 +61,7 @@ export default function MembersPage() {
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", locationId: "", status: "ACTIVE", fitnessGoal: "" });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState("");
 
   const load = async () => {
@@ -70,7 +106,7 @@ export default function MembersPage() {
     try {
       await api("/members", { method: "POST", body: JSON.stringify({ ...form, locationId: form.locationId || undefined }) });
       setModalOpen(false);
-      setForm({ firstName: "", lastName: "", email: "", phone: "", locationId: "", status: "ACTIVE", fitnessGoal: "" });
+      setForm(EMPTY_FORM);
       await load();
     } catch (err: any) {
       setFormError(err?.message || "Failed to create member");
@@ -88,94 +124,154 @@ export default function MembersPage() {
   };
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-ink-900">Members</h1>
-          <p className="text-xs text-slate-500">{data?.total ?? 0} people on record</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              className="input !w-64 !pl-9"
+    <Box>
+      <PageHeader
+        title="Members"
+        subtitle={`${data?.total ?? 0} people on record`}
+        actions={
+          <>
+            <TextField
+              size="small"
               placeholder="Search name, email, phone…"
               value={search}
-              onChange={(e) => { setPage(1); setSearch(e.target.value); }}
-              aria-label="Search the member list"
+              onChange={(e) => {
+                setPage(1);
+                setSearch(e.target.value);
+              }}
+              slotProps={{
+                htmlInput: { "aria-label": "Search the member list" },
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search size={15} />
+                    </InputAdornment>
+                  ),
+                },
+              }}
+              sx={{ width: { xs: "100%", sm: 260 } }}
             />
-          </div>
-          <button className="btn-primary" onClick={() => setModalOpen(true)}><Plus size={16} /> New member</button>
-        </div>
-      </div>
+            <Button variant="contained" startIcon={<Plus size={16} />} onClick={() => setModalOpen(true)}>
+              New member
+            </Button>
+          </>
+        }
+      />
+
       {error && <ErrorState message={error} onRetry={() => void load()} />}
       {!data && !error && <LoadingSkeleton />}
-      {data && data.items.length === 0 && (search ? <EmptyState title="No matches" hint={`Nobody matches “${search}”. Try a different name, email or phone.`} /> : <EmptyState title="No members yet" hint="Create the first member or convert a prospect." />)}
+      {data && data.items.length === 0 &&
+        (search ? (
+          <EmptyState title="No matches" hint={`Nobody matches “${search}”. Try a different name, email or phone.`} />
+        ) : (
+          <EmptyState title="No members yet" hint="Create the first member or convert a prospect." />
+        ))}
       {data && data.items.length > 0 && (
-        <div className="card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="th">Member</th>
-                  <th className="th">Club</th>
-                  <th className="th">Plan</th>
-                  <th className="th">Status</th>
-                  <th className="th">Goal</th>
-                  <th className="th text-right">Remove</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {data.items.map((m) => {
-                  const contract = m.memberships[0];
-                  return (
-                    <tr key={m.id} className="hover:bg-slate-50">
-                      <td className="td">
-                        <p className="font-semibold text-slate-800">{m.firstName} {m.lastName}</p>
-                        <p className="text-xs text-slate-500">{m.email || m.phone || "—"}</p>
-                      </td>
-                      <td className="td text-xs">{m.location?.name || "—"}</td>
-                      <td className="td text-xs">
-                        <p className="font-medium text-slate-700">{contract?.plan?.name || "No plan"}</p>
-                        <p className="text-slate-400">{contract ? `$${Number(contract.monthlyValue).toFixed(0)}/mo` : ""}</p>
-                      </td>
-                      <td className="td"><StatusBadge status={m.status} /></td>
-                      <td className="td text-xs">{m.fitnessGoal || "—"}</td>
-                      <td className="td"><div className="flex justify-end"><button className="rounded-lg p-2 text-rose-600 hover:bg-rose-50" onClick={() => void remove(m.id)} aria-label="Archive member"><Trash2 size={16} /></button></div></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+        <TableShell>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Member</TableCell>
+                <TableCell>Club</TableCell>
+                <TableCell>Plan</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Goal</TableCell>
+                <TableCell align="right">Remove</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {data.items.map((m) => {
+                const contract = m.memberships[0];
+                return (
+                  <TableRow key={m.id} hover>
+                    <TableCell>
+                      <Typography sx={{ fontWeight: 600, fontSize: 13.5 }}>
+                        {m.firstName} {m.lastName}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                        {m.email || m.phone || "—"}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                        {m.location?.name || "—"}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">{contract?.plan?.name || "No plan"}</Typography>
+                      <Typography variant="caption" sx={{ color: "text.disabled" }}>
+                        {contract ? `$${Number(contract.monthlyValue).toFixed(0)}/mo` : ""}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <StatusChip status={m.status} />
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                        {m.fitnessGoal || "—"}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="Archive member">
+                        <IconButton aria-label="Archive member" onClick={() => void remove(m.id)}>
+                          <Trash2 size={16} />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
           <PaginationBar page={data.page} pages={data.pages} total={data.total} onPage={setPage} />
-        </div>
+        </TableShell>
       )}
+
       <Modal open={modalOpen} title="New member" onClose={() => setModalOpen(false)}>
-        <form onSubmit={create} className="grid grid-cols-2 gap-3">
-          <FormField label="First name"><input className="input" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} required /></FormField>
-          <FormField label="Last name"><input className="input" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} required /></FormField>
-          <FormField label="Email"><input className="input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></FormField>
-          <FormField label="Phone"><input className="input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></FormField>
-          <FormField label="Home club">
-            <select className="input" value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value })}>
-              <option value="">Unassigned</option>
-              {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-            </select>
-          </FormField>
-          <FormField label="Status">
-            <select className="input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-              <option>TRIAL</option><option>ACTIVE</option><option>PAUSED</option><option>CANCELLED</option><option>EXPIRED</option>
-            </select>
-          </FormField>
-          <FormField label="Fitness goal"><input className="input" value={form.fitnessGoal} onChange={(e) => setForm({ ...form, fitnessGoal: e.target.value })} placeholder="Build strength" /></FormField>
-          {formError && <p className="col-span-2 text-sm text-rose-600">{formError}</p>}
-          <div className="col-span-2 flex justify-end gap-2 pt-2">
-            <button type="button" className="btn-secondary" onClick={() => setModalOpen(false)}>Cancel</button>
-            <button type="submit" className="btn-primary">Create member</button>
-          </div>
-        </form>
+        <Box component="form" onSubmit={create}>
+          <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" } }}>
+            <TextField required label="First name" size="small" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
+            <TextField required label="Last name" size="small" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
+            <TextField label="Email" type="email" size="small" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            <TextField label="Phone" size="small" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+            <TextField select label="Home club" size="small" value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value })}>
+              <MenuItem value="">Unassigned</MenuItem>
+              {locations.map((l) => (
+                <MenuItem key={l.id} value={l.id}>
+                  {l.name}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField select label="Status" size="small" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+              {STATUSES.map((status) => (
+                <MenuItem key={status} value={status}>
+                  {status}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              label="Fitness goal"
+              size="small"
+              placeholder="Build strength"
+              value={form.fitnessGoal}
+              onChange={(e) => setForm({ ...form, fitnessGoal: e.target.value })}
+              sx={{ gridColumn: { sm: "span 2" } }}
+            />
+          </Box>
+          {formError && (
+            <Typography variant="body2" sx={{ color: "text.secondary", mt: 2 }}>
+              {formError}
+            </Typography>
+          )}
+          <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 3 }}>
+            <Button variant="outlined" onClick={() => setModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained">
+              Create member
+            </Button>
+          </Stack>
+        </Box>
       </Modal>
-    </div>
+    </Box>
   );
 }

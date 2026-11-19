@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Box, Button, LinearProgress, Typography } from "@mui/material";
+import { Stack } from "@/components/mui-stack";
 import { api } from "@/lib/api";
-import { LoadingSkeleton, ErrorState } from "@/components/ui";
+import { ErrorState, LoadingSkeleton, PageHeader, Panel, StatusChip } from "@/components/kit";
 import { Check, CreditCard } from "lucide-react";
 
 interface Subscription { plan: string; status: string; quotaMembers: number; quotaStaff: number; currentPeriodEnd?: string | null }
@@ -33,6 +35,26 @@ const PLANS = [
     features: ["Everything in Growth", "SSO/SAML", "Audit exports", "Dedicated success manager"],
   },
 ];
+
+function Quota({ label, used, quota }: { label: string; used: number; quota: number }) {
+  const pct = Math.min(100, quota ? (used / quota) * 100 : 0);
+  return (
+    <Box>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.75 }}>
+        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+          {label}
+        </Typography>
+        <Stack direction="row" spacing={1} alignItems="center">
+          {pct > 90 ? <StatusChip status="NEAR LIMIT" /> : null}
+          <Typography variant="caption" sx={{ color: "text.secondary" }}>
+            {used} / {quota.toLocaleString()}
+          </Typography>
+        </Stack>
+      </Stack>
+      <LinearProgress variant="determinate" value={pct} />
+    </Box>
+  );
+}
 
 export default function SubscriptionsPage() {
   const [sub, setSub] = useState<Subscription | null>(null);
@@ -74,67 +96,80 @@ export default function SubscriptionsPage() {
   if (error) return <ErrorState message={error} onRetry={() => void load()} />;
   if (!sub) return <LoadingSkeleton rows={3} />;
 
-  const memberPct = Math.min(100, sub.quotaMembers ? ((usage?.members ?? 0) / sub.quotaMembers) * 100 : 0);
-  const staffPct = Math.min(100, sub.quotaStaff ? ((usage?.staff ?? 0) / sub.quotaStaff) * 100 : 0);
-
   return (
-    <div className="mx-auto max-w-5xl space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-ink-900">Subscription & entitlements</h1>
-          <p className="text-xs text-slate-500">
-            Current plan: <span className="font-bold text-accent-700">{sub.plan}</span> · {sub.status}
-            {sub.currentPeriodEnd ? ` · renews ${new Date(sub.currentPeriodEnd).toLocaleDateString()}` : ""}
-          </p>
-        </div>
-        <CreditCard size={22} className="text-slate-400" />
-      </div>
+    <Box sx={{ maxWidth: 1060, mx: "auto" }}>
+      <PageHeader
+        title="Subscription & entitlements"
+        subtitle={`Current plan: ${sub.plan} · ${sub.status}${
+          sub.currentPeriodEnd ? ` · renews ${new Date(sub.currentPeriodEnd).toLocaleDateString()}` : ""
+        }`}
+        actions={<CreditCard size={22} color="#8d8d95" />}
+      />
 
-      <div className="card p-5">
-        <p className="label">Quota usage</p>
-        <div className="mt-3 grid gap-4 sm:grid-cols-2">
-          <div>
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-slate-700">Members</span>
-              <span className="text-slate-500">{usage?.members ?? 0} / {sub.quotaMembers.toLocaleString()}</span>
-            </div>
-            <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100">
-              <div className={`h-full rounded-full ${memberPct > 90 ? "bg-rose-500" : "bg-accent-500"}`} style={{ width: `${memberPct}%` }} />
-            </div>
-          </div>
-          <div>
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-slate-700">Staff seats</span>
-              <span className="text-slate-500">{usage?.staff ?? 0} / {sub.quotaStaff.toLocaleString()}</span>
-            </div>
-            <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100">
-              <div className={`h-full rounded-full ${staffPct > 90 ? "bg-rose-500" : "bg-accent-500"}`} style={{ width: `${staffPct}%` }} />
-            </div>
-          </div>
-        </div>
-      </div>
+      <Panel>
+        <Typography variant="overline" sx={{ color: "text.secondary" }}>
+          Quota usage
+        </Typography>
+        <Box sx={{ mt: 2, display: "grid", gap: 3, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" } }}>
+          <Quota label="Members" used={usage?.members ?? 0} quota={sub.quotaMembers} />
+          <Quota label="Staff seats" used={usage?.staff ?? 0} quota={sub.quotaStaff} />
+        </Box>
+      </Panel>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <Box sx={{ mt: 2, display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" } }}>
         {PLANS.map((plan) => {
           const current = sub.plan === plan.name;
           return (
-            <div key={plan.name} className={`card flex flex-col p-6 ${current ? "ring-2 ring-accent-500" : ""}`}>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-500">{plan.label}</p>
-              <p className="mt-2 text-3xl font-black text-ink-900">{plan.price}<span className="text-sm font-semibold text-slate-400">/mo</span></p>
-              <p className="mt-3 text-xs text-slate-500">{plan.members} · {plan.staff}</p>
-              <ul className="mt-4 flex-1 space-y-2">
+            <Panel
+              key={plan.name}
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                p: 3,
+                borderColor: current ? "rgba(255,255,255,0.42)" : undefined,
+              }}
+            >
+              <Stack direction="row" alignItems="center" justifyContent="space-between">
+                <Typography variant="overline" sx={{ color: "text.secondary" }}>
+                  {plan.label}
+                </Typography>
+                {current ? <StatusChip status="CURRENT" /> : null}
+              </Stack>
+              <Typography sx={{ mt: 1, fontSize: 32, fontWeight: 700, letterSpacing: "-0.035em" }}>
+                {plan.price}
+                <Box component="span" sx={{ fontSize: 12, fontWeight: 600, color: "text.disabled" }}>
+                  /mo
+                </Box>
+              </Typography>
+              <Typography variant="caption" sx={{ mt: 1, color: "text.secondary" }}>
+                {plan.members} · {plan.staff}
+              </Typography>
+              <Stack spacing={1.1} sx={{ mt: 2.5, flex: 1 }}>
                 {plan.features.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-xs text-slate-600"><Check size={13} className="text-emerald-500" /> {f}</li>
+                  <Stack key={f} direction="row" spacing={1} alignItems="center">
+                    <Check size={13} color="#b9b9c0" />
+                    <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                      {f}
+                    </Typography>
+                  </Stack>
                 ))}
-              </ul>
-              <button className={current ? "btn-secondary mt-5" : "btn-primary mt-5"} disabled={current || busy} onClick={() => void changePlan(plan.name)}>
+              </Stack>
+              <Button
+                variant={current ? "outlined" : "contained"}
+                disabled={current || busy}
+                onClick={() => void changePlan(plan.name)}
+                sx={{ mt: 3 }}
+              >
                 {current ? "Current plan" : `Switch to ${plan.label}`}
-              </button>
-            </div>
+              </Button>
+            </Panel>
           );
         })}
-      </div>
-      <p className="text-center text-[10px] text-slate-400">Test mode only — no real charges are initiated. Billing provider integration awaits live credentials.</p>
-    </div>
+      </Box>
+
+      <Typography variant="caption" sx={{ display: "block", textAlign: "center", mt: 2.5, color: "text.disabled" }}>
+        Test mode only — no real charges are initiated. Billing provider integration awaits live credentials.
+      </Typography>
+    </Box>
   );
 }

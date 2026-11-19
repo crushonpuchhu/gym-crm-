@@ -1,8 +1,10 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
+import { Box, Button, IconButton, TextField, Typography } from "@mui/material";
+import { Stack } from "@/components/mui-stack";
 import { api } from "@/lib/api";
-import { EmptyState, ErrorState, LoadingSkeleton, Modal, FormField } from "@/components/ui";
-import { CheckSquare, Plus, Circle, CheckCircle2 } from "lucide-react";
+import { EmptyState, ErrorState, LoadingSkeleton, Modal, PageHeader, Panel, StatusChip } from "@/components/kit";
+import { CheckCircle2, Circle, Plus } from "lucide-react";
 
 interface Task { id: string; title: string; type: string; ownerId: string; dueAt: string | null; status: string; }
 
@@ -54,40 +56,92 @@ export default function TasksPage() {
   const pending = tasks.filter((t) => t.status !== "COMPLETED").length;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-ink-900">Tasks & follow-ups</h1>
-          <p className="text-xs text-slate-500">{pending} open · {tasks.length} total</p>
-        </div>
-        <button className="btn-primary" onClick={() => setModalOpen(true)}><Plus size={16} /> New task</button>
-      </div>
+    <Box sx={{ maxWidth: 780, mx: "auto" }}>
+      <PageHeader
+        title="Tasks & follow-ups"
+        subtitle={`${pending} open · ${tasks.length} total`}
+        actions={
+          <Button variant="contained" startIcon={<Plus size={16} />} onClick={() => setModalOpen(true)}>
+            New task
+          </Button>
+        }
+      />
+
       {tasks.length === 0 && <EmptyState title="All clear" hint="Create follow-up tasks for tours, trials and renewals." />}
-      <div className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
-        {tasks.map((t) => (
-          <div key={t.id} className="flex items-center gap-3 p-4 transition hover:bg-slate-50">
-            <button onClick={() => void toggle(t)} className="text-slate-400 hover:text-accent-600" aria-label="Toggle complete">
-              {t.status === "COMPLETED" ? <CheckCircle2 size={20} className="text-emerald-500" /> : <Circle size={20} />}
-            </button>
-            <div className="min-w-0 flex-1">
-              <p className={`text-sm font-medium ${t.status === "COMPLETED" ? "text-slate-400 line-through" : "text-slate-800"}`}>{t.title}</p>
-              <p className="text-[10px] uppercase tracking-wide text-slate-400">{t.type}{t.dueAt ? ` · due ${new Date(t.dueAt).toLocaleDateString()}` : ""}</p>
-            </div>
-          </div>
-        ))}
-      </div>
+
+      {tasks.length > 0 && (
+        <Panel padded={false} sx={{ overflow: "hidden" }}>
+          {tasks.map((t) => {
+            const done = t.status === "COMPLETED";
+            return (
+              <Stack
+                key={t.id}
+                direction="row"
+                alignItems="center"
+                spacing={1.5}
+                sx={{
+                  px: 2,
+                  py: 1.75,
+                  borderBottom: "1px solid rgba(255,255,255,0.06)",
+                  "&:last-of-type": { borderBottom: "none" },
+                  "&:hover": { backgroundColor: "rgba(255,255,255,0.025)" },
+                }}
+              >
+                <IconButton aria-label="Toggle complete" onClick={() => void toggle(t)} sx={{ color: done ? "#f5f5f6" : "text.disabled" }}>
+                  {done ? <CheckCircle2 size={20} /> : <Circle size={20} />}
+                </IconButton>
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  <Typography
+                    sx={{
+                      fontSize: 13.5,
+                      fontWeight: 550,
+                      color: done ? "text.disabled" : "text.primary",
+                      textDecoration: done ? "line-through" : "none",
+                    }}
+                  >
+                    {t.title}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: "text.disabled", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                    {t.type}
+                    {t.dueAt ? ` · due ${new Date(t.dueAt).toLocaleDateString()}` : ""}
+                  </Typography>
+                </Box>
+                <StatusChip status={t.status} />
+              </Stack>
+            );
+          })}
+        </Panel>
+      )}
+
       <Modal open={modalOpen} title="New task" onClose={() => setModalOpen(false)}>
-        <form onSubmit={create} className="space-y-3">
-          <FormField label="Title"><input className="input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required placeholder="Follow up with Acme about the proposal" /></FormField>
-          <FormField label="Assignee (user id, optional)"><input className="input" value={form.ownerId} onChange={(e) => setForm({ ...form, ownerId: e.target.value })} /></FormField>
-          <FormField label="Due date"><input className="input" type="datetime-local" value={form.dueAt} onChange={(e) => setForm({ ...form, dueAt: e.target.value })} /></FormField>
-          {formError && <p className="text-sm text-rose-600">{formError}</p>}
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" className="btn-secondary" onClick={() => setModalOpen(false)}>Cancel</button>
-            <button type="submit" className="btn-primary">Create task</button>
-          </div>
-        </form>
+        <Box component="form" onSubmit={create}>
+          <Stack spacing={2}>
+            <TextField required label="Title" size="small" placeholder="Follow up with a member about renewal" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            <TextField label="Assignee (user id, optional)" size="small" value={form.ownerId} onChange={(e) => setForm({ ...form, ownerId: e.target.value })} />
+            <TextField
+              label="Due date"
+              type="datetime-local"
+              size="small"
+              value={form.dueAt}
+              onChange={(e) => setForm({ ...form, dueAt: e.target.value })}
+              slotProps={{ inputLabel: { shrink: true } }}
+            />
+          </Stack>
+          {formError && (
+            <Typography variant="body2" sx={{ color: "text.secondary", mt: 2 }}>
+              {formError}
+            </Typography>
+          )}
+          <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 3 }}>
+            <Button variant="outlined" onClick={() => setModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained">
+              Create task
+            </Button>
+          </Stack>
+        </Box>
       </Modal>
-    </div>
+    </Box>
   );
 }

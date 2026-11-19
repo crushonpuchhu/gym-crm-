@@ -1,13 +1,50 @@
 "use client";
+
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
 import {
-  LayoutDashboard, UserPlus, Users, MapPin, KanbanSquare, TicketCheck,
-  CheckSquare, BarChart3, Workflow, Settings, Bell, CreditCard, LogOut, Search, Menu, X,
-  Dumbbell, ClipboardList, QrCode,
+  Avatar,
+  Box,
+  Chip,
+  CssBaseline,
+  Divider,
+  Drawer,
+  IconButton,
+  InputAdornment,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  TextField,
+  ThemeProvider,
+  Tooltip,
+  Typography,
+  useMediaQuery,
+} from "@mui/material";
+import { Stack } from "@/components/mui-stack";
+import {
+  BarChart3,
+  Bell,
+  CheckSquare,
+  ClipboardList,
+  Dumbbell,
+  KanbanSquare,
+  LayoutDashboard,
+  LogOut,
+  MapPin,
+  Menu,
+  QrCode,
+  Search,
+  Settings,
+  TicketCheck,
+  UserPlus,
+  Users,
+  Workflow,
+  X,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { theme } from "@/theme";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -23,12 +60,191 @@ const NAV = [
   { href: "/workflows", label: "Automations", icon: Workflow },
 ];
 
+const FOOTER_NAV = [
+  { href: "/subscriptions", label: "Subscription", icon: ClipboardList },
+  { href: "/settings", label: "Settings", icon: Settings },
+];
+
+function Brand() {
+  return (
+    <Stack direction="row" spacing={1.5} alignItems="center" sx={{ px: 1, py: 0.5 }}>
+      <Box
+        sx={{
+          display: "grid",
+          placeItems: "center",
+          width: 40,
+          height: 40,
+          borderRadius: 2.5,
+          border: "1px solid rgba(255,255,255,0.14)",
+          background: "linear-gradient(160deg, rgba(255,255,255,0.16), rgba(255,255,255,0.02))",
+        }}
+      >
+        <Dumbbell size={18} />
+      </Box>
+      <Box sx={{ minWidth: 0 }}>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Typography sx={{ fontWeight: 700, fontSize: 15, letterSpacing: "-0.01em" }}>GymFlow</Typography>
+          <Chip label="Beta" size="small" sx={{ height: 18, fontSize: 9, px: 0.5 }} />
+        </Stack>
+        <Typography variant="caption" sx={{ color: "text.secondary" }}>
+          Member CRM
+        </Typography>
+      </Box>
+    </Stack>
+  );
+}
+
+function SidebarContent({
+  pathname,
+  onNavigate,
+  onSignOut,
+  userName,
+  userEmail,
+  search,
+  onSearch,
+  onSearchSubmit,
+}: {
+  pathname: string;
+  onNavigate: () => void;
+  onSignOut: () => void;
+  userName: string;
+  userEmail: string;
+  search: string;
+  onSearch: (value: string) => void;
+  onSearchSubmit: () => void;
+}) {
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  return (
+    <Stack sx={{ height: "100%", py: 2 }} spacing={1}>
+      <Brand />
+      <Box sx={{ px: 2, pt: 1.5 }}>
+        <TextField
+          fullWidth
+          size="small"
+          placeholder="Search anything…"
+          value={search}
+          onChange={(event) => onSearch(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") onSearchSubmit();
+          }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={15} />
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  <Box
+                    sx={{
+                      border: "1px solid rgba(255,255,255,0.14)",
+                      borderRadius: 1,
+                      px: 0.75,
+                      py: 0.25,
+                      fontSize: 10,
+                      color: "text.secondary",
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    ⏎
+                  </Box>
+                </InputAdornment>
+              ),
+            },
+          }}
+          sx={{ "& .MuiOutlinedInput-root": { backgroundColor: "#17171b" } }}
+        />
+      </Box>
+      <List sx={{ px: 1.5, pt: 1, flex: 1, overflowY: "auto" }}>
+        {NAV.map(({ href, label, icon: Icon }) => {
+          const active = isActive(href);
+          return (
+            <ListItemButton
+              key={href}
+              component={Link}
+              href={href}
+              selected={active}
+              onClick={onNavigate}
+              sx={{
+                mb: 0.5,
+                border: active ? "1px solid rgba(255,255,255,0.14)" : "1px solid transparent",
+              }}
+            >
+              <ListItemIcon>
+                <Icon size={17} strokeWidth={1.9} />
+              </ListItemIcon>
+              <ListItemText primary={label} />
+            </ListItemButton>
+          );
+        })}
+      </List>
+      <Divider sx={{ mx: 2 }} />
+      <List sx={{ px: 1.5 }}>
+        {FOOTER_NAV.map(({ href, label, icon: Icon }) => {
+          const active = isActive(href);
+          return (
+            <ListItemButton
+              key={href}
+              component={Link}
+              href={href}
+              selected={active}
+              onClick={onNavigate}
+              sx={{
+                mb: 0.5,
+                border: active ? "1px solid rgba(255,255,255,0.14)" : "1px solid transparent",
+              }}
+            >
+              <ListItemIcon>
+                <Icon size={17} strokeWidth={1.9} />
+              </ListItemIcon>
+              <ListItemText primary={label} />
+            </ListItemButton>
+          );
+        })}
+        <ListItemButton onClick={onSignOut} sx={{ color: "#c9c9cf" }}>
+          <ListItemIcon sx={{ color: "inherit" }}>
+            <LogOut size={17} strokeWidth={1.9} />
+          </ListItemIcon>
+          <ListItemText primary="Sign out" />
+        </ListItemButton>
+      </List>
+      <Box sx={{ px: 1.5, pt: 1.5 }}>
+        <Stack
+          direction="row"
+          spacing={1.25}
+          alignItems="center"
+          sx={{
+            border: "1px solid rgba(255,255,255,0.09)",
+            borderRadius: 3,
+            p: 1.25,
+            backgroundColor: "rgba(255,255,255,0.03)",
+          }}
+        >
+          <Avatar sx={{ width: 32, height: 32, fontSize: 12 }}>
+            {userName.split(" ").map((part) => part[0]).slice(0, 2).join("").toUpperCase()}
+          </Avatar>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography noWrap sx={{ fontSize: 12.5, fontWeight: 600 }}>
+              {userName}
+            </Typography>
+            <Typography noWrap variant="caption" sx={{ color: "text.secondary" }}>
+              {userEmail}
+            </Typography>
+          </Box>
+        </Stack>
+      </Box>
+    </Stack>
+  );
+}
+
 export default function AppLayout({ children }: { children: ReactNode }) {
   const { user, loading, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const isDesktop = useMediaQuery(theme.breakpoints.up("lg"), { noSsr: true });
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
@@ -41,93 +257,153 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     router.refresh();
   };
 
+  const current = [
+    ...NAV,
+    ...FOOTER_NAV,
+    { href: "/notifications", label: "Notifications", icon: Bell },
+    { href: "/users", label: "Users & roles", icon: Users },
+  ].find(
+    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
+  );
+
   if (loading || !user) {
     return (
-      <div className="flex h-screen items-center justify-center bg-ink-950 text-slate-400">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-accent-400" />
-      </div>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
+          <Box
+            sx={{
+              width: 30,
+              height: 30,
+              borderRadius: "50%",
+              border: "2px solid rgba(255,255,255,0.12)",
+              borderTopColor: "#f5f5f6",
+              animation: "spin 0.8s linear infinite",
+              "@keyframes spin": { to: { transform: "rotate(360deg)" } },
+            }}
+          />
+        </Box>
+      </ThemeProvider>
     );
   }
 
+  const sidebar = (
+    <SidebarContent
+      pathname={pathname}
+      onNavigate={() => setSidebarOpen(false)}
+      onSignOut={() => void signOut()}
+      userName={user.name}
+      userEmail={user.email}
+      search={search}
+      onSearch={setSearch}
+      onSearchSubmit={() => {
+        const query = search.trim();
+        // Same-route pushes keep the page mounted, so tell it directly too.
+        window.dispatchEvent(new CustomEvent("gym:search", { detail: query }));
+        router.push(query ? `/members?search=${encodeURIComponent(query)}` : "/members");
+        setSidebarOpen(false);
+      }}
+    />
+  );
+
   return (
-    <div className="flex h-screen overflow-hidden">
-      {sidebarOpen && <button className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} aria-label="Close menu" />}
-      <aside className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-ink-950 text-slate-300 transition-transform lg:static lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
-        <div className="flex h-16 items-center gap-2 border-b border-white/10 px-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-600 text-white"><Dumbbell size={18} /></div>
-          <div>
-            <p className="text-sm font-bold text-white">GymFlow</p>
-            <p className="text-[10px] uppercase tracking-widest text-slate-500">Member CRM</p>
-          </div>
-          <button className="ml-auto rounded p-1 text-slate-500 hover:text-white lg:hidden" onClick={() => setSidebarOpen(false)} aria-label="Close menu"><X size={18} /></button>
-        </div>
-        <nav className="flex-1 overflow-y-auto px-3 py-4">
-          {NAV.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || pathname.startsWith(`${href}/`);
-            return (
-              <Link
-                key={href}
-                href={href}
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Box sx={{ minHeight: "100vh", display: "flex" }}>
+        {isDesktop ? (
+          <Box
+            component="aside"
+            sx={{
+              width: 264,
+              flexShrink: 0,
+              position: "sticky",
+              top: 0,
+              height: "100vh",
+              borderRight: "1px solid rgba(255,255,255,0.07)",
+              backgroundColor: "rgba(10,10,12,0.72)",
+              backdropFilter: "blur(14px)",
+            }}
+          >
+            {sidebar}
+          </Box>
+        ) : (
+          <Drawer open={sidebarOpen} onClose={() => setSidebarOpen(false)}>
+            <Box sx={{ width: 272, position: "relative" }}>
+              <IconButton
+                aria-label="Close menu"
                 onClick={() => setSidebarOpen(false)}
-                className={`mb-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                  active ? "bg-accent-600/90 text-white" : "text-slate-400 hover:bg-white/5 hover:text-slate-100"
-                }`}
+                sx={{ position: "absolute", right: 8, top: 10, zIndex: 1 }}
               >
-                <Icon size={17} strokeWidth={2} />
-                {label}
-              </Link>
-            );
-          })}
-        </nav>
-        <div className="border-t border-white/10 p-3">
-          <Link href="/settings" className="mb-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 hover:bg-white/5 hover:text-slate-100">
-            <Settings size={17} /> Settings
-          </Link>
-          <Link href="/subscriptions" className="mb-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 hover:bg-white/5 hover:text-slate-100">
-            <CreditCard size={17} /> Subscription
-          </Link>
-          <button onClick={() => void signOut()} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-rose-300 hover:bg-rose-500/10">
-            <LogOut size={17} /> Sign out
-          </button>
-        </div>
-      </aside>
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4 lg:px-6">
-          <button className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="Open menu"><Menu size={20} /></button>
-          <div className="relative hidden w-96 md:block">
-            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              className="input !pl-9"
-              placeholder="Search members…"
-              aria-label="Search members"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key !== "Enter") return;
-                const query = search.trim();
-                // Same-route pushes keep the page mounted, so tell it directly.
-                window.dispatchEvent(new CustomEvent("gym:search", { detail: query }));
-                router.push(query ? `/members?search=${encodeURIComponent(query)}` : "/members");
-              }}
-            />
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            <Link href="/notifications" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="Notifications">
-              <Bell size={19} />
-            </Link>
-            <div className="flex items-center gap-2 border-l border-slate-200 pl-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-100 text-xs font-bold text-accent-700">
-                {user.name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()}
-              </div>
-              <div className="hidden sm:block">
-                <p className="text-xs font-semibold text-slate-800">{user.name}</p>
-                <p className="text-[10px] text-slate-500">{user.email}</p>
-              </div>
-            </div>
-          </div>
-        </header>
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">{children}</main>
-      </div>
-    </div>
+                <X size={18} />
+              </IconButton>
+              {sidebar}
+            </Box>
+          </Drawer>
+        )}
+
+        <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+          <Box
+            component="header"
+            sx={{
+              position: "sticky",
+              top: 0,
+              zIndex: 10,
+              display: "flex",
+              alignItems: "center",
+              gap: 1.5,
+              height: 68,
+              px: { xs: 2, lg: 3.5 },
+              borderBottom: "1px solid rgba(255,255,255,0.07)",
+              backgroundColor: "rgba(8,8,10,0.78)",
+              backdropFilter: "blur(14px)",
+            }}
+          >
+            {!isDesktop ? (
+              <IconButton aria-label="Open menu" onClick={() => setSidebarOpen(true)}>
+                <Menu size={20} />
+              </IconButton>
+            ) : null}
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 0 }}>
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                GymFlow
+              </Typography>
+              <Typography variant="body2" sx={{ color: "text.disabled" }}>
+                /
+              </Typography>
+              <Typography noWrap variant="body2" sx={{ fontWeight: 600 }}>
+                {current?.label ?? "Workspace"}
+              </Typography>
+            </Stack>
+
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ ml: "auto" }}>
+              <Tooltip title="Notifications">
+                <IconButton component={Link} href="/notifications" aria-label="Notifications">
+                  <Bell size={18} />
+                </IconButton>
+              </Tooltip>
+              <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+              <Stack direction="row" spacing={1.25} alignItems="center">
+                <Avatar sx={{ width: 32, height: 32, fontSize: 11.5 }}>
+                  {user.name.split(" ").map((part) => part[0]).slice(0, 2).join("").toUpperCase()}
+                </Avatar>
+                <Box sx={{ display: { xs: "none", sm: "block" } }}>
+                  <Typography sx={{ fontSize: 12.5, fontWeight: 600, lineHeight: 1.2 }}>{user.name}</Typography>
+                  <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                    {user.email}
+                  </Typography>
+                </Box>
+              </Stack>
+            </Stack>
+          </Box>
+
+          <Box
+            component="main"
+            sx={{ flex: 1, minWidth: 0, px: { xs: 2, lg: 3.5 }, py: { xs: 2.5, lg: 3.5 } }}
+          >
+            <Box sx={{ maxWidth: 1360, mx: "auto", width: "100%" }}>{children}</Box>
+          </Box>
+        </Box>
+      </Box>
+    </ThemeProvider>
   );
 }

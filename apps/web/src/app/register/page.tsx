@@ -1,9 +1,23 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth";
-import { FormField } from "@/components/ui";
+import Link from "next/link";
+import {
+  Alert,
+  Box,
+  Button,
+  CssBaseline,
+  Divider,
+  Paper,
+  TextField,
+  ThemeProvider,
+  Typography,
+} from "@mui/material";
+import { Stack } from "@/components/mui-stack";
 import { Dumbbell } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { theme } from "@/theme";
 
 export default function RegisterPage() {
   const { register, user, loading } = useAuth();
@@ -17,8 +31,11 @@ export default function RegisterPage() {
     if (!loading && user) router.replace("/dashboard");
   }, [loading, user, router]);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const setField = (key: keyof typeof form) => (event: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((current) => ({ ...current, [key]: event.target.value }));
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setBusy(true);
     setError("");
     try {
@@ -33,41 +50,106 @@ export default function RegisterPage() {
 
   if (loading || user) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-ink-950">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-accent-400" />
-      </main>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
+          <Box
+            sx={{
+              width: 30,
+              height: 30,
+              borderRadius: "50%",
+              border: "2px solid rgba(255,255,255,0.12)",
+              borderTopColor: "#f5f5f6",
+              animation: "spin 0.8s linear infinite",
+              "@keyframes spin": { to: { transform: "rotate(360deg)" } },
+            }}
+          />
+        </Box>
+      </ThemeProvider>
     );
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-ink-950 px-4">
-      <div className="w-full max-w-md">
-        <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-accent-600 text-white"><Dumbbell size={22} /></div>
-          <h1 className="text-2xl font-bold text-white">GymFlow</h1>
-          <p className="mt-1 text-sm text-slate-400">Set up your gym brand workspace</p>
-        </div>        <form onSubmit={submit} className="card space-y-4 p-6">
-          <FormField label="Gym brand name">
-            <input className="input" value={form.organizationName} onChange={(e) => setForm({ ...form, organizationName: e.target.value })} required />
-          </FormField>
-          <FormField label="Your name">
-            <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-          </FormField>
-          <FormField label="Email">
-            <input className="input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-          </FormField>
-          <FormField label="Password (min 8 characters)">
-            <input className="input" type="password" minLength={8} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
-          </FormField>
-          {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">{error}</p>}
-          <button className="btn-primary w-full" type="submit" disabled={busy}>
-            {busy ? "Creating…" : "Create gym workspace"}
-          </button>
-          <p className="text-center text-xs text-slate-500">
-            Have an account? <a className="font-semibold text-accent-600 hover:underline" href="/login">Sign in</a>
-          </p>
-        </form>
-      </div>
-    </main>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", px: 2, py: 6 }}>
+        <Box sx={{ width: "100%", maxWidth: 440 }}>
+          <Stack alignItems="center" spacing={1.25} sx={{ mb: 3 }}>
+            <Box
+              sx={{
+                display: "grid",
+                placeItems: "center",
+                width: 46,
+                height: 46,
+                borderRadius: 3,
+                border: "1px solid rgba(255,255,255,0.14)",
+                background: "linear-gradient(160deg, rgba(255,255,255,0.16), rgba(255,255,255,0.02))",
+              }}
+            >
+              <Dumbbell size={20} />
+            </Box>
+            <Typography variant="h2">GymFlow</Typography>
+            <Typography variant="body2" sx={{ color: "text.secondary" }}>
+              Set up your gym brand workspace
+            </Typography>
+          </Stack>
+
+          <Paper sx={{ borderRadius: 4, p: { xs: 2.5, sm: 3.5 } }}>
+            <form onSubmit={submit}>
+              <Stack spacing={2}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Gym brand name"
+                  value={form.organizationName}
+                  onChange={setField("organizationName")}
+                  required
+                />
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Your name"
+                  value={form.name}
+                  onChange={setField("name")}
+                  required
+                />
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Email"
+                  type="email"
+                  value={form.email}
+                  onChange={setField("email")}
+                  autoComplete="email"
+                  required
+                />
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Password (min 8 characters)"
+                  type="password"
+                  value={form.password}
+                  onChange={setField("password")}
+                  autoComplete="new-password"
+                  slotProps={{ htmlInput: { minLength: 8 } }}
+                  required
+                />
+                {error ? <Alert severity="error">{error}</Alert> : null}
+                <Button type="submit" variant="contained" size="large" disabled={busy} sx={{ mt: 0.5 }}>
+                  {busy ? "Creating…" : "Create gym workspace"}
+                </Button>
+              </Stack>
+            </form>
+            <Divider sx={{ my: 2.5 }} />
+            <Typography variant="body2" sx={{ color: "text.secondary", textAlign: "center" }}>
+              Have an account?{" "}
+              <Box component={Link} href="/login" sx={{ color: "#f5f5f6", fontWeight: 600, textDecoration: "none" }}>
+                Sign in
+              </Box>
+            </Typography>
+          </Paper>
+        </Box>
+      </Box>
+    </ThemeProvider>
   );
 }

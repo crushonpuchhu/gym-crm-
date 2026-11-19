@@ -1,11 +1,36 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Box, Button, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import { api, getAccessToken } from "@/lib/api";
-import { LoadingSkeleton, ErrorState } from "@/components/ui";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend, LineChart, Line } from "recharts";
+import { ErrorState, LoadingSkeleton, PageHeader, Panel, StatCard, TableShell } from "@/components/kit";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { Download } from "lucide-react";
 
-const SOURCE_COLORS = ["#4f46e5", "#6366f1", "#818cf8", "#a5b4fc", "#c7d2fe", "#7c3aed", "#0891b2", "#059669", "#d97706"];
+const SOURCE_COLORS = ["#f5f5f6", "#c9c9cf", "#9a9aa2", "#74747c", "#55555c", "#3d3d43", "#2c2c32", "#232328", "#1a1a1e"];
+
+const AXIS = { fontSize: 11, fill: "#8d8d95" };
+const GRID = "rgba(255,255,255,0.07)";
+const TOOLTIP_STYLE = {
+  backgroundColor: "#151519",
+  border: "1px solid rgba(255,255,255,0.12)",
+  borderRadius: 10,
+  fontSize: 12,
+  color: "#f5f5f6",
+};
 
 interface Conversion { total: number; converted: number; rate: number }
 interface ProspectBySource { source: string; count: number }
@@ -85,124 +110,157 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-ink-900">Club reports</h1>
-          <p className="text-xs text-slate-500">Joins, attendance and retention across every club</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {EXPORTS.map((entry) => (
-            <button key={entry.key} className="btn-secondary" onClick={() => void exportCsv(entry.key)}>
-              <Download size={14} /> {entry.label} CSV
-            </button>
-          ))}
-        </div>
-      </div>
+    <Box>
+      <PageHeader
+        title="Club reports"
+        subtitle="Joins, attendance and retention across every club"
+        actions={EXPORTS.map((entry) => (
+          <Button key={entry.key} variant="outlined" size="small" startIcon={<Download size={14} />} onClick={() => void exportCsv(entry.key)}>
+            {entry.label} CSV
+          </Button>
+        ))}
+      />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="card p-5">
-          <p className="label">Prospects</p>
-          <p className="mt-1 text-3xl font-black text-ink-900">{conversion.total}</p>
-          <p className="mt-1 text-xs text-slate-500">{conversion.converted} joined</p>
-        </div>
-        <div className="card p-5">
-          <p className="label">Trial conversion</p>
-          <p className="mt-1 text-3xl font-black text-accent-700">{conversion.rate.toFixed(1)}%</p>
-          <p className="mt-1 text-xs text-slate-500">Joined ÷ all prospects</p>
-        </div>
-        <div className="card p-5">
-          <p className="label">Active members</p>
-          <p className="mt-1 text-3xl font-black text-emerald-600">{retention.active}</p>
-          <p className="mt-1 text-xs text-slate-500">{retention.trial} on trial · {retention.paused} paused</p>
-        </div>
-        <div className="card p-5">
-          <p className="label">Churn rate</p>
-          <p className="mt-1 text-3xl font-black text-rose-600">{retention.churnRate.toFixed(1)}%</p>
-          <p className="mt-1 text-xs text-slate-500">{retention.cancelled} cancelled · {retention.expired} expired</p>
-        </div>
-      </div>
+      <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", lg: "repeat(4, 1fr)" } }}>
+        <StatCard label="Prospects" value={conversion.total} sub={`${conversion.converted} joined`} />
+        <StatCard label="Trial conversion" value={`${conversion.rate.toFixed(1)}%`} sub="Joined ÷ all prospects" />
+        <StatCard label="Active members" value={retention.active} sub={`${retention.trial} on trial · ${retention.paused} paused`} />
+        <StatCard label="Churn rate" value={`${retention.churnRate.toFixed(1)}%`} sub={`${retention.cancelled} cancelled · ${retention.expired} expired`} />
+      </Box>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <div className="card p-5">
-          <p className="label">Signed contract value by month</p>
+      <Box sx={{ display: "grid", gap: 2, mt: 2, gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" } }}>
+        <Panel>
+          <Typography variant="overline" sx={{ color: "text.secondary" }}>
+            Signed contract value by month
+          </Typography>
           {joins.length === 0 ? (
-            <p className="flex h-56 items-center justify-center text-sm text-slate-400">No signed memberships recorded yet</p>
+            <Box sx={{ height: 220, display: "grid", placeItems: "center" }}>
+              <Typography variant="body2" sx={{ color: "text.disabled" }}>
+                No signed memberships recorded yet
+              </Typography>
+            </Box>
           ) : (
-            <div className="h-56">
+            <Box sx={{ height: 220, mt: 1 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={joins}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <Tooltip cursor={{ fill: "rgba(99,102,241,0.08)" }} />
-                  <Bar dataKey="value" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+                  <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="month" tick={AXIS} axisLine={false} tickLine={false} />
+                  <YAxis tick={AXIS} axisLine={false} tickLine={false} />
+                  <Tooltip cursor={{ fill: "rgba(255,255,255,0.05)" }} contentStyle={TOOLTIP_STYLE} />
+                  <Bar dataKey="value" fill="#e4e4e7" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
-            </div>
+            </Box>
           )}
-        </div>
-        <div className="card p-5">
-          <p className="label">Prospects by source</p>
+        </Panel>
+
+        <Panel>
+          <Typography variant="overline" sx={{ color: "text.secondary" }}>
+            Prospects by source
+          </Typography>
           {sources.length === 0 ? (
-            <p className="flex h-56 items-center justify-center text-sm text-slate-400">No prospects yet</p>
+            <Box sx={{ height: 220, display: "grid", placeItems: "center" }}>
+              <Typography variant="body2" sx={{ color: "text.disabled" }}>
+                No prospects yet
+              </Typography>
+            </Box>
           ) : (
-            <div className="h-56">
+            <Box sx={{ height: 220, mt: 1 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={sources} dataKey="count" nameKey="source" innerRadius={50} outerRadius={78} paddingAngle={2}>
-                    {sources.map((s, i) => (<Cell key={s.source} fill={SOURCE_COLORS[i % SOURCE_COLORS.length]} />))}
+                  <Pie data={sources} dataKey="count" nameKey="source" innerRadius={50} outerRadius={78} paddingAngle={2} stroke="#111114">
+                    {sources.map((s, i) => (
+                      <Cell key={s.source} fill={SOURCE_COLORS[i % SOURCE_COLORS.length]} />
+                    ))}
                   </Pie>
-                  <Tooltip />
-                  <Legend />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} />
+                  <Legend formatter={(value) => <span style={{ color: "#94949c", fontSize: 11 }}>{value}</span>} />
                 </PieChart>
               </ResponsiveContainer>
-            </div>
+            </Box>
           )}
-        </div>
-      </div>
+        </Panel>
+      </Box>
 
-      <div className="card p-5">
-        <p className="label">Check-ins · last 30 days</p>
+      <Panel sx={{ mt: 2 }}>
+        <Typography variant="overline" sx={{ color: "text.secondary" }}>
+          Check-ins · last 30 days
+        </Typography>
         {checkIns.length === 0 ? (
-          <p className="flex h-52 items-center justify-center text-sm text-slate-400">No check-ins recorded yet</p>
+          <Box sx={{ height: 200, display: "grid", placeItems: "center" }}>
+            <Typography variant="body2" sx={{ color: "text.disabled" }}>
+              No check-ins recorded yet
+            </Typography>
+          </Box>
         ) : (
-          <div className="h-52">
+          <Box sx={{ height: 200, mt: 1 }}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={checkIns}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="date" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v: string) => v.slice(5)} />
-                <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                <Tooltip />
-                <Line type="monotone" dataKey="count" stroke="#4f46e5" strokeWidth={2} dot={false} />
+                <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="date" tick={AXIS} axisLine={false} tickLine={false} tickFormatter={(v: string) => v.slice(5)} />
+                <YAxis tick={AXIS} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={TOOLTIP_STYLE} />
+                <Line type="monotone" dataKey="count" stroke="#f5f5f6" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
-          </div>
+          </Box>
         )}
-      </div>
+      </Panel>
 
-      <div className="card p-5">
-        <p className="label">Membership revenue by advisor</p>
+      <Panel sx={{ mt: 2 }}>
+        <Typography variant="overline" sx={{ color: "text.secondary" }}>
+          Membership revenue by advisor
+        </Typography>
         {staff.length === 0 ? (
-          <p className="py-6 text-center text-xs text-slate-400">No active memberships assigned yet</p>
+          <Typography variant="body2" sx={{ py: 4, textAlign: "center", color: "text.disabled" }}>
+            No active memberships assigned yet
+          </Typography>
         ) : (
-          <div className="mt-2 overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-50"><tr><th className="th">Advisor</th><th className="th">Active contracts</th><th className="th">MRR</th><th className="th">Contract value</th></tr></thead>
-              <tbody className="divide-y divide-slate-100">
-                {staff.sort((a, b) => b.row.mrr - a.row.mrr).map(({ row, name }) => (
-                  <tr key={row.ownerId}>
-                    <td className="td text-sm font-medium text-slate-800">{name}</td>
-                    <td className="td text-xs">{row.count}</td>
-                    <td className="td text-xs font-bold text-accent-700">${row.mrr.toLocaleString()}</td>
-                    <td className="td text-xs">${row.contractValue.toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Box sx={{ mt: 1 }}>
+            <TableShell>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Advisor</TableCell>
+                    <TableCell>Active contracts</TableCell>
+                    <TableCell>MRR</TableCell>
+                    <TableCell>Contract value</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {staff
+                    .slice()
+                    .sort((a, b) => b.row.mrr - a.row.mrr)
+                    .map(({ row, name }) => (
+                      <TableRow key={row.ownerId} hover>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {name}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                            {row.count}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontWeight: 650 }}>
+                            ${row.mrr.toLocaleString()}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                            ${row.contractValue.toLocaleString()}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </TableShell>
+          </Box>
         )}
-      </div>
-    </div>
+      </Panel>
+    </Box>
   );
 }

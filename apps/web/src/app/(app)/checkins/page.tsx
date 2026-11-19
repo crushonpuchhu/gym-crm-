@@ -1,7 +1,20 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
+import {
+  Box,
+  Button,
+  MenuItem,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { Stack } from "@/components/mui-stack";
 import { api } from "@/lib/api";
-import { EmptyState, ErrorState, LoadingSkeleton, Modal, FormField, StatusBadge } from "@/components/ui";
+import { EmptyState, ErrorState, LoadingSkeleton, Modal, PageHeader, StatusChip, TableShell } from "@/components/kit";
 import { Plus, QrCode, Users } from "lucide-react";
 
 interface CheckIn {
@@ -15,6 +28,9 @@ interface CheckIn {
 interface CheckInList { items: CheckIn[]; total: number; todayCount: number }
 interface MemberMini { id: string; firstName: string; lastName: string; status: string; location?: { id: string; name: string } | null }
 interface Location { id: string; name: string }
+
+const METHODS = ["FRONT_DESK", "APP", "QR"];
+const EMPTY_FORM = { memberId: "", locationId: "", method: "FRONT_DESK", durationMinutes: "60" };
 
 const today = () => {
   const now = new Date();
@@ -30,7 +46,7 @@ export default function CheckInsPage() {
   const [date, setDate] = useState(today());
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({ memberId: "", locationId: "", method: "FRONT_DESK", durationMinutes: "60" });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState("");
 
   const load = async () => {
@@ -69,7 +85,7 @@ export default function CheckInsPage() {
         }),
       });
       setModalOpen(false);
-      setForm({ memberId: "", locationId: "", method: "FRONT_DESK", durationMinutes: "60" });
+      setForm(EMPTY_FORM);
       await load();
     } catch (err: any) {
       setFormError(err?.message || "Check-in failed");
@@ -80,84 +96,138 @@ export default function CheckInsPage() {
   if (!data) return <LoadingSkeleton />;
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-xl font-bold text-ink-900"><QrCode size={20} /> Check-ins</h1>
-          <p className="text-xs text-slate-500">{data.todayCount} today · {data.total} on {date}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Check-in date" />
-          <button className="btn-primary whitespace-nowrap" onClick={() => setModalOpen(true)}><Plus size={16} /> Log check-in</button>
-        </div>
-      </div>
+    <Box>
+      <PageHeader
+        title="Check-ins"
+        subtitle={`${data.todayCount} today · ${data.total} on ${date}`}
+        actions={
+          <>
+            <TextField
+              type="date"
+              size="small"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              slotProps={{ htmlInput: { "aria-label": "Check-in date" } }}
+              sx={{ width: 160 }}
+            />
+            <Button variant="contained" startIcon={<Plus size={16} />} onClick={() => setModalOpen(true)}>
+              Log check-in
+            </Button>
+          </>
+        }
+      />
 
       {data.items.length === 0 ? (
         <EmptyState title="No check-ins on this date" hint="Front desk, app and QR entries appear here." />
       ) : (
-        <div className="card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="th">Member</th>
-                  <th className="th">Club</th>
-                  <th className="th">Time</th>
-                  <th className="th">Method</th>
-                  <th className="th">Duration</th>
-                  <th className="th">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {data.items.map((c) => (
-                  <tr key={c.id} className="hover:bg-slate-50">
-                    <td className="td">
-                      <p className="font-semibold text-slate-800">{c.member.firstName} {c.member.lastName}</p>
-                      <p className="text-xs text-slate-500">{c.member.email || "—"}</p>
-                    </td>
-                    <td className="td text-xs">{c.location.name}</td>
-                    <td className="td text-xs">{new Date(c.checkedInAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</td>
-                    <td className="td"><span className="badge bg-slate-100 text-slate-600">{c.method.replaceAll("_", " ")}</span></td>
-                    <td className="td text-xs">{c.durationMinutes ? `${c.durationMinutes} min` : "—"}</td>
-                    <td className="td"><StatusBadge status={c.member.status} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="border-t border-slate-200 px-4 py-3 text-xs text-slate-500">{data.total} entries</div>
-        </div>
+        <TableShell>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Member</TableCell>
+                <TableCell>Club</TableCell>
+                <TableCell>Time</TableCell>
+                <TableCell>Method</TableCell>
+                <TableCell>Duration</TableCell>
+                <TableCell>Status</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {data.items.map((c) => (
+                <TableRow key={c.id} hover>
+                  <TableCell>
+                    <Typography sx={{ fontWeight: 600, fontSize: 13.5 }}>
+                      {c.member.firstName} {c.member.lastName}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                      {c.member.email || "—"}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                      {c.location.name}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                      {new Date(c.checkedInAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <StatusChip status={c.method} />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                      {c.durationMinutes ? `${c.durationMinutes} min` : "—"}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <StatusChip status={c.member.status} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <Box sx={{ borderTop: "1px solid rgba(255,255,255,0.08)", px: 2, py: 1.5 }}>
+            <Typography variant="caption" sx={{ color: "text.secondary" }}>
+              {data.total} entries
+            </Typography>
+          </Box>
+        </TableShell>
       )}
 
       <Modal open={modalOpen} title="Log a check-in" onClose={() => setModalOpen(false)}>
-        <form onSubmit={create} className="space-y-3">
-          <FormField label="Member">
-            <select className="input" value={form.memberId} onChange={(e) => setForm({ ...form, memberId: e.target.value })} required>
-              <option value="">Select a member</option>
-              {members.map((m) => <option key={m.id} value={m.id} disabled={m.status === "CANCELLED"}>{m.firstName} {m.lastName} · {m.status}</option>)}
-            </select>
-          </FormField>
-          <div className="grid grid-cols-2 gap-3">
-            <FormField label="Club">
-              <select className="input" value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value })}>
-                <option value="">Member's home club</option>
-                {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-              </select>
-            </FormField>
-            <FormField label="Method">
-              <select className="input" value={form.method} onChange={(e) => setForm({ ...form, method: e.target.value })}>
-                <option>FRONT_DESK</option><option>APP</option><option>QR</option>
-              </select>
-            </FormField>
-          </div>
-          <FormField label="Session length (minutes)"><input className="input" type="number" min="1" max="600" value={form.durationMinutes} onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })} /></FormField>
-          {formError && <p className="text-sm text-rose-600">{formError}</p>}
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" className="btn-secondary" onClick={() => setModalOpen(false)}>Cancel</button>
-            <button type="submit" className="btn-primary"><Users size={15} /> Check in</button>
-          </div>
-        </form>
+        <Box component="form" onSubmit={create}>
+          <Stack spacing={2}>
+            <TextField select required label="Member" size="small" value={form.memberId} onChange={(e) => setForm({ ...form, memberId: e.target.value })}>
+              <MenuItem value="">Select a member</MenuItem>
+              {members.map((m) => (
+                <MenuItem key={m.id} value={m.id} disabled={m.status === "CANCELLED"}>
+                  {m.firstName} {m.lastName} · {m.status}
+                </MenuItem>
+              ))}
+            </TextField>
+            <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: "1fr 1fr" }}>
+              <TextField select label="Club" size="small" value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value })}>
+                <MenuItem value="">Member&apos;s home club</MenuItem>
+                {locations.map((l) => (
+                  <MenuItem key={l.id} value={l.id}>
+                    {l.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField select label="Method" size="small" value={form.method} onChange={(e) => setForm({ ...form, method: e.target.value })}>
+                {METHODS.map((method) => (
+                  <MenuItem key={method} value={method}>
+                    {method.replaceAll("_", " ")}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Box>
+            <TextField
+              label="Session length (minutes)"
+              type="number"
+              size="small"
+              value={form.durationMinutes}
+              onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })}
+              slotProps={{ htmlInput: { min: 1, max: 600 } }}
+            />
+          </Stack>
+          {formError && (
+            <Typography variant="body2" sx={{ color: "text.secondary", mt: 2 }}>
+              {formError}
+            </Typography>
+          )}
+          <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 3 }}>
+            <Button variant="outlined" onClick={() => setModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained" startIcon={<Users size={15} />}>
+              Check in
+            </Button>
+          </Stack>
+        </Box>
       </Modal>
-    </div>
+    </Box>
   );
 }

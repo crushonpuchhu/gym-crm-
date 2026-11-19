@@ -1,8 +1,10 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
+import { Box, Button, MenuItem, TextField, Typography } from "@mui/material";
+import { Stack } from "@/components/mui-stack";
 import { api } from "@/lib/api";
-import { EmptyState, ErrorState, LoadingSkeleton, Modal, FormField } from "@/components/ui";
-import { Plus, Archive, BadgeDollarSign, CalendarDays, Repeat } from "lucide-react";
+import { EmptyState, ErrorState, LoadingSkeleton, Modal, PageHeader, Panel } from "@/components/kit";
+import { Archive, BadgeDollarSign, CalendarDays, Plus, Repeat } from "lucide-react";
 
 interface Plan {
   id: string;
@@ -17,12 +19,14 @@ interface Plan {
 }
 
 const CYCLE_LABEL: Record<string, string> = { MONTHLY: "per month", QUARTERLY: "per quarter", ANNUAL: "per year", ONE_TIME: "one-time" };
+const CYCLES = ["MONTHLY", "QUARTERLY", "ANNUAL", "ONE_TIME"];
+const EMPTY_FORM = { name: "", description: "", price: "", billingCycle: "MONTHLY", durationDays: "30" };
 
 export default function PlansPage() {
   const [plans, setPlans] = useState<Plan[] | null>(null);
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", description: "", price: "", billingCycle: "MONTHLY", durationDays: "30", color: "#4f46e5" });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState("");
 
   const load = async () => {
@@ -51,7 +55,7 @@ export default function PlansPage() {
         }),
       });
       setModalOpen(false);
-      setForm({ name: "", description: "", price: "", billingCycle: "MONTHLY", durationDays: "30", color: "#4f46e5" });
+      setForm(EMPTY_FORM);
       await load();
     } catch (err: any) {
       setFormError(err?.message || "Failed to create plan");
@@ -81,60 +85,106 @@ export default function PlansPage() {
   if (!plans) return <LoadingSkeleton rows={4} />;
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-ink-900">Membership plans</h1>
-          <p className="text-xs text-slate-500">{plans.filter((p) => p.isActive).length} active products · {plans.reduce((s, p) => s + p._count.memberships, 0)} contracts sold</p>
-        </div>
-        <button className="btn-primary" onClick={() => setModalOpen(true)}><Plus size={16} /> New plan</button>
-      </div>
+    <Box>
+      <PageHeader
+        title="Membership plans"
+        subtitle={`${plans.filter((p) => p.isActive).length} active products · ${plans.reduce((s, p) => s + p._count.memberships, 0)} contracts sold`}
+        actions={
+          <Button variant="contained" startIcon={<Plus size={16} />} onClick={() => setModalOpen(true)}>
+            New plan
+          </Button>
+        }
+      />
 
       {plans.length === 0 && <EmptyState title="No plans yet" hint="Add the products your front desk sells." />}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+
+      <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr", lg: "repeat(3, 1fr)" } }}>
         {plans.map((plan) => (
-          <div key={plan.id} className={`card flex flex-col p-5 ${plan.isActive ? "" : "opacity-60"}`}>
-            <div className="flex items-start justify-between">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg" style={{ backgroundColor: `${plan.color}1a`, color: plan.color }}>
+          <Panel key={plan.id} sx={{ display: "flex", flexDirection: "column", opacity: plan.isActive ? 1 : 0.6 }}>
+            <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
+              <Box
+                sx={{
+                  display: "grid",
+                  placeItems: "center",
+                  width: 40,
+                  height: 40,
+                  borderRadius: 2,
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  color: "text.secondary",
+                }}
+              >
                 <BadgeDollarSign size={19} />
-              </div>
-              <div className="flex gap-1">
-                <button className="rounded-lg px-2 py-1 text-[10px] font-bold uppercase text-slate-500 hover:bg-slate-100" onClick={() => void toggle(plan)}>
+              </Box>
+              <Stack direction="row" spacing={0.5} alignItems="center">
+                <Button size="small" variant="text" sx={{ fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase" }} onClick={() => void toggle(plan)}>
                   {plan.isActive ? "Active" : "Paused"}
-                </button>
-                <button className="rounded-lg p-2 text-rose-500 hover:bg-rose-50" onClick={() => void archive(plan)} aria-label="Archive plan"><Archive size={15} /></button>
-              </div>
-            </div>
-            <p className="mt-3 text-base font-bold text-ink-900">{plan.name}</p>
-            <p className="mt-1 text-xs text-slate-500">{plan.description || "No description"}</p>
-            <p className="mt-3 text-2xl font-black text-ink-900">${Number(plan.price).toLocaleString()}<span className="ml-1 text-xs font-semibold text-slate-400">{CYCLE_LABEL[plan.billingCycle]}</span></p>
-            <div className="mt-4 flex flex-wrap gap-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
-              <span className="inline-flex items-center gap-1"><CalendarDays size={12} /> {plan.durationDays} days</span>
-              <span className="inline-flex items-center gap-1"><Repeat size={12} /> {plan._count.memberships} contracts</span>
-            </div>
-          </div>
+                </Button>
+                <Button size="small" variant="text" aria-label="Archive plan" onClick={() => void archive(plan)} sx={{ minWidth: 0, px: 1 }}>
+                  <Archive size={15} />
+                </Button>
+              </Stack>
+            </Stack>
+            <Typography sx={{ mt: 1.5, fontSize: 16, fontWeight: 650 }}>{plan.name}</Typography>
+            <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.5 }}>
+              {plan.description || "No description"}
+            </Typography>
+            <Typography sx={{ mt: 1.5, fontSize: 26, fontWeight: 700, letterSpacing: "-0.03em" }}>
+              ${Number(plan.price).toLocaleString()}
+              <Box component="span" sx={{ ml: 1, fontSize: 11.5, fontWeight: 600, color: "text.disabled" }}>
+                {CYCLE_LABEL[plan.billingCycle]}
+              </Box>
+            </Typography>
+            <Stack direction="row" spacing={2} flexWrap="wrap" sx={{ mt: 2, pt: 1.75, borderTop: "1px solid rgba(255,255,255,0.07)", color: "text.secondary" }}>
+              <Stack direction="row" spacing={0.75} alignItems="center">
+                <CalendarDays size={12} />
+                <Typography variant="caption">{plan.durationDays} days</Typography>
+              </Stack>
+              <Stack direction="row" spacing={0.75} alignItems="center">
+                <Repeat size={12} />
+                <Typography variant="caption">{plan._count.memberships} contracts</Typography>
+              </Stack>
+            </Stack>
+          </Panel>
         ))}
-      </div>
+      </Box>
 
       <Modal open={modalOpen} title="New membership plan" onClose={() => setModalOpen(false)}>
-        <form onSubmit={create} className="grid grid-cols-2 gap-3">
-          <FormField label="Plan name"><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="Unlimited Monthly" /></FormField>
-          <FormField label="Price ($)"><input className="input" type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} required /></FormField>
-          <FormField label="Billing cycle">
-            <select className="input" value={form.billingCycle} onChange={(e) => setForm({ ...form, billingCycle: e.target.value })}>
-              <option>MONTHLY</option><option>QUARTERLY</option><option>ANNUAL</option><option>ONE_TIME</option>
-            </select>
-          </FormField>
-          <FormField label="Duration (days)"><input className="input" type="number" min="1" value={form.durationDays} onChange={(e) => setForm({ ...form, durationDays: e.target.value })} /></FormField>
-          <FormField label="Description"><input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="All clubs and group classes" /></FormField>
-          <FormField label="Card colour"><input className="input h-10" type="color" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} /></FormField>
-          {formError && <p className="col-span-2 text-sm text-rose-600">{formError}</p>}
-          <div className="col-span-2 flex justify-end gap-2 pt-2">
-            <button type="button" className="btn-secondary" onClick={() => setModalOpen(false)}>Cancel</button>
-            <button type="submit" className="btn-primary">Create plan</button>
-          </div>
-        </form>
+        <Box component="form" onSubmit={create}>
+          <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: "1fr 1fr" }}>
+            <TextField required label="Plan name" size="small" placeholder="Unlimited Monthly" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <TextField required label="Price ($)" type="number" size="small" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
+            <TextField select label="Billing cycle" size="small" value={form.billingCycle} onChange={(e) => setForm({ ...form, billingCycle: e.target.value })}>
+              {CYCLES.map((cycle) => (
+                <MenuItem key={cycle} value={cycle}>
+                  {cycle.replaceAll("_", " ")}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField label="Duration (days)" type="number" size="small" value={form.durationDays} onChange={(e) => setForm({ ...form, durationDays: e.target.value })} />
+            <TextField
+              label="Description"
+              size="small"
+              placeholder="All clubs and group classes"
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              sx={{ gridColumn: "span 2" }}
+            />
+          </Box>
+          {formError && (
+            <Typography variant="body2" sx={{ color: "text.secondary", mt: 2 }}>
+              {formError}
+            </Typography>
+          )}
+          <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 3 }}>
+            <Button variant="outlined" onClick={() => setModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained">
+              Create plan
+            </Button>
+          </Stack>
+        </Box>
       </Modal>
-    </div>
+    </Box>
   );
 }

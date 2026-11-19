@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Avatar, Box, MenuItem, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from "@mui/material";
 import { api } from "@/lib/api";
-import { LoadingSkeleton, ErrorState } from "@/components/ui";
-import { ShieldCheck, UserRound } from "lucide-react";
+import { ErrorState, LoadingSkeleton, PageHeader, TableShell } from "@/components/kit";
+import { ShieldCheck } from "lucide-react";
 
 interface OrgUser { id: string; name: string; email: string; role: string }
 const ROLES = ["ORG_OWNER", "ORG_ADMIN", "CLUB_MANAGER", "MEMBERSHIP_ADVISOR", "SUPPORT_MANAGER", "SUPPORT_AGENT", "VIEWER"];
@@ -41,39 +42,64 @@ export default function UsersPage() {
   if (!users) return <LoadingSkeleton />;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-5">
-      <div>
-        <h1 className="text-xl font-bold text-ink-900">Users & roles</h1>
-        <p className="text-xs text-slate-500">Role-based access control · {users.length} members</p>
-      </div>
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <table className="w-full">
-          <thead className="bg-slate-50"><tr><th className="th">Member</th><th className="th">Role</th><th className="th text-right">Change role</th></tr></thead>
-          <tbody className="divide-y divide-slate-100">
+    <Box sx={{ maxWidth: 940, mx: "auto" }}>
+      <PageHeader title="Users & roles" subtitle={`Role-based access control · ${users.length} members`} />
+
+      <TableShell>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Member</TableCell>
+              <TableCell>Role</TableCell>
+              <TableCell align="right">Change role</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
             {users.map((u) => (
-              <tr key={u.id} className="hover:bg-slate-50">
-                <td className="td">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500"><UserRound size={16} /></div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-800">{u.name}</p>
-                      <p className="text-[10px] text-slate-500">{u.email}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="td"><span className="inline-flex items-center gap-1 font-mono text-[10px] font-bold text-slate-600"><ShieldCheck size={12} />{u.role.replaceAll("_", " ")}</span></td>
-                <td className="td">
-                  <div className="flex justify-end">
-                    <select className="input w-44" value={u.role} disabled={busy} onChange={(e) => void changeRole(u.id, e.target.value)} aria-label="Change role">
-                      {ROLES.map((r) => (<option key={r} value={r}>{r.replaceAll("_", " ")}</option>))}
-                    </select>
-                  </div>
-                </td>
-              </tr>
+              <TableRow key={u.id} hover>
+                <TableCell>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                    <Avatar sx={{ width: 32, height: 32, fontSize: 12 }}>
+                      {u.name.split(" ").map((part) => part[0]).slice(0, 2).join("").toUpperCase()}
+                    </Avatar>
+                    <Box>
+                      <Typography sx={{ fontSize: 13.5, fontWeight: 600 }}>{u.name}</Typography>
+                      <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                        {u.email}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.75, color: "text.secondary" }}>
+                    <ShieldCheck size={13} />
+                    <Typography variant="caption" sx={{ fontFamily: "Geist Mono, monospace", fontWeight: 600, letterSpacing: "0.04em" }}>
+                      {u.role.replaceAll("_", " ")}
+                    </Typography>
+                  </Box>
+                </TableCell>
+                <TableCell align="right">
+                  <TextField
+                    select
+                    size="small"
+                    value={u.role}
+                    disabled={busy}
+                    onChange={(e) => void changeRole(u.id, e.target.value)}
+                    slotProps={{ htmlInput: { "aria-label": "Change role" } }}
+                    sx={{ width: 210 }}
+                  >
+                    {ROLES.map((r) => (
+                      <MenuItem key={r} value={r}>
+                        {r.replaceAll("_", " ")}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+          </TableBody>
+        </Table>
+      </TableShell>
+    </Box>
   );
 }

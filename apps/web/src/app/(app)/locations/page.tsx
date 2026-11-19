@@ -1,8 +1,10 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
+import { Box, Button, IconButton, TextField, Tooltip, Typography } from "@mui/material";
+import { Stack } from "@/components/mui-stack";
 import { api } from "@/lib/api";
-import { EmptyState, ErrorState, LoadingSkeleton, Modal, FormField, PaginationBar } from "@/components/ui";
-import { Plus, Trash2, Users, QrCode, DoorOpen } from "lucide-react";
+import { EmptyState, ErrorState, LoadingSkeleton, Modal, PageHeader, PaginationBar, Panel } from "@/components/kit";
+import { DoorOpen, Plus, QrCode, Trash2, Users } from "lucide-react";
 
 interface LocationRow {
   id: string;
@@ -19,12 +21,14 @@ interface LocationRow {
 }
 interface LocationList { items: LocationRow[]; total: number; page: number; pages: number }
 
+const EMPTY_FORM = { name: "", address: "", city: "", region: "", phone: "", capacity: "", opensAt: "06:00", closesAt: "22:00" };
+
 export default function LocationsPage() {
   const [data, setData] = useState<LocationList | null>(null);
   const [page, setPage] = useState(1);
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", address: "", city: "", region: "", phone: "", capacity: "", opensAt: "06:00", closesAt: "22:00" });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState("");
 
   const load = async () => {
@@ -46,7 +50,7 @@ export default function LocationsPage() {
     try {
       await api("/locations", { method: "POST", body: JSON.stringify({ ...form, capacity: form.capacity ? Number(form.capacity) : undefined }) });
       setModalOpen(false);
-      setForm({ name: "", address: "", city: "", region: "", phone: "", capacity: "", opensAt: "06:00", closesAt: "22:00" });
+      setForm(EMPTY_FORM);
       await load();
     } catch (err: any) {
       setFormError(err?.message || "Failed to create club");
@@ -64,58 +68,111 @@ export default function LocationsPage() {
   };
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-ink-900">Clubs</h1>
-          <p className="text-xs text-slate-500">{data?.total ?? 0} locations in this gym brand</p>
-        </div>
-        <button className="btn-primary" onClick={() => setModalOpen(true)}><Plus size={16} /> New club</button>
-      </div>
+    <Box>
+      <PageHeader
+        title="Clubs"
+        subtitle={`${data?.total ?? 0} locations in this gym brand`}
+        actions={
+          <Button variant="contained" startIcon={<Plus size={16} />} onClick={() => setModalOpen(true)}>
+            New club
+          </Button>
+        }
+      />
       {error && <ErrorState message={error} onRetry={() => void load()} />}
       {!data && !error && <LoadingSkeleton />}
       {data && data.items.length === 0 && <EmptyState title="No clubs yet" hint="Add the first location to start assigning members." />}
       {data && data.items.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr", lg: "repeat(3, 1fr)" } }}>
           {data.items.map((co) => (
-            <div key={co.id} className="card flex flex-col p-5">
-              <div className="flex items-start justify-between">
-                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-accent-50 text-lg font-black text-accent-600">{co.name.slice(0, 1).toUpperCase()}</div>
-                <button className="rounded-lg p-2 text-rose-500 hover:bg-rose-50" onClick={() => void remove(co.id)} aria-label="Archive club"><Trash2 size={16} /></button>
-              </div>
-              <p className="mt-3 text-base font-bold text-ink-900">{co.name}</p>
-              <p className="text-xs text-slate-500">{co.address || "No address"}{co.city ? ` · ${co.city}${co.region ? `, ${co.region}` : ""}` : ""}</p>
-              <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
-                <DoorOpen size={13} /> {co.opensAt || "—"}–{co.closesAt || "—"}
-                {co.phone ? <span className="ml-auto">{co.phone}</span> : null}
-              </div>
-              <div className="mt-4 flex flex-wrap gap-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
-                <span className="inline-flex items-center gap-1"><Users size={12} /> {co._count.members} members{co.capacity ? ` / ${co.capacity}` : ""}</span>
-                <span className="inline-flex items-center gap-1"><QrCode size={12} /> {co._count.checkIns} check-ins</span>
-                <span>{co._count.memberships} contracts</span>
-              </div>
-            </div>
+            <Panel key={co.id} sx={{ display: "flex", flexDirection: "column" }}>
+              <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
+                <Box
+                  sx={{
+                    display: "grid",
+                    placeItems: "center",
+                    width: 44,
+                    height: 44,
+                    borderRadius: 2,
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    backgroundColor: "rgba(255,255,255,0.04)",
+                    fontSize: 18,
+                    fontWeight: 700,
+                  }}
+                >
+                  {co.name.slice(0, 1).toUpperCase()}
+                </Box>
+                <Tooltip title="Archive club">
+                  <IconButton aria-label="Archive club" onClick={() => void remove(co.id)}>
+                    <Trash2 size={16} />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+              <Typography sx={{ mt: 1.5, fontSize: 16, fontWeight: 650 }}>{co.name}</Typography>
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                {co.address || "No address"}
+                {co.city ? ` · ${co.city}${co.region ? `, ${co.region}` : ""}` : ""}
+              </Typography>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1, color: "text.secondary" }}>
+                <DoorOpen size={13} />
+                <Typography variant="caption">
+                  {co.opensAt || "—"}–{co.closesAt || "—"}
+                </Typography>
+                {co.phone ? (
+                  <Typography variant="caption" sx={{ ml: "auto" }}>
+                    {co.phone}
+                  </Typography>
+                ) : null}
+              </Stack>
+              <Stack direction="row" flexWrap="wrap" gap={2} sx={{ mt: 2, pt: 1.5, borderTop: "1px solid rgba(255,255,255,0.07)", color: "text.secondary" }}>
+                <Stack direction="row" spacing={0.75} alignItems="center">
+                  <Users size={12} />
+                  <Typography variant="caption">
+                    {co._count.members} members{co.capacity ? ` / ${co.capacity}` : ""}
+                  </Typography>
+                </Stack>
+                <Stack direction="row" spacing={0.75} alignItems="center">
+                  <QrCode size={12} />
+                  <Typography variant="caption">{co._count.checkIns} check-ins</Typography>
+                </Stack>
+                <Typography variant="caption">{co._count.memberships} contracts</Typography>
+              </Stack>
+            </Panel>
           ))}
-        </div>
+        </Box>
       )}
-      {data && <PaginationBar page={data.page} pages={data.pages} total={data.total} onPage={setPage} />}
+      {data && data.items.length > 0 && (
+        <Panel padded={false} sx={{ mt: 2 }}>
+          <PaginationBar page={data.page} pages={data.pages} total={data.total} onPage={setPage} />
+        </Panel>
+      )}
+
       <Modal open={modalOpen} title="New club" onClose={() => setModalOpen(false)}>
-        <form onSubmit={create} className="grid grid-cols-2 gap-3">
-          <FormField label="Club name"><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></FormField>
-          <FormField label="Phone"><input className="input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></FormField>
-          <FormField label="Address"><input className="input" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></FormField>
-          <FormField label="City"><input className="input" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></FormField>
-          <FormField label="Region"><input className="input" value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} /></FormField>
-          <FormField label="Capacity"><input className="input" type="number" min="0" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} /></FormField>
-          <FormField label="Opens at"><input className="input" type="time" value={form.opensAt} onChange={(e) => setForm({ ...form, opensAt: e.target.value })} /></FormField>
-          <FormField label="Closes at"><input className="input" type="time" value={form.closesAt} onChange={(e) => setForm({ ...form, closesAt: e.target.value })} /></FormField>
-          {formError && <p className="col-span-2 text-sm text-rose-600">{formError}</p>}
-          <div className="col-span-2 flex justify-end gap-2 pt-2">
-            <button type="button" className="btn-secondary" onClick={() => setModalOpen(false)}>Cancel</button>
-            <button type="submit" className="btn-primary">Create club</button>
-          </div>
-        </form>
+        <Box component="form" onSubmit={create}>
+          <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" } }}>
+            <TextField required label="Club name" size="small" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <TextField label="Phone" size="small" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+            <TextField label="Address" size="small" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+            <TextField label="City" size="small" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+            <TextField label="Region" size="small" value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} />
+            <TextField label="Capacity" type="number" size="small" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} />
+            <TextField label="Opens at" type="time" size="small" value={form.opensAt} onChange={(e) => setForm({ ...form, opensAt: e.target.value })} />
+            <TextField label="Closes at" type="time" size="small" value={form.closesAt} onChange={(e) => setForm({ ...form, closesAt: e.target.value })} />
+          </Box>
+          {formError && (
+            <Typography variant="body2" sx={{ color: "text.secondary", mt: 2 }}>
+              {formError}
+            </Typography>
+          )}
+          <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 3 }}>
+            <Button variant="outlined" onClick={() => setModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained">
+              Create club
+            </Button>
+          </Stack>
+        </Box>
       </Modal>
-    </div>
+    </Box>
   );
 }

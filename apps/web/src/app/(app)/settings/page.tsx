@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Box, Button, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { LoadingSkeleton } from "@/components/ui";
+import { LoadingSkeleton, PageHeader, Panel } from "@/components/kit";
 
 interface AuditEntry { id: string; action: string; entityType: string; createdAt: string; user?: { name: string } | null }
 
@@ -18,47 +19,89 @@ export default function SettingsPage() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-5">
-      <div>
-        <h1 className="text-xl font-bold text-ink-900">Gym brand settings</h1>
-        <p className="text-xs text-slate-500">Brand profile, staff access and the audit trail</p>
-      </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="card p-5">
-          <p className="label">Gym brand</p>
-          <p className="mt-1 text-lg font-black text-ink-900">{orgName || "…"}</p>
-          <p className="mt-3 text-xs text-slate-500">Signed in as</p>
-          <p className="text-sm font-semibold text-slate-800">{user?.name} · {user?.email}</p>
-          <Link href="/users" className="btn-secondary mt-4 !text-xs">Manage staff & roles</Link>
-        </div>
-        <div className="card p-5">
-          <p className="label">Data export</p>
-          <p className="mt-1 text-sm text-slate-600">Download members, memberships, prospects, tickets and check-ins as CSV.</p>
-          <Link href="/reports" className="btn-secondary mt-4 !text-xs">Open club reports</Link>
-        </div>
-      </div>
-      <div className="card p-5">
-        <p className="label">Recent audit log</p>
-        {!audit && <LoadingSkeleton rows={5} />}
-        {audit && audit.length === 0 && <p className="py-6 text-center text-xs text-slate-400">No audit events yet</p>}
-        {audit && audit.length > 0 && (
-          <div className="mt-2 overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-50"><tr><th className="th">Time</th><th className="th">Actor</th><th className="th">Action</th><th className="th">Entity</th></tr></thead>
-              <tbody className="divide-y divide-slate-100">
-                {audit.slice(0, 20).map((a) => (
-                  <tr key={a.id}>
-                    <td className="td text-xs text-slate-500">{new Date(a.createdAt).toLocaleString()}</td>
-                    <td className="td text-xs">{a.user?.name || "system"}</td>
-                    <td className="td font-mono text-[10px]">{a.action}</td>
-                    <td className="td text-xs">{a.entityType}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+    <Box sx={{ maxWidth: 940, mx: "auto" }}>
+      <PageHeader title="Gym brand settings" subtitle="Brand profile, staff access and the audit trail" />
+
+      <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" } }}>
+        <Panel>
+          <Typography variant="overline" sx={{ color: "text.secondary" }}>
+            Gym brand
+          </Typography>
+          <Typography sx={{ mt: 0.75, fontSize: 20, fontWeight: 700, letterSpacing: "-0.02em" }}>{orgName || "…"}</Typography>
+          <Typography variant="caption" sx={{ color: "text.secondary", display: "block", mt: 2 }}>
+            Signed in as
+          </Typography>
+          <Typography variant="body2" sx={{ fontWeight: 600, mt: 0.25 }}>
+            {user?.name} · {user?.email}
+          </Typography>
+          <Button component={Link} href="/users" variant="outlined" size="small" sx={{ mt: 2 }}>
+            Manage staff &amp; roles
+          </Button>
+        </Panel>
+        <Panel>
+          <Typography variant="overline" sx={{ color: "text.secondary" }}>
+            Data export
+          </Typography>
+          <Typography variant="body2" sx={{ color: "text.secondary", mt: 1 }}>
+            Download members, memberships, prospects, tickets and check-ins as CSV.
+          </Typography>
+          <Button component={Link} href="/reports" variant="outlined" size="small" sx={{ mt: 2 }}>
+            Open club reports
+          </Button>
+        </Panel>
+      </Box>
+
+      <Panel sx={{ mt: 2 }}>
+        <Typography variant="overline" sx={{ color: "text.secondary" }}>
+          Recent audit log
+        </Typography>
+        {!audit && (
+          <Box sx={{ mt: 1.5 }}>
+            <LoadingSkeleton rows={5} />
+          </Box>
         )}
-      </div>
-    </div>
+        {audit && audit.length === 0 && (
+          <Typography variant="body2" sx={{ py: 4, textAlign: "center", color: "text.disabled" }}>
+            No audit events yet
+          </Typography>
+        )}
+        {audit && audit.length > 0 && (
+          <Box sx={{ mt: 1 }}>
+            <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Time</TableCell>
+                    <TableCell>Actor</TableCell>
+                    <TableCell>Action</TableCell>
+                    <TableCell>Entity</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {audit.slice(0, 20).map((a) => (
+                    <TableRow key={a.id} hover>
+                      <TableCell>
+                        <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                          {new Date(a.createdAt).toLocaleString()}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="caption">{a.user?.name || "system"}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="caption" sx={{ fontFamily: "Geist Mono, monospace" }}>
+                          {a.action}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="caption">{a.entityType}</Typography>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+            </Table>
+          </Box>
+        )}
+      </Panel>
+    </Box>
   );
 }

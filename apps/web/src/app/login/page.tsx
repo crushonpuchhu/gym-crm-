@@ -1,9 +1,24 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth";
-import { FormField } from "@/components/ui";
+import Link from "next/link";
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  CssBaseline,
+  Divider,
+  Paper,
+  TextField,
+  ThemeProvider,
+  Typography,
+} from "@mui/material";
+import { Stack } from "@/components/mui-stack";
 import { Dumbbell } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { theme } from "@/theme";
 
 const DEMO_ACCOUNTS = [
   { email: "owner@demo.com", label: "Owner" },
@@ -25,15 +40,15 @@ export default function LoginPage() {
     if (!loading && user) router.replace("/dashboard");
   }, [loading, user, router]);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setBusy(true);
     setError("");
     try {
       await login(email, password);
       router.replace("/dashboard");
     } catch (err: any) {
-      setError(err?.message || "Login failed");
+      setError(err?.message || "Sign in failed");
     } finally {
       setBusy(false);
     }
@@ -47,51 +62,117 @@ export default function LoginPage() {
 
   if (loading || user) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-ink-950">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-accent-400" />
-      </main>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
+          <Box
+            sx={{
+              width: 30,
+              height: 30,
+              borderRadius: "50%",
+              border: "2px solid rgba(255,255,255,0.12)",
+              borderTopColor: "#f5f5f6",
+              animation: "spin 0.8s linear infinite",
+              "@keyframes spin": { to: { transform: "rotate(360deg)" } },
+            }}
+          />
+        </Box>
+      </ThemeProvider>
     );
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-ink-950 px-4 py-10">
-      <div className="w-full max-w-md">
-        <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-accent-600 text-white"><Dumbbell size={22} /></div>
-          <h1 className="text-2xl font-bold text-white">GymFlow</h1>
-          <p className="mt-1 text-sm text-slate-400">Member CRM for gym brands · sign in</p>
-        </div>
-        <form onSubmit={submit} className="card space-y-4 p-6">
-          <FormField label="Email">
-            <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" placeholder="you@yourgym.com" />
-          </FormField>
-          <FormField label="Password">
-            <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
-          </FormField>
-          {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">{error}</p>}
-          <button className="btn-primary w-full" type="submit" disabled={busy}>
-            {busy ? "Signing in…" : "Sign in"}
-          </button>
-          <div className="rounded-lg bg-slate-50 p-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Demo accounts · password123</p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "grid",
+          placeItems: "center",
+          px: 2,
+          py: 6,
+        }}
+      >
+        <Box sx={{ width: "100%", maxWidth: 420 }}>
+          <Stack alignItems="center" spacing={1.25} sx={{ mb: 3 }}>
+            <Box
+              sx={{
+                display: "grid",
+                placeItems: "center",
+                width: 46,
+                height: 46,
+                borderRadius: 3,
+                border: "1px solid rgba(255,255,255,0.14)",
+                background: "linear-gradient(160deg, rgba(255,255,255,0.16), rgba(255,255,255,0.02))",
+              }}
+            >
+              <Dumbbell size={20} />
+            </Box>
+            <Typography variant="h2">GymFlow</Typography>
+            <Typography variant="body2" sx={{ color: "text.secondary" }}>
+              Member CRM for gym brands
+            </Typography>
+          </Stack>
+
+          <Paper sx={{ borderRadius: 4, p: { xs: 2.5, sm: 3.5 } }}>
+            <form onSubmit={submit}>
+              <Stack spacing={2}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Email"
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="you@yourgym.com"
+                  autoComplete="email"
+                  required
+                />
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Password"
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  autoComplete="current-password"
+                  required
+                />
+                {error ? <Alert severity="error">{error}</Alert> : null}
+                <Button type="submit" variant="contained" size="large" disabled={busy} sx={{ mt: 0.5 }}>
+                  {busy ? "Signing in…" : "Sign in"}
+                </Button>
+              </Stack>
+            </form>
+
+            <Divider sx={{ my: 2.5 }} />
+
+            <Typography variant="overline" sx={{ color: "text.secondary" }}>
+              Demo accounts · password123
+            </Typography>
+            <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mt: 1 }}>
               {DEMO_ACCOUNTS.map((account) => (
-                <button
+                <Chip
                   key={account.email}
-                  type="button"
+                  label={account.label}
                   onClick={() => useDemo(account.email)}
-                  className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-600 hover:border-accent-300 hover:text-accent-700"
-                >
-                  {account.label}
-                </button>
+                  sx={{ cursor: "pointer", textTransform: "none", letterSpacing: 0 }}
+                />
               ))}
-            </div>
-          </div>
-          <p className="text-center text-xs text-slate-500">
-            New gym brand? <a className="font-semibold text-accent-600 hover:underline" href="/register">Create an account</a>
-          </p>
-        </form>
-      </div>
-    </main>
+            </Stack>
+          </Paper>
+
+          <Typography variant="body2" sx={{ color: "text.secondary", textAlign: "center", mt: 2.5 }}>
+            New gym brand?{" "}
+            <Box component={Link} href="/register" sx={{ color: "#f5f5f6", fontWeight: 600, textDecoration: "none" }}>
+              Create an account
+            </Box>
+          </Typography>
+          <Typography variant="caption" sx={{ color: "text.disabled", textAlign: "center", display: "block", mt: 1 }}>
+            GymFlow · Member CRM
+          </Typography>
+        </Box>
+      </Box>
+    </ThemeProvider>
   );
 }
