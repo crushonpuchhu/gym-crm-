@@ -318,8 +318,9 @@ function KanbanCard({
     <Box
       sx={{
         borderRadius: 2,
-        border: "1px solid rgba(140,165,220,0.14)",
-        backgroundColor: "rgba(140,165,220,0.05)",
+        border: "1px solid var(--gf-border)",
+        backgroundColor: "background.paper",
+        boxShadow: "0 1px 2px rgba(10, 20, 40, 0.04)",
         p: 1.5,
         opacity: moving ? 0.55 : 1,
         pointerEvents: moving ? "none" : "auto",
@@ -351,7 +352,7 @@ function KanbanCard({
         slotProps={{ htmlInput: { "aria-label": `Move ${contract.title} to another stage` } }}
         sx={{
           mt: 1.25,
-          "& .MuiOutlinedInput-root": { backgroundColor: "rgba(140,165,220,0.06)" },
+          "& .MuiOutlinedInput-root": { backgroundColor: "action.hover" },
           "& .MuiInputLabel-root": { fontSize: 11 },
         }}
       >
@@ -390,13 +391,13 @@ function KanbanColumn({
         width: 288,
         flexShrink: 0,
         borderRadius: 3,
-        border: "1px solid rgba(140,165,220,0.14)",
-        backgroundColor: "rgba(140,165,220,0.03)",
-        backgroundImage: `linear-gradient(180deg, ${accent.soft}, transparent 32%)`,
+        border: "1px solid var(--gf-border)",
+        backgroundColor: "action.hover",
+        backgroundImage: `linear-gradient(180deg, ${accent.soft}, transparent 26%)`,
         p: 1.5,
       }}
     >
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5, pb: 1.25, borderBottom: "1px solid rgba(140,165,220,0.12)" }}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5, pb: 1.25, borderBottom: "1px solid var(--gf-border)" }}>
         <Box>
           <Stack direction="row" spacing={0.9} alignItems="center">
             <Box sx={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: accent.main, flexShrink: 0 }} />
@@ -410,7 +411,7 @@ function KanbanColumn({
         </Box>
         <Typography
           variant="caption"
-          sx={{ border: "1px solid rgba(140,165,220,0.16)", borderRadius: 999, px: 1, py: 0.4, color: "text.secondary" }}
+          sx={{ border: "1px solid var(--gf-border)", borderRadius: 999, px: 1, py: 0.4, color: "text.secondary" }}
         >
           {contracts.length} · ${Math.round(monthly).toLocaleString()}/mo
         </Typography>
@@ -426,7 +427,7 @@ function KanbanColumn({
           />
         ))}
         {contracts.length === 0 && (
-          <Box sx={{ border: "1px dashed rgba(140,165,220,0.18)", borderRadius: 2, p: 1.5, textAlign: "center" }}>
+          <Box sx={{ border: "1px dashed var(--gf-border)", borderRadius: 2, p: 1.5, textAlign: "center" }}>
             <Typography variant="caption" sx={{ color: "text.disabled" }}>
               No contracts at this stage
             </Typography>

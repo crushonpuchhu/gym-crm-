@@ -7,18 +7,18 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
-  CssBaseline,
+  CircularProgress,
   Divider,
-  Paper,
+  IconButton,
+  InputAdornment,
   TextField,
-  ThemeProvider,
   Typography,
 } from "@mui/material";
 import { Stack } from "@/components/mui-stack";
-import { Dumbbell } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { theme } from "@/theme";
+import { ColorModeProvider } from "@/components/color-mode";
+import { AuthShell } from "@/components/auth-shell";
 
 const DEMO_ACCOUNTS = [
   { email: "owner@demo.com", label: "Owner" },
@@ -28,10 +28,19 @@ const DEMO_ACCOUNTS = [
 ];
 
 export default function LoginPage() {
+  return (
+    <ColorModeProvider>
+      <LoginView />
+    </ColorModeProvider>
+  );
+}
+
+function LoginView() {
   const { login, user, loading } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -62,119 +71,144 @@ export default function LoginPage() {
 
   if (loading || user) {
     return (
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-          <Box
-            sx={{
-              width: 30,
-              height: 30,
-              borderRadius: "50%",
-              border: "2px solid rgba(140,165,220,0.18)",
-              borderTopColor: "#4b7cf2",
-              animation: "spin 0.8s linear infinite",
-              "@keyframes spin": { to: { transform: "rotate(360deg)" } },
-            }}
-          />
-        </Box>
-      </ThemeProvider>
+      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
+        <CircularProgress size={26} thickness={4.5} />
+      </Box>
     );
   }
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Box
-        sx={{
-          minHeight: "100vh",
-          display: "grid",
-          placeItems: "center",
-          px: 2,
-          py: 6,
-        }}
-      >
-        <Box sx={{ width: "100%", maxWidth: 420 }}>
-          <Stack alignItems="center" spacing={1.25} sx={{ mb: 3 }}>
+    <AuthShell
+      eyebrow="Membership CRM"
+      headline="Run every club from one record set."
+      points={[
+        "Prospects, members and contracts in a single pipeline.",
+        "Front-desk check-ins, plans and billing in one place.",
+        "Retention reports that explain churn, not just count it.",
+      ]}
+      title="Welcome back"
+      subtitle="Sign in to your gym brand workspace."
+      footer={
+        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+          New gym brand?{" "}
+          <Box component={Link} href="/register" sx={{ color: "primary.main", fontWeight: 600, textDecoration: "none" }}>
+            Create an account
+          </Box>
+        </Typography>
+      }
+    >
+      <form onSubmit={submit}>
+        <Stack spacing={2.25}>
+          <TextField
+            fullWidth
+            label="Email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="you@yourgym.com"
+            autoComplete="email"
+            required
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Mail size={15} />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+          <TextField
+            fullWidth
+            label="Password"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            autoComplete="current-password"
+            required
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Lock size={15} />
+                  </InputAdornment>
+                ),
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      onClick={() => setShowPassword((current) => !current)}
+                      edge="end"
+                      size="small"
+                    >
+                      {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+          {error ? <Alert severity="error">{error}</Alert> : null}
+          <Button
+            type="submit"
+            variant="contained"
+            size="large"
+            disabled={busy}
+            endIcon={busy ? undefined : <ArrowRight size={16} />}
+            sx={{ mt: 0.5, minHeight: 48, fontSize: 14 }}
+          >
+            {busy ? "Signing in…" : "Sign in"}
+          </Button>
+        </Stack>
+      </form>
+
+      <Divider sx={{ my: 2.5 }} />
+
+      <Stack direction="row" alignItems="baseline" justifyContent="space-between" sx={{ mb: 1.25 }}>
+        <Typography variant="overline" sx={{ color: "text.secondary" }}>
+          Demo accounts
+        </Typography>
+        <Typography variant="caption" sx={{ color: "text.disabled" }}>
+          password123
+        </Typography>
+      </Stack>
+      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}>
+        {DEMO_ACCOUNTS.map((account) => (
+          <Button
+            key={account.email}
+            variant="outlined"
+            size="small"
+            onClick={() => useDemo(account.email)}
+            sx={{
+              justifyContent: "flex-start",
+              gap: 1,
+              py: 0.9,
+              fontSize: 12,
+              fontWeight: 600,
+              textTransform: "none",
+              borderColor: "divider",
+              color: "text.primary",
+            }}
+          >
             <Box
               sx={{
                 display: "grid",
                 placeItems: "center",
-                width: 46,
-                height: 46,
-                borderRadius: 3,
-                border: "1px solid rgba(75,124,242,0.45)",
-                background: "linear-gradient(160deg, #4b7cf2, #3e71ec)",
-                color: "#ffffff",
-                boxShadow: "0 8px 24px rgba(75,124,242,0.3)",
+                width: 22,
+                height: 22,
+                borderRadius: "50%",
+                backgroundColor: "action.selected",
+                color: "primary.main",
+                fontSize: 10,
+                fontWeight: 700,
               }}
             >
-              <Dumbbell size={20} />
+              {account.label.charAt(0)}
             </Box>
-            <Typography variant="h2">GymFlow</Typography>
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              Member CRM for gym brands
-            </Typography>
-          </Stack>
-
-          <Paper sx={{ borderRadius: 4, p: { xs: 2.5, sm: 3.5 } }}>
-            <form onSubmit={submit}>
-              <Stack spacing={2}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Email"
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="you@yourgym.com"
-                  autoComplete="email"
-                  required
-                />
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Password"
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  autoComplete="current-password"
-                  required
-                />
-                {error ? <Alert severity="error">{error}</Alert> : null}
-                <Button type="submit" variant="contained" size="large" disabled={busy} sx={{ mt: 0.5 }}>
-                  {busy ? "Signing in…" : "Sign in"}
-                </Button>
-              </Stack>
-            </form>
-
-            <Divider sx={{ my: 2.5 }} />
-
-            <Typography variant="overline" sx={{ color: "text.secondary" }}>
-              Demo accounts · password123
-            </Typography>
-            <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mt: 1 }}>
-              {DEMO_ACCOUNTS.map((account) => (
-                <Chip
-                  key={account.email}
-                  label={account.label}
-                  onClick={() => useDemo(account.email)}
-                  sx={{ cursor: "pointer", textTransform: "none", letterSpacing: 0 }}
-                />
-              ))}
-            </Stack>
-          </Paper>
-
-          <Typography variant="body2" sx={{ color: "text.secondary", textAlign: "center", mt: 2.5 }}>
-            New gym brand?{" "}
-            <Box component={Link} href="/register" sx={{ color: "#abc5f3", fontWeight: 600, textDecoration: "none" }}>
-              Create an account
-            </Box>
-          </Typography>
-          <Typography variant="caption" sx={{ color: "text.disabled", textAlign: "center", display: "block", mt: 1 }}>
-            GymFlow · Member CRM
-          </Typography>
-        </Box>
+            {account.label}
+          </Button>
+        ))}
       </Box>
-    </ThemeProvider>
+    </AuthShell>
   );
 }

@@ -168,7 +168,7 @@ export default function CheckInsPage() {
               ))}
             </TableBody>
           </Table>
-          <Box sx={{ borderTop: "1px solid rgba(140,165,220,0.12)", px: 2, py: 1.5 }}>
+          <Box sx={{ borderTop: "1px solid var(--gf-border)", px: 2, py: 1.5 }}>
             <Typography variant="caption" sx={{ color: "text.secondary" }}>
               {data.total} entries
             </Typography>

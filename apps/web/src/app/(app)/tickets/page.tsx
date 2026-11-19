@@ -126,7 +126,7 @@ export default function TicketsPage() {
         }}
       >
         <Panel padded={false} sx={{ display: "flex", flexDirection: "column", height: "calc(100vh - 14rem)", minHeight: 460 }}>
-          <Stack direction="row" alignItems="center" spacing={1} sx={{ p: 2, borderBottom: "1px solid rgba(140,165,220,0.12)" }}>
+          <Stack direction="row" alignItems="center" spacing={1} sx={{ p: 2, borderBottom: "1px solid var(--gf-border)" }}>
             <Inbox size={16} color="#8d8d95" />
             <Typography sx={{ fontWeight: 600, fontSize: 13.5 }}>Member support · {data.total}</Typography>
           </Stack>
@@ -147,12 +147,12 @@ export default function TicketsPage() {
                     textAlign: "left",
                     px: 2,
                     py: 1.75,
-                    background: active ? "rgba(140,165,220,0.08)" : "transparent",
+                    background: active ? "var(--gf-wash-strong)" : "transparent",
                     border: "none",
-                    borderBottom: "1px solid rgba(140,165,220,0.08)",
+                    borderBottom: "1px solid var(--gf-border)",
                     color: "inherit",
                     cursor: "pointer",
-                    "&:hover": { background: "rgba(140,165,220,0.06)" },
+                    "&:hover": { background: "var(--gf-wash)" },
                   }}
                 >
                   <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
@@ -171,7 +171,7 @@ export default function TicketsPage() {
                     </Typography>
                     <Typography
                       variant="caption"
-                      sx={{ ml: "auto", border: "1px solid rgba(140,165,220,0.14)", borderRadius: 1, px: 0.75, color: "text.disabled" }}
+                      sx={{ ml: "auto", border: "1px solid var(--gf-border)", borderRadius: 1, px: 0.75, color: "text.disabled" }}
                     >
                       {t.category.replaceAll("_", " ")}
                     </Typography>
@@ -191,7 +191,7 @@ export default function TicketsPage() {
             </Box>
           ) : (
             <>
-              <Box sx={{ p: 2, borderBottom: "1px solid rgba(140,165,220,0.12)" }}>
+              <Box sx={{ p: 2, borderBottom: "1px solid var(--gf-border)" }}>
                 <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={2} flexWrap="wrap">
                   <Box>
                     <Typography sx={{ fontFamily: "Geist Mono, monospace", fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "text.disabled" }}>
@@ -219,7 +219,7 @@ export default function TicketsPage() {
                         sx={{
                           borderRadius: 999,
                           border: "1px solid",
-                          borderColor: active ? "rgba(75,124,242,0.65)" : "rgba(140,165,220,0.18)",
+                          borderColor: active ? "var(--gf-accent-border)" : "var(--gf-border)",
                           backgroundColor: active ? TONES.indigo.soft : "transparent",
                           color: active ? TONES.indigo.main : "text.secondary",
                           px: 1.25,
@@ -228,7 +228,7 @@ export default function TicketsPage() {
                           fontWeight: 700,
                           letterSpacing: "0.06em",
                           cursor: "pointer",
-                          "&:hover": { borderColor: "rgba(75,124,242,0.6)", color: "#cfdcff" },
+                          "&:hover": { borderColor: "var(--gf-accent-border)", color: "primary.main" },
                         }}
                       >
                         {s.replaceAll("_", " ")}
@@ -248,8 +248,8 @@ export default function TicketsPage() {
                       borderRadius: 2.5,
                       p: 1.75,
                       fontSize: 13,
-                      border: "1px solid rgba(140,165,220,0.12)",
-                      backgroundColor: c.isInternal ? "rgba(140,165,220,0.12)" : "rgba(140,165,220,0.05)",
+                      border: "1px solid var(--gf-border)",
+                      backgroundColor: c.isInternal ? "var(--gf-wash-strong)" : "var(--gf-wash)",
                     }}
                   >
                     <Typography sx={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "text.disabled", mb: 0.75 }}>
@@ -266,7 +266,7 @@ export default function TicketsPage() {
                 )}
               </Stack>
 
-              <Box component="form" onSubmit={addComment} sx={{ borderTop: "1px solid rgba(140,165,220,0.12)", p: 1.5 }}>
+              <Box component="form" onSubmit={addComment} sx={{ borderTop: "1px solid var(--gf-border)", p: 1.5 }}>
                 <Stack direction="row" alignItems="center" spacing={1}>
                   <TextField
                     size="small"

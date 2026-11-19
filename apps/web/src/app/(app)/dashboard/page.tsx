@@ -99,7 +99,7 @@ export default function DashboardPage() {
           <Typography variant="caption" sx={{ color: "text.secondary", display: "block", mt: 1 }}>
             Enquiries, tours and trials in the funnel
           </Typography>
-          <Stack spacing={1.25} sx={{ mt: 2.5, pt: 2, borderTop: "1px solid rgba(140,165,220,0.1)" }}>
+          <Stack spacing={1.25} sx={{ mt: 2.5, pt: 2, borderTop: "1px solid var(--gf-border)" }}>
             {FUNNEL.map((row) => (
               <Stack key={row.label} direction="row" justifyContent="space-between" alignItems="center">
                 <Stack direction="row" spacing={0.9} alignItems="center">
@@ -140,8 +140,8 @@ export default function DashboardPage() {
                 <BarChart data={joins}>
                   <defs>
                     <linearGradient id="monthBars" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#5b8cf5" />
-                      <stop offset="100%" stopColor="#3e71ec" />
+                      <stop offset="0%" stopColor="var(--gf-tone-indigo)" />
+                      <stop offset="100%" stopColor="var(--gf-chart-bar-bottom)" />
                     </linearGradient>
                   </defs>
                   <CartesianGrid stroke={CHART.grid} strokeDasharray="3 3" vertical={false} />
@@ -186,7 +186,7 @@ export default function DashboardPage() {
                 <CartesianGrid stroke={CHART.grid} strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="date" tick={CHART.axis} axisLine={false} tickLine={false} tickFormatter={(v: string) => v.slice(5)} />
                 <YAxis tick={CHART.axis} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={CHART.tooltip} cursor={{ stroke: "rgba(140,165,220,0.15)" }} />
+                <Tooltip contentStyle={CHART.tooltip} cursor={{ stroke: "var(--gf-border)" }} />
                 <Area type="monotone" dataKey="count" stroke="none" fill="url(#checkInFill)" />
                 <Line
                   type="monotone"
@@ -194,7 +194,7 @@ export default function DashboardPage() {
                   stroke="url(#checkInStroke)"
                   strokeWidth={2.4}
                   dot={false}
-                  activeDot={{ r: 4, fill: TONES.cyan.main, stroke: "#0a101d", strokeWidth: 2 }}
+                  activeDot={{ r: 4, fill: TONES.cyan.main, stroke: "var(--gf-paper)", strokeWidth: 2 }}
                 />
               </LineChart>
             </ResponsiveContainer>

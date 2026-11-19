@@ -1,18 +1,18 @@
 /**
  * GymFlow accent palette.
  *
- * Sampled from the dark-navy dashboard reference: deep blue ground, electric
- * blue for primary action, violet for secondary series, then amber, green,
- * pink and sky as category accents. Saturation is held back slightly so the
- * tones stay readable on the near-black navy rather than glowing.
+ * Tones are CSS custom properties set by the theme, so the same six roles
+ * resolve to navy-bright values in dark mode and deeper ink values in light
+ * mode. Each role ships a `main` for text, strokes and bars, plus a low-alpha
+ * `soft` wash for chips and a `glow` for card corners.
  */
 export const TONES = {
-  indigo: { main: "#5b8cf5", soft: "rgba(91, 140, 245, 0.16)", glow: "rgba(91, 140, 245, 0.24)" },
-  violet: { main: "#8b6ce8", soft: "rgba(139, 108, 232, 0.16)", glow: "rgba(139, 108, 232, 0.22)" },
-  cyan: { main: "#74aee8", soft: "rgba(116, 174, 232, 0.15)", glow: "rgba(116, 174, 232, 0.2)" },
-  emerald: { main: "#56bd77", soft: "rgba(86, 189, 119, 0.15)", glow: "rgba(86, 189, 119, 0.2)" },
-  amber: { main: "#eda23c", soft: "rgba(237, 162, 60, 0.15)", glow: "rgba(237, 162, 60, 0.2)" },
-  rose: { main: "#e06d92", soft: "rgba(224, 109, 146, 0.15)", glow: "rgba(224, 109, 146, 0.2)" },
+  indigo: { main: "var(--gf-tone-indigo)", soft: "var(--gf-tone-indigo-soft)", glow: "var(--gf-tone-indigo-glow)" },
+  violet: { main: "var(--gf-tone-violet)", soft: "var(--gf-tone-violet-soft)", glow: "var(--gf-tone-violet-glow)" },
+  cyan: { main: "var(--gf-tone-cyan)", soft: "var(--gf-tone-cyan-soft)", glow: "var(--gf-tone-cyan-glow)" },
+  emerald: { main: "var(--gf-tone-emerald)", soft: "var(--gf-tone-emerald-soft)", glow: "var(--gf-tone-emerald-glow)" },
+  amber: { main: "var(--gf-tone-amber)", soft: "var(--gf-tone-amber-soft)", glow: "var(--gf-tone-amber-glow)" },
+  rose: { main: "var(--gf-tone-rose)", soft: "var(--gf-tone-rose-soft)", glow: "var(--gf-tone-rose-glow)" },
 } as const;
 
 export type ToneName = keyof typeof TONES;
@@ -32,9 +32,9 @@ export const SERIES: string[] = [
 /** Nine-step expansion for pies and legends with more categories than hues. */
 export const SERIES_9: string[] = [
   ...SERIES,
-  "#a9c2ff",
-  "#8fd9a8",
-  "#f6c98b",
+  "var(--gf-series-7)",
+  "var(--gf-series-8)",
+  "var(--gf-series-9)",
 ];
 
 /** Same order, low-alpha fills for stacked or area work. */
@@ -49,15 +49,15 @@ export const SERIES_SOFT: string[] = [
 
 /** Recharts furniture shared by every chart in the app. */
 export const CHART = {
-  axis: { fontSize: 11, fill: "#8c99b4" },
-  grid: "rgba(140, 165, 220, 0.12)",
-  cursor: { fill: "rgba(91, 140, 245, 0.08)" },
+  axis: { fontSize: 11, fill: "var(--gf-chart-axis)" },
+  grid: "var(--gf-chart-grid)",
+  cursor: { fill: "var(--gf-chart-cursor)" },
   tooltip: {
-    backgroundColor: "#101a2e",
-    border: "1px solid rgba(140, 165, 220, 0.22)",
+    backgroundColor: "var(--gf-chart-tooltip-bg)",
+    border: "1px solid var(--gf-chart-tooltip-border)",
     borderRadius: 10,
     fontSize: 12,
-    color: "#eef2fb",
+    color: "var(--gf-chart-tooltip-text)",
   },
 };
 

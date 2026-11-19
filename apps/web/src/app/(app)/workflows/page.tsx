@@ -141,7 +141,7 @@ export default function WorkflowsPage() {
                 height: 38,
                 borderRadius: 2,
                 backgroundColor: w.isActive ? TONES.emerald.soft : "transparent",
-                boxShadow: `inset 0 0 0 1px ${w.isActive ? TONES.emerald.soft : "rgba(140,165,220,0.16)"}`,
+                boxShadow: `inset 0 0 0 1px ${w.isActive ? TONES.emerald.soft : "var(--gf-border)"}`,
                 color: w.isActive ? TONES.emerald.main : "text.disabled",
                 flexShrink: 0,
               }}

@@ -137,8 +137,8 @@ export default function ReportsPage() {
                 <BarChart data={joins}>
                   <defs>
                     <linearGradient id="reportMonthBars" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#5b8cf5" />
-                      <stop offset="100%" stopColor="#3e71ec" />
+                      <stop offset="0%" stopColor="var(--gf-tone-indigo)" />
+                      <stop offset="100%" stopColor="var(--gf-chart-bar-bottom)" />
                     </linearGradient>
                   </defs>
                   <CartesianGrid stroke={CHART.grid} strokeDasharray="3 3" vertical={false} />
@@ -215,7 +215,7 @@ export default function ReportsPage() {
                   stroke="url(#reportCheckInStroke)"
                   strokeWidth={2.4}
                   dot={false}
-                  activeDot={{ r: 4, fill: TONES.cyan.main, stroke: "#0a101d", strokeWidth: 2 }}
+                  activeDot={{ r: 4, fill: TONES.cyan.main, stroke: "var(--gf-paper)", strokeWidth: 2 }}
                 />
               </LineChart>
             </ResponsiveContainer>

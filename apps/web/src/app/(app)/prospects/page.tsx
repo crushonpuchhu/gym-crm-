@@ -325,7 +325,7 @@ export default function ProspectsPage() {
           sx={{ "& textarea": { fontFamily: "Geist Mono, ui-monospace, monospace", fontSize: 12 } }}
         />
         {importResult && (
-          <Typography variant="body2" sx={{ mt: 1.5, color: "text.secondary", border: "1px solid rgba(140,165,220,0.14)", borderRadius: 2, px: 1.5, py: 1 }}>
+          <Typography variant="body2" sx={{ mt: 1.5, color: "text.secondary", border: "1px solid var(--gf-border)", borderRadius: 2, px: 1.5, py: 1 }}>
             {importResult}
           </Typography>
         )}

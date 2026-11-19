@@ -6,7 +6,6 @@ import { ReactNode, useEffect, useState } from "react";
 import {
   Avatar,
   Box,
-  CssBaseline,
   Divider,
   Drawer,
   IconButton,
@@ -16,7 +15,6 @@ import {
   ListItemIcon,
   ListItemText,
   TextField,
-  ThemeProvider,
   Tooltip,
   Typography,
   useMediaQuery,
@@ -43,7 +41,7 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { theme } from "@/theme";
+import { ColorModeProvider, ColorModeToggle } from "@/components/color-mode";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -75,7 +73,7 @@ function Brand() {
           height: 40,
           borderRadius: 2.5,
           border: "1px solid rgba(75,124,242,0.45)",
-          background: "linear-gradient(160deg, #4b7cf2, #3e71ec)",
+          background: "linear-gradient(160deg, var(--gf-accent), var(--gf-chart-bar-bottom))",
           color: "#ffffff",
           boxShadow: "0 6px 18px rgba(75,124,242,0.28)",
         }}
@@ -138,7 +136,8 @@ function SidebarContent({
                 <InputAdornment position="end">
                   <Box
                     sx={{
-                      border: "1px solid rgba(140,165,220,0.2)",
+                      border: "1px solid",
+                      borderColor: "divider",
                       borderRadius: 1,
                       px: 0.75,
                       py: 0.25,
@@ -153,7 +152,7 @@ function SidebarContent({
               ),
             },
           }}
-          sx={{ "& .MuiOutlinedInput-root": { backgroundColor: "#0c1424" } }}
+          sx={{ "& .MuiOutlinedInput-root": { backgroundColor: "background.default" } }}
         />
       </Box>
       <List sx={{ px: 1.5, pt: 1, flex: 1, overflowY: "auto" }}>
@@ -168,7 +167,7 @@ function SidebarContent({
               onClick={onNavigate}
               sx={{
                 mb: 0.5,
-                border: active ? "1px solid rgba(75,124,242,0.4)" : "1px solid transparent",
+                border: active ? "1px solid var(--gf-accent-border)" : "1px solid transparent",
               }}
             >
               <ListItemIcon>
@@ -192,7 +191,7 @@ function SidebarContent({
               onClick={onNavigate}
               sx={{
                 mb: 0.5,
-                border: active ? "1px solid rgba(75,124,242,0.4)" : "1px solid transparent",
+                border: active ? "1px solid var(--gf-accent-border)" : "1px solid transparent",
               }}
             >
               <ListItemIcon>
@@ -202,7 +201,7 @@ function SidebarContent({
             </ListItemButton>
           );
         })}
-        <ListItemButton onClick={onSignOut} sx={{ color: "#c6d0e6" }}>
+        <ListItemButton onClick={onSignOut} sx={{ color: "text.secondary" }}>
           <ListItemIcon sx={{ color: "inherit" }}>
             <LogOut size={17} strokeWidth={1.9} />
           </ListItemIcon>
@@ -215,10 +214,11 @@ function SidebarContent({
           spacing={1.25}
           alignItems="center"
           sx={{
-            border: "1px solid rgba(140,165,220,0.14)",
+            border: "1px solid",
+            borderColor: "divider",
             borderRadius: 3,
             p: 1.25,
-            backgroundColor: "rgba(140,165,220,0.05)",
+            backgroundColor: "action.hover",
           }}
         >
           <Avatar sx={{ width: 32, height: 32, fontSize: 12 }}>
@@ -238,13 +238,13 @@ function SidebarContent({
   );
 }
 
-export default function AppLayout({ children }: { children: ReactNode }) {
+function AppLayoutInner({ children }: { children: ReactNode }) {
   const { user, loading, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const isDesktop = useMediaQuery(theme.breakpoints.up("lg"), { noSsr: true });
+  const isDesktop = useMediaQuery("(min-width:1200px)", { noSsr: true });
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
@@ -268,22 +268,19 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   if (loading || !user) {
     return (
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
+      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
           <Box
             sx={{
               width: 30,
               height: 30,
               borderRadius: "50%",
-              border: "2px solid rgba(140,165,220,0.18)",
-              borderTopColor: "#f5f5f6",
+              border: "2px solid var(--gf-border)",
+              borderTopColor: "var(--gf-accent)",
               animation: "spin 0.8s linear infinite",
               "@keyframes spin": { to: { transform: "rotate(360deg)" } },
             }}
           />
         </Box>
-      </ThemeProvider>
     );
   }
 
@@ -307,8 +304,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   );
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
       <Box sx={{ minHeight: "100vh", display: "flex" }}>
         {isDesktop ? (
           <Box
@@ -319,8 +314,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               position: "sticky",
               top: 0,
               height: "100vh",
-              borderRight: "1px solid rgba(140,165,220,0.1)",
-              backgroundColor: "rgba(10,10,12,0.72)",
+              borderRight: "1px solid",
+              borderColor: "divider",
+              backgroundColor: "var(--gf-rail)",
               backdropFilter: "blur(14px)",
             }}
           >
@@ -353,8 +349,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               gap: 1.5,
               height: 68,
               px: { xs: 2, lg: 3.5 },
-              borderBottom: "1px solid rgba(140,165,220,0.1)",
-              backgroundColor: "rgba(8,8,10,0.78)",
+              borderBottom: "1px solid",
+              borderColor: "divider",
+              backgroundColor: "var(--gf-header)",
               backdropFilter: "blur(14px)",
             }}
           >
@@ -376,6 +373,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             </Stack>
 
             <Stack direction="row" alignItems="center" spacing={1} sx={{ ml: "auto" }}>
+              <ColorModeToggle />
               <Tooltip title="Notifications">
                 <IconButton component={Link} href="/notifications" aria-label="Notifications">
                   <Bell size={18} />
@@ -404,6 +402,13 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </Box>
         </Box>
       </Box>
-    </ThemeProvider>
+  );
+}
+
+export default function AppLayout({ children }: { children: ReactNode }) {
+  return (
+    <ColorModeProvider>
+      <AppLayoutInner>{children}</AppLayoutInner>
+    </ColorModeProvider>
   );
 }

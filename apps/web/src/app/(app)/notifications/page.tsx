@@ -80,12 +80,12 @@ export default function NotificationsPage() {
                 px: 2.5,
                 py: 2,
                 border: "none",
-                borderBottom: "1px solid rgba(140,165,220,0.08)",
-                backgroundColor: n.readAt ? "transparent" : "rgba(140,165,220,0.06)",
+                borderBottom: "1px solid var(--gf-border)",
+                backgroundColor: n.readAt ? "transparent" : "var(--gf-wash)",
                 color: "inherit",
                 cursor: "pointer",
                 opacity: n.readAt ? 0.55 : 1,
-                "&:hover": { backgroundColor: "rgba(140,165,220,0.08)" },
+                "&:hover": { backgroundColor: "var(--gf-wash-strong)" },
               }}
             >
               <Box
@@ -95,7 +95,7 @@ export default function NotificationsPage() {
                   height: 7,
                   borderRadius: "50%",
                   flexShrink: 0,
-                  backgroundColor: n.readAt ? "rgba(140,165,220,0.22)" : TONES.indigo.main,
+                  backgroundColor: n.readAt ? "var(--gf-wash-strong)" : TONES.indigo.main,
                   boxShadow: n.readAt ? "none" : `0 0 0 3px ${TONES.indigo.soft}`,
                 }}
               />

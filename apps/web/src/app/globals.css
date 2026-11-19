@@ -2,45 +2,68 @@
 @tailwind components;
 @tailwind utilities;
 
-/* The CRM app surfaces set their own MUI navy theme; the landing page paints
-   its own paper palette inside `.sfx`, so this is only the app ground. */
+/* The CRM app surfaces paint their own MUI theme; the landing page paints its
+   paper palette inside `.sfx`. This file only holds the shared ground and a
+   few utility classes that read the theme's custom properties. */
 :root {
-  color-scheme: dark;
+  color-scheme: dark light;
 }
 
 body {
-  @apply bg-[#04060f] text-[#eef2fb] antialiased;
+  @apply antialiased;
 }
 
 @layer components {
   .card {
-    @apply rounded-xl border border-[#8ca5dc]/15 bg-[#0a101d];
+    @apply rounded-xl border;
+    border-color: var(--gf-border);
+    background-color: var(--gf-paper);
   }
   .input {
-    @apply w-full rounded-lg border border-[#8ca5dc]/20 bg-[#0c1424] px-3 py-2 text-sm text-[#eef2fb] outline-none transition placeholder:text-[#8ca5dc]/40 focus:border-[#4b7cf2];
+    @apply w-full rounded-lg border px-3 py-2 text-sm outline-none transition;
+    border-color: var(--gf-border-strong);
+    background-color: var(--gf-wash);
+    color: inherit;
+  }
+  .input:focus {
+    border-color: var(--gf-accent);
   }
   .label {
-    @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-[#909db6];
+    @apply mb-1 block text-xs font-semibold uppercase tracking-wide;
+    color: var(--gf-chart-axis);
   }
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition focus:outline-none disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-primary {
-    @apply btn bg-[#3f6fe0] text-white hover:bg-[#3a67d6];
+    @apply btn text-white;
+    background-color: var(--gf-accent);
+  }
+  .btn-primary:hover {
+    background-color: var(--gf-chart-bar-bottom);
   }
   .btn-secondary {
-    @apply btn border border-[#8ca5dc]/25 bg-transparent text-[#eef2fb] hover:border-[#4b7cf2]/60 hover:bg-[#4b7cf2]/10;
+    @apply btn border bg-transparent;
+    border-color: var(--gf-border-strong);
+    color: inherit;
+  }
+  .btn-secondary:hover {
+    border-color: var(--gf-accent-border);
+    background-color: var(--gf-wash);
   }
   .btn-danger {
-    @apply btn border border-[#e06d92]/35 bg-[#e06d92]/10 text-[#eef2fb] hover:bg-[#e06d92]/20;
+    @apply btn border;
+    border-color: var(--gf-border-strong);
+    background-color: var(--gf-wash);
   }
   .badge {
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
   }
   .th {
-    @apply px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-[#8c99b4];
+    @apply px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider;
+    color: var(--gf-chart-axis);
   }
   .td {
-    @apply px-4 py-3 text-sm text-[#dbe4f7];
+    @apply px-4 py-3 text-sm;
   }
 }
