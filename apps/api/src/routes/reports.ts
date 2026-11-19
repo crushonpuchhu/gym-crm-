@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../config/prisma";
 import { ok, err } from "../utils/response";
-import { AuthedRequest } from "../middleware/auth";
+import { AuthedRequest, requirePermission } from "../middleware/auth";
 
 const router = Router();
 
@@ -39,7 +39,7 @@ router.get("/dashboard", async (req: AuthedRequest, res) => {
   });
 });
 
-router.get("/joins-by-month", async (req: AuthedRequest, res) => {
+router.get("/joins-by-month", requirePermission("view_reports"), async (req: AuthedRequest, res) => {
   const org = req.orgId!;
   const since = new Date();
   since.setMonth(since.getMonth() - 11);
@@ -65,20 +65,20 @@ router.get("/joins-by-month", async (req: AuthedRequest, res) => {
   );
 });
 
-router.get("/prospects-by-source", async (req: AuthedRequest, res) => {
+router.get("/prospects-by-source", requirePermission("view_reports"), async (req: AuthedRequest, res) => {
   const org = req.orgId!;
   const rows = await prisma.prospect.groupBy({ by: ["source"], where: { organizationId: org, deletedAt: null }, _count: { source: true } });
   return ok(res, rows.map((r) => ({ source: r.source, count: r._count.source })));
 });
 
-router.get("/conversion", async (req: AuthedRequest, res) => {
+router.get("/conversion", requirePermission("view_reports"), async (req: AuthedRequest, res) => {
   const org = req.orgId!;
   const total = await prisma.prospect.count({ where: { organizationId: org, deletedAt: null } });
   const converted = await prisma.prospect.count({ where: { organizationId: org, status: "JOINED", deletedAt: null } });
   return ok(res, { total, converted, rate: total ? (converted / total) * 100 : 0 });
 });
 
-router.get("/checkins-by-day", async (req: AuthedRequest, res) => {
+router.get("/checkins-by-day", requirePermission("view_reports"), async (req: AuthedRequest, res) => {
   const org = req.orgId!;
   const days = Math.min(Number(req.query.days) || 14, 90);
   const since = new Date();
@@ -102,7 +102,7 @@ router.get("/checkins-by-day", async (req: AuthedRequest, res) => {
   return ok(res, Object.entries(buckets).map(([date, count]) => ({ date, count })));
 });
 
-router.get("/retention", async (req: AuthedRequest, res) => {
+router.get("/retention", requirePermission("view_reports"), async (req: AuthedRequest, res) => {
   const org = req.orgId!;
   const rows = await prisma.member.groupBy({
     by: ["status"],
@@ -126,7 +126,7 @@ router.get("/retention", async (req: AuthedRequest, res) => {
   });
 });
 
-router.get("/staff-performance", async (req: AuthedRequest, res) => {
+router.get("/staff-performance", requirePermission("view_reports"), async (req: AuthedRequest, res) => {
   const org = req.orgId!;
   const rows = await prisma.membership.groupBy({
     by: ["ownerId"],
@@ -159,7 +159,7 @@ function toCsv(header: string[], rows: unknown[][]) {
   return [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
 }
 
-router.get("/export/:report", async (req: AuthedRequest, res) => {
+router.get("/export/:report", requirePermission("view_reports"), async (req: AuthedRequest, res) => {
   const org = req.orgId!;
   const report = req.params.report.toLowerCase();
   let csv = "";

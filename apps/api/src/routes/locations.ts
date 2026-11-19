@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../config/prisma";
 import { ok, err } from "../utils/response";
 import { audit } from "../utils/audit";
-import { AuthedRequest } from "../middleware/auth";
+import { AuthedRequest, requirePermission } from "../middleware/auth";
 
 const router = Router();
 
@@ -40,7 +40,7 @@ router.get("/", async (req: AuthedRequest, res) => {
   return ok(res, { items, total, page, limit, pages: Math.ceil(total / limit) });
 });
 
-router.post("/", async (req: AuthedRequest, res) => {
+router.post("/", requirePermission("manage_org"), async (req: AuthedRequest, res) => {
   const data = locationSchema.parse(req.body);
   const location = await prisma.location.create({ data: { organizationId: req.orgId!, ...data } });
   await audit({ orgId: req.orgId, userId: req.userId, action: "location.create", entityType: "location", entityId: location.id, newValues: data, ip: req.ip, userAgent: req.get("user-agent") });
@@ -58,7 +58,7 @@ router.get("/:id", async (req: AuthedRequest, res) => {
   return ok(res, location);
 });
 
-router.patch("/:id", async (req: AuthedRequest, res) => {
+router.patch("/:id", requirePermission("manage_org"), async (req: AuthedRequest, res) => {
   const location = await prisma.location.findFirst({ where: { id: req.params.id, organizationId: req.orgId!, deletedAt: null } });
   if (!location) return err(res, "not_found", "Location not found", 404);
   const data = locationSchema.partial().parse(req.body);
@@ -67,7 +67,7 @@ router.patch("/:id", async (req: AuthedRequest, res) => {
   return ok(res, updated);
 });
 
-router.delete("/:id", async (req: AuthedRequest, res) => {
+router.delete("/:id", requirePermission("manage_org"), async (req: AuthedRequest, res) => {
   const location = await prisma.location.findFirst({ where: { id: req.params.id, organizationId: req.orgId!, deletedAt: null } });
   if (!location) return err(res, "not_found", "Location not found", 404);
   const memberCount = await prisma.member.count({ where: { locationId: req.params.id, organizationId: req.orgId!, deletedAt: null } });

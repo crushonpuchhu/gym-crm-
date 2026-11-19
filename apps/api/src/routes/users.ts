@@ -4,6 +4,7 @@ import { prisma } from "../config/prisma";
 import { ok, err } from "../utils/response";
 import { audit } from "../utils/audit";
 import { AuthedRequest, requirePermission } from "../middleware/auth";
+import { canAssignRole } from "../config/permissions";
 
 const router = Router();
 
@@ -63,6 +64,16 @@ router.patch(
     if (membership.userId === req.userId) {
       return err(res, "forbidden", "Cannot change your own role", 403);
     }
+    // Nobody may edit a role above their own, or hand out one above their own.
+    if (!canAssignRole(req.role, membership.role)) {
+      return err(res, "forbidden", "Cannot change the role of a more senior staff member", 403);
+    }
+    if (!canAssignRole(req.role, parsed.data.role)) {
+      return err(res, "forbidden", "You cannot grant a role above your own", 403, "role");
+    }
+    if (membership.role === "ORG_OWNER" && req.role !== "ORG_OWNER") {
+      return err(res, "forbidden", "Only the owner can change the owner role", 403);
+    }
     const updated = await prisma.teamMembership.update({
       where: { id: membership.id },
       data: { role: parsed.data.role },
@@ -80,6 +91,12 @@ router.delete(
     if (!membership) return err(res, "not_found", "Membership not found", 404);
     if (membership.userId === req.userId) {
       return err(res, "forbidden", "Cannot deactivate yourself", 403);
+    }
+    if (membership.role === "ORG_OWNER") {
+      return err(res, "forbidden", "The brand owner cannot be removed", 403);
+    }
+    if (!canAssignRole(req.role, membership.role)) {
+      return err(res, "forbidden", "Cannot remove a more senior staff member", 403);
     }
     await prisma.teamMembership.update({ where: { id: membership.id }, data: { deletedAt: new Date() } });
     await audit({ orgId: req.orgId, userId: req.userId, action: "user.deactivate", entityType: "membership", entityId: membership.id, ip: req.ip, userAgent: req.get("user-agent") });

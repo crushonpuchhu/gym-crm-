@@ -13,7 +13,9 @@ import {
   List,
   ListItemButton,
   ListItemIcon,
+  Chip,
   ListItemText,
+  MenuItem,
   TextField,
   Tooltip,
   Typography,
@@ -34,6 +36,7 @@ import {
   QrCode,
   Search,
   Settings,
+  ShieldCheck,
   TicketCheck,
   UserPlus,
   Users,
@@ -41,6 +44,7 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { roleLabel } from "@/lib/roles";
 import { ColorModeProvider, ColorModeToggle } from "@/components/color-mode";
 
 const NAV = [
@@ -58,6 +62,7 @@ const NAV = [
 ];
 
 const FOOTER_NAV = [
+  { href: "/users", label: "Staff & access", icon: ShieldCheck },
   { href: "/subscriptions", label: "Subscription", icon: ClipboardList },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -239,7 +244,7 @@ function SidebarContent({
 }
 
 function AppLayoutInner({ children }: { children: ReactNode }) {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, memberships, organizationId, role, switchOrg } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -371,6 +376,44 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
                 {current?.label ?? "Workspace"}
               </Typography>
             </Stack>
+
+            {memberships.length > 0 ? (
+              <Box sx={{ ml: 2, display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
+                {memberships.length > 1 ? (
+                  <TextField
+                    select
+                    size="small"
+                    value={organizationId ?? ""}
+                    onChange={(event) => {
+                      const next = event.target.value;
+                      void switchOrg(next).then(() => window.location.reload());
+                    }}
+                    slotProps={{ htmlInput: { "aria-label": "Switch gym brand" } }}
+                    sx={{
+                      minWidth: 190,
+                      "& .MuiOutlinedInput-root": { height: 32, fontSize: 12.5, backgroundColor: "transparent" },
+                    }}
+                  >
+                    {memberships.map((membership) => (
+                      <MenuItem key={membership.organization.id} value={membership.organization.id}>
+                        {membership.organization.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                ) : (
+                  <Typography noWrap variant="caption" sx={{ color: "text.secondary", display: { xs: "none", md: "block" } }}>
+                    {memberships[0].organization.name}
+                  </Typography>
+                )}
+                {role ? (
+                  <Chip
+                    label={roleLabel(role)}
+                    size="small"
+                    sx={{ display: { xs: "none", lg: "inline-flex" }, textTransform: "none", letterSpacing: 0 }}
+                  />
+                ) : null}
+              </Box>
+            ) : null}
 
             <Stack direction="row" alignItems="center" spacing={1} sx={{ ml: "auto" }}>
               <ColorModeToggle />

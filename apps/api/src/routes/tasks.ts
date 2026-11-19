@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../config/prisma";
 import { ok, err } from "../utils/response";
 import { audit } from "../utils/audit";
-import { AuthedRequest } from "../middleware/auth";
+import { AuthedRequest, requirePermission } from "../middleware/auth";
 
 const router = Router();
 const taskSchema = z.object({
@@ -41,7 +41,7 @@ router.get("/", async (req: AuthedRequest, res) => {
   return ok(res, tasks);
 });
 
-router.post("/", async (req: AuthedRequest, res) => {
+router.post("/", requirePermission("manage_tasks"), async (req: AuthedRequest, res) => {
   const data = taskSchema.parse(req.body);
   const ownerId = data.ownerId ?? req.userId!;
   if (!(await isOrgMember(req.orgId!, ownerId))) {
@@ -52,7 +52,7 @@ router.post("/", async (req: AuthedRequest, res) => {
   return ok(res, task, 201);
 });
 
-router.patch("/:id", async (req: AuthedRequest, res) => {
+router.patch("/:id", requirePermission("manage_tasks"), async (req: AuthedRequest, res) => {
   const task = await prisma.task.findFirst({ where: { id: req.params.id, organizationId: req.orgId!, deletedAt: null } });
   if (!task) return err(res, "not_found", "Task not found", 404);
   const data = taskSchema.partial().parse(req.body);
@@ -67,7 +67,7 @@ router.patch("/:id", async (req: AuthedRequest, res) => {
   return ok(res, updated);
 });
 
-router.delete("/:id", async (req: AuthedRequest, res) => {
+router.delete("/:id", requirePermission("manage_tasks"), async (req: AuthedRequest, res) => {
   const task = await prisma.task.findFirst({ where: { id: req.params.id, organizationId: req.orgId!, deletedAt: null } });
   if (!task) return err(res, "not_found", "Task not found", 404);
   await prisma.task.update({ where: { id: req.params.id }, data: { deletedAt: new Date() } });

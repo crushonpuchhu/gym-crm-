@@ -2,6 +2,9 @@ import { Request, Response, NextFunction } from "express";
 import { verifyAccess, verifyRefresh } from "../utils/jwt";
 import { err } from "../utils/response";
 import { prisma } from "../config/prisma";
+import { hasPermission } from "../config/permissions";
+
+export { hasPermission };
 
 export interface AuthedRequest extends Request {
   userId?: string;
@@ -9,27 +12,6 @@ export interface AuthedRequest extends Request {
   role?: string;
   memberships?: Array<{ organizationId: string; role: string }>;
 }
-
-/** Permission grants per role. "*" means full access. */
-const ROLE_PERMISSIONS: Record<string, string[]> = {
-  SUPER_ADMIN: ["*"],
-  ORG_OWNER: ["*"],
-  ORG_ADMIN: [
-    "manage_users",
-    "manage_pipelines",
-    "manage_prospects",
-    "manage_members",
-    "manage_memberships",
-    "manage_reports",
-    "manage_tickets_internal",
-    "view_audit_logs",
-  ],
-  CLUB_MANAGER: ["manage_prospects", "manage_members", "manage_memberships", "manage_pipelines", "manage_tickets", "manage_reports"],
-  MEMBERSHIP_ADVISOR: ["manage_prospects", "manage_members", "manage_memberships"],
-  SUPPORT_MANAGER: ["manage_tickets", "manage_tickets_internal"],
-  SUPPORT_AGENT: ["manage_tickets"],
-  VIEWER: [],
-};
 
 export function authenticate(req: AuthedRequest, res: Response, next: NextFunction) {
   const access = req.headers.authorization?.replace("Bearer ", "");
@@ -84,12 +66,6 @@ export function requireOrg(req: AuthedRequest, res: Response, next: NextFunction
     return err(res, "forbidden", "Not a member of this organization", 403);
   }
   next();
-}
-
-export function hasPermission(role: string | undefined, permission: string) {
-  if (!role) return false;
-  const grants = ROLE_PERMISSIONS[role] || [];
-  return grants.includes("*") || grants.includes(permission);
 }
 
 export function requirePermission(permission: string) {

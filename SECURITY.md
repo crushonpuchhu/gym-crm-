@@ -1,4 +1,4 @@
-# SECURITY — SALESFLOW CRM
+# SECURITY — GYMFLOW CRM
 
 ## Threat model summary
 Multi-tenant SaaS; primary risks: cross-tenant data access, credential theft, injection, over-privileged roles, secret leakage.
@@ -12,12 +12,18 @@ Multi-tenant SaaS; primary risks: cross-tenant data access, credential theft, in
 - Every tenant route resolves org context from server-side membership lookup; **client-supplied org IDs are never trusted**
 - Tenant scoping enforced in every Prisma query (`where: { organizationId, deletedAt: null }`)
 - Cross-tenant access returns 404 (record not found), not 403 with existence leakage
-- Role model: SUPER_ADMIN, ORG_OWNER, ORG_ADMIN, SALES_MANAGER, SALES_REP, SUPPORT_MANAGER, SUPPORT_AGENT, VIEWER
-- Permission checks are server-side at the service/route layer
+- Role model: SUPER_ADMIN (platform only), ORG_OWNER, ORG_ADMIN, CLUB_MANAGER, MEMBERSHIP_ADVISOR, SUPPORT_MANAGER, SUPPORT_AGENT, VIEWER
+- Permissions are capabilities (`manage_members`, `manage_billing`, `manage_users`, …) defined in `apps/api/src/config/permissions.ts`; every mutation route and sensitive read declares one with `requirePermission`
+- Privilege ceiling: `canAssignRole` stops an admin from minting an owner, stops managers/advisors from granting any role, and blocks editing or removing a more senior account; the brand owner cannot be demoted or removed
+- Staff join only through an invitation: pending `Invitation` (7-day token) → public preview → accept. A new email sets a name and password; an existing GymFlow login must confirm its current password, so an invite can never be used to take over an account
+- Seats: `Subscription.quotaStaff` caps active memberships plus unexpired pending invitations (402 `seat_limit`)
+- Full design: `docs/ACCESS_CONTROL.md`
 
 ## Verified evidence
+- `apps/api/tests/permissions.test.ts`: role matrix, `canAssignRole` ceiling, invite payload validation
 - `apps/api/tests/tenant-isolation.sh`: org B registers, sees 0 of org A's leads, cross-tenant deal read blocked
-- Lead/deal/ticket/contact/company detail routes all include `organizationId` in `where`
+- Live checks: advisor/viewer blocked on member/report/billing writes; admin cannot invite an owner; reused invite → 410; removed staff → immediate 403; existing-account accept rejects a wrong password (401)
+- Member/ticket/contact detail routes all include `organizationId` in `where`
 
 ## Input handling
 - Zod validation on body/query/params via `validate()` middleware and route-level `schema.parse`

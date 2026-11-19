@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../config/prisma";
 import { ok, err } from "../utils/response";
 import { audit } from "../utils/audit";
-import { AuthedRequest } from "../middleware/auth";
+import { AuthedRequest, requirePermission } from "../middleware/auth";
 
 const router = Router();
 
@@ -53,7 +53,7 @@ router.get("/", async (req: AuthedRequest, res) => {
   return ok(res, { items, total, todayCount });
 });
 
-router.post("/", async (req: AuthedRequest, res) => {
+router.post("/", requirePermission("manage_checkins"), async (req: AuthedRequest, res) => {
   const data = checkInSchema.parse(req.body);
   const member = await prisma.member.findFirst({
     where: { id: data.memberId, organizationId: req.orgId!, deletedAt: null },

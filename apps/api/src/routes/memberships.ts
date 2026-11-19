@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../config/prisma";
 import { ok, err } from "../utils/response";
 import { audit } from "../utils/audit";
-import { AuthedRequest } from "../middleware/auth";
+import { AuthedRequest, requirePermission } from "../middleware/auth";
 
 const router = Router();
 
@@ -104,7 +104,7 @@ router.get("/", async (req: AuthedRequest, res) => {
   return ok(res, { items, total, page, limit, pages: Math.ceil(total / limit), weightedRevenue: weighted });
 });
 
-router.post("/", async (req: AuthedRequest, res) => {
+router.post("/", requirePermission("manage_memberships"), async (req: AuthedRequest, res) => {
   const data = membershipSchema.parse(req.body);
   const relationError = await assertRelationsInOrg(req.orgId!, data);
   if (relationError) return err(res, "validation_error", relationError, 400);
@@ -138,7 +138,7 @@ router.get("/:id", async (req: AuthedRequest, res) => {
   return ok(res, membership);
 });
 
-router.patch("/:id", async (req: AuthedRequest, res) => {
+router.patch("/:id", requirePermission("manage_memberships"), async (req: AuthedRequest, res) => {
   const membership = await prisma.membership.findFirst({ where: { id: req.params.id, organizationId: req.orgId!, deletedAt: null } });
   if (!membership) return err(res, "not_found", "Membership not found", 404);
   const data = membershipSchema.partial().parse(req.body);
@@ -193,7 +193,7 @@ router.patch("/:id", async (req: AuthedRequest, res) => {
   return ok(res, updated);
 });
 
-router.delete("/:id", async (req: AuthedRequest, res) => {
+router.delete("/:id", requirePermission("manage_memberships"), async (req: AuthedRequest, res) => {
   const membership = await prisma.membership.findFirst({ where: { id: req.params.id, organizationId: req.orgId!, deletedAt: null } });
   if (!membership) return err(res, "not_found", "Membership not found", 404);
   await prisma.membership.update({ where: { id: req.params.id }, data: { deletedAt: new Date() } });

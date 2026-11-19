@@ -4,6 +4,7 @@ import { prisma } from "../config/prisma";
 import { ok, err } from "../utils/response";
 import { audit } from "../utils/audit";
 import { AuthedRequest, requirePermission } from "../middleware/auth";
+import { createInvitation, InviteError } from "../utils/invitations";
 
 const router = Router();
 
@@ -28,7 +29,7 @@ const updateOrgSchema = z.object({ name: z.string().min(1).max(200).optional(), 
 
 router.patch(
   "/:id",
-  requirePermission("manage_users"),
+  requirePermission("manage_org"),
   async (req: AuthedRequest, res) => {
     if (req.params.id !== req.orgId) return err(res, "forbidden", "Cannot modify another organization", 403);
     const org = await prisma.organization.findFirst({ where: { id: req.orgId!, deletedAt: null } });
@@ -45,7 +46,6 @@ router.patch(
 const invitationSchema = z.object({
   email: z.string().email(),
   role: z.enum([
-    "SUPER_ADMIN",
     "ORG_OWNER",
     "ORG_ADMIN",
     "CLUB_MANAGER",
@@ -56,6 +56,7 @@ const invitationSchema = z.object({
   ]),
 });
 
+/** Legacy path kept for compatibility; new clients use POST /api/v1/invitations. */
 router.post(
   "/:id/invitations",
   requirePermission("manage_users"),
@@ -63,13 +64,21 @@ router.post(
     if (req.params.id !== req.orgId) return err(res, "forbidden", "Cannot invite into another organization", 403);
     const parsed = invitationSchema.safeParse(req.body);
     if (!parsed.success) return err(res, "validation_error", "email and role required", 400, parsed.error.issues[0]?.path.join("."));
-    const { email, role } = parsed.data;
-    const token = require("crypto").randomBytes(32).toString("hex");
-    const invitation = await prisma.invitation.create({
-      data: { organizationId: req.orgId!, email, role, token, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), createdById: req.userId! },
-    });
-    await audit({ orgId: req.orgId, userId: req.userId, action: "org.invite", entityType: "invitation", entityId: invitation.id, newValues: { email, role }, ip: req.ip, userAgent: req.get("user-agent") });
-    return ok(res, invitation, 201);
+    try {
+      const { invitation, inviteUrl } = await createInvitation({
+        orgId: req.orgId!,
+        actorId: req.userId!,
+        actorRole: req.role,
+        email: parsed.data.email,
+        role: parsed.data.role,
+        ip: req.ip,
+        userAgent: req.get("user-agent"),
+      });
+      return ok(res, { ...invitation, link: inviteUrl }, 201);
+    } catch (error) {
+      if (error instanceof InviteError) return err(res, error.code, error.message, error.status, error.field);
+      throw error;
+    }
   },
 );
 

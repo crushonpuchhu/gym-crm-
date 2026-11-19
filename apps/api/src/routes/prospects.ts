@@ -8,7 +8,7 @@ import {
 import { prisma } from "../config/prisma";
 import { ok, err } from "../utils/response";
 import { audit } from "../utils/audit";
-import { AuthedRequest } from "../middleware/auth";
+import { AuthedRequest, requirePermission } from "../middleware/auth";
 
 const router = Router();
 
@@ -85,7 +85,7 @@ router.get("/", async (req: AuthedRequest, res) => {
   return ok(res, { items, total, page, limit, pages: Math.ceil(total / limit) });
 });
 
-router.post("/", validateBody(createProspectSchema), async (req: AuthedRequest, res) => {
+router.post("/", requirePermission("manage_prospects"), validateBody(createProspectSchema), async (req: AuthedRequest, res) => {
   const data = req.body as any;
   if (data.locationId) {
     const location = await prisma.location.findFirst({ where: { id: data.locationId, organizationId: req.orgId!, deletedAt: null }, select: { id: true } });
@@ -111,7 +111,7 @@ router.get("/:id", async (req: AuthedRequest, res) => {
   return ok(res, prospect);
 });
 
-router.patch("/:id", validateBody(updateProspectSchema), async (req: AuthedRequest, res) => {
+router.patch("/:id", requirePermission("manage_prospects"), validateBody(updateProspectSchema), async (req: AuthedRequest, res) => {
   const prospect = await prisma.prospect.findFirst({ where: { id: req.params.id, organizationId: req.orgId!, deletedAt: null } });
   if (!prospect) return err(res, "not_found", "Prospect not found", 404);
   const data = req.body as any;
@@ -124,7 +124,7 @@ router.patch("/:id", validateBody(updateProspectSchema), async (req: AuthedReque
   return ok(res, updated);
 });
 
-router.delete("/:id", async (req: AuthedRequest, res) => {
+router.delete("/:id", requirePermission("manage_prospects"), async (req: AuthedRequest, res) => {
   const prospect = await prisma.prospect.findFirst({ where: { id: req.params.id, organizationId: req.orgId!, deletedAt: null } });
   if (!prospect) return err(res, "not_found", "Prospect not found", 404);
   await prisma.prospect.update({ where: { id: req.params.id }, data: { deletedAt: new Date() } });
@@ -136,7 +136,7 @@ router.delete("/:id", async (req: AuthedRequest, res) => {
  * Convert a trial or enquiry into a member plus an opening membership.
  * The membership starts in the first stage of the default pipeline.
  */
-router.post("/:id/convert", async (req: AuthedRequest, res) => {
+router.post("/:id/convert", requirePermission("manage_prospects"), async (req: AuthedRequest, res) => {
   const prospect = await prisma.prospect.findFirst({ where: { id: req.params.id, organizationId: req.orgId!, deletedAt: null } });
   if (!prospect) return err(res, "not_found", "Prospect not found", 404);
   if (prospect.status === "JOINED" || prospect.convertedMemberId || prospect.convertedMembershipId) {
@@ -203,7 +203,7 @@ router.post("/:id/convert", async (req: AuthedRequest, res) => {
   return ok(res, result);
 });
 
-router.post("/import", async (req: AuthedRequest, res) => {
+router.post("/import", requirePermission("manage_prospects"), async (req: AuthedRequest, res) => {
   const { csv } = z.object({ csv: z.string().min(1) }).parse(req.body);
   const rows = parseCsvRows(csv);
   if (!rows.length) return err(res, "validation_error", "CSV is empty", 400);

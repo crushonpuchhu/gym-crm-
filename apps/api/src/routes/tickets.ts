@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../config/prisma";
 import { ok, err } from "../utils/response";
 import { audit } from "../utils/audit";
-import { AuthedRequest, hasPermission } from "../middleware/auth";
+import { AuthedRequest, hasPermission, requirePermission } from "../middleware/auth";
 
 const router = Router();
 const ticketSchema = z.object({
@@ -75,7 +75,7 @@ router.get("/", async (req: AuthedRequest, res) => {
   return ok(res, { items, total, page, limit, pages: Math.ceil(total / limit) });
 });
 
-router.post("/", async (req: AuthedRequest, res) => {
+router.post("/", requirePermission("manage_tickets"), async (req: AuthedRequest, res) => {
   const data = ticketSchema.parse(req.body);
   const last = await prisma.ticket.findFirst({
     where: { organizationId: req.orgId! },
@@ -130,7 +130,7 @@ router.get("/:id", async (req: AuthedRequest, res) => {
   return ok(res, ticket);
 });
 
-router.patch("/:id", async (req: AuthedRequest, res) => {
+router.patch("/:id", requirePermission("manage_tickets"), async (req: AuthedRequest, res) => {
   const ticket = await prisma.ticket.findFirst({ where: { id: req.params.id, organizationId: req.orgId!, deletedAt: null } });
   if (!ticket) return err(res, "not_found", "Ticket not found", 404);
   const data = z.object({
@@ -154,7 +154,7 @@ router.patch("/:id", async (req: AuthedRequest, res) => {
   return ok(res, updated);
 });
 
-router.post("/:id/comments", async (req: AuthedRequest, res) => {
+router.post("/:id/comments", requirePermission("manage_tickets"), async (req: AuthedRequest, res) => {
   const { body, isInternal } = z.object({ body: z.string().min(1).max(4000), isInternal: z.boolean().default(false) }).parse(req.body);
   if (isInternal && !canSeeInternalComments(req)) {
     return err(res, "forbidden", "Only support staff can add internal comments", 403);
@@ -170,7 +170,7 @@ router.post("/:id/comments", async (req: AuthedRequest, res) => {
   return ok(res, comment, 201);
 });
 
-router.post("/:id/assign", async (req: AuthedRequest, res) => {
+router.post("/:id/assign", requirePermission("manage_tickets"), async (req: AuthedRequest, res) => {
   const { ownerId } = z.object({ ownerId: z.string() }).parse(req.body);
   const ticket = await prisma.ticket.findFirst({ where: { id: req.params.id, organizationId: req.orgId!, deletedAt: null } });
   if (!ticket) return err(res, "not_found", "Ticket not found", 404);

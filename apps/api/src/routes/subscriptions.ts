@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../config/prisma";
 import { ok, err } from "../utils/response";
-import { AuthedRequest } from "../middleware/auth";
+import { AuthedRequest, requirePermission } from "../middleware/auth";
 
 const router = Router();
 
@@ -13,7 +13,7 @@ router.get("/", async (req: AuthedRequest, res) => {
 
 const planSchema = z.object({ plan: z.enum(["STARTER", "GROWTH", "SCALE"]) });
 
-router.post("/:plan", validateBody(planSchema), async (req: AuthedRequest, res) => {
+router.post("/:plan", requirePermission("manage_billing"), validateBody(planSchema), async (req: AuthedRequest, res) => {
   const { plan } = req.body as any;
   let sub = await prisma.subscription.findFirst({ where: { organizationId: req.orgId! } });
   const data: any = { plan, status: "ACTIVE", currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) };

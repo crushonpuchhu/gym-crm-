@@ -9,12 +9,21 @@ export interface SessionUser {
   emailVerified: boolean;
 }
 
+export interface OrgMembership {
+  organization: { id: string; name: string; slug: string };
+  role: string;
+}
+
 interface AuthContextType {
   user: SessionUser | null;
   organizationId: string | null;
+  role: string | null;
+  memberships: OrgMembership[];
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (input: { email: string; password: string; name: string; organizationName: string }) => Promise<void>;
+  acceptInvitation: (token: string, input: { name?: string; password: string }) => Promise<void>;
+  switchOrg: (organizationId: string) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -24,6 +33,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [memberships, setMemberships] = useState<OrgMembership[]>([]);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
@@ -38,9 +48,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const me = await api<{ user: SessionUser; memberships: Array<{ organizationId: string }> }>("/auth/me");
       setUser(me.user);
       setOrganizationId(me.memberships?.[0]?.organizationId ?? null);
+      const orgs = await api<OrgMembership[]>("/auth/memberships");
+      setMemberships(orgs);
     } catch {
       setUser(null);
       setOrganizationId(null);
+      setMemberships([]);
       setAccessToken(null);
     } finally {
       setLoading(false);
@@ -57,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAccessToken(null);
       setUser(null);
       setOrganizationId(null);
+      setMemberships([]);
     };
     // Back/forward cache restores the old DOM without re-running the provider.
     const onPageShow = (event: PageTransitionEvent) => {
@@ -78,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(data.accessToken);
     setUser(data.user);
     setOrganizationId(data.organizationId);
+    setMemberships(await api<OrgMembership[]>("/auth/memberships"));
   }, []);
 
   const register = useCallback(
@@ -89,9 +104,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAccessToken(data.accessToken);
       setUser(data.user);
       setOrganizationId(data.organization.id);
+      setMemberships(await api<OrgMembership[]>("/auth/memberships"));
     },
     [],
   );
+
+  const acceptInvitation = useCallback(
+    async (token: string, input: { name?: string; password: string }) => {
+      const data = await api<{ accessToken: string; user: SessionUser; organization: { id: string } }>(
+        `/auth/invitations/${token}/accept`,
+        { method: "POST", body: JSON.stringify(input) },
+      );
+      setAccessToken(data.accessToken);
+      setUser(data.user);
+      setOrganizationId(data.organization.id);
+      setMemberships(await api<OrgMembership[]>("/auth/memberships"));
+    },
+    [],
+  );
+
+  const switchOrg = useCallback(async (nextOrgId: string) => {
+    const data = await api<{ accessToken: string }>("/auth/switch-org", {
+      method: "POST",
+      body: JSON.stringify({ organizationId: nextOrgId }),
+    });
+    setAccessToken(data.accessToken);
+    setOrganizationId(nextOrgId);
+  }, []);
 
   const logout = useCallback(async () => {
     // Revoke the refresh cookie first; if the request hangs, give up after 4s.
@@ -108,11 +147,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAccessToken(null);
       setUser(null);
       setOrganizationId(null);
+      setMemberships([]);
     }
   }, []);
 
+  const role = memberships.find((m) => m.organization.id === organizationId)?.role ?? null;
+
   return (
-    <AuthContext.Provider value={{ user, organizationId, loading, login, register, logout, refresh }}>
+    <AuthContext.Provider
+      value={{ user, organizationId, role, memberships, loading, login, register, acceptInvitation, switchOrg, logout, refresh }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../config/prisma";
 import { ok, err } from "../utils/response";
 import { audit } from "../utils/audit";
-import { AuthedRequest } from "../middleware/auth";
+import { AuthedRequest, requirePermission } from "../middleware/auth";
 
 const router = Router();
 
@@ -26,14 +26,14 @@ router.get("/", async (req: AuthedRequest, res) => {
   return ok(res, plans);
 });
 
-router.post("/", async (req: AuthedRequest, res) => {
+router.post("/", requirePermission("manage_org"), async (req: AuthedRequest, res) => {
   const data = planSchema.parse(req.body);
   const plan = await prisma.membershipPlan.create({ data: { organizationId: req.orgId!, ...data } });
   await audit({ orgId: req.orgId, userId: req.userId, action: "plan.create", entityType: "membershipPlan", entityId: plan.id, newValues: data, ip: req.ip, userAgent: req.get("user-agent") });
   return ok(res, plan, 201);
 });
 
-router.patch("/:id", async (req: AuthedRequest, res) => {
+router.patch("/:id", requirePermission("manage_org"), async (req: AuthedRequest, res) => {
   const plan = await prisma.membershipPlan.findFirst({ where: { id: req.params.id, organizationId: req.orgId!, deletedAt: null } });
   if (!plan) return err(res, "not_found", "Plan not found", 404);
   const data = planSchema.partial().parse(req.body);
@@ -42,7 +42,7 @@ router.patch("/:id", async (req: AuthedRequest, res) => {
   return ok(res, updated);
 });
 
-router.delete("/:id", async (req: AuthedRequest, res) => {
+router.delete("/:id", requirePermission("manage_org"), async (req: AuthedRequest, res) => {
   const plan = await prisma.membershipPlan.findFirst({ where: { id: req.params.id, organizationId: req.orgId!, deletedAt: null } });
   if (!plan) return err(res, "not_found", "Plan not found", 404);
   const openCount = await prisma.membership.count({

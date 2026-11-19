@@ -14,6 +14,7 @@ import { hash, compare } from "../utils/hash";
 import { prisma } from "../config/prisma";
 import { audit } from "../utils/audit";
 import { env } from "../config/env";
+import { seatBlockedReason } from "../utils/seats";
 
 const router = Router();
 
@@ -218,6 +219,177 @@ router.post("/verify-email", validate(verifyEmailSchema), async (req, res) => {
     prisma.emailVerificationToken.delete({ where: { id: record.id } }),
   ]);
   return ok(res, { message: "Email verified" });
+});
+
+/** Public: what the invitee is about to join. The token is the credential. */
+router.get("/invitations/:token", async (req, res) => {
+  const invitation = await prisma.invitation.findUnique({
+    where: { token: req.params.token },
+    include: { organization: { select: { id: true, name: true, slug: true, status: true } } },
+  });
+  if (!invitation) return err(res, "not_found", "Invitation not found", 404);
+  if (invitation.acceptedAt) return err(res, "invite_used", "This invitation was already accepted", 410);
+  if (invitation.expiresAt < new Date()) return err(res, "invite_expired", "This invitation has expired", 410);
+  if (invitation.organization.status !== "active") {
+    return err(res, "org_suspended", "This gym brand is suspended", 403);
+  }
+  const account = await prisma.user.findFirst({
+    where: { email: invitation.email, deletedAt: null },
+    select: { id: true, name: true },
+  });
+  return ok(res, {
+    email: invitation.email,
+    role: invitation.role,
+    organization: { id: invitation.organization.id, name: invitation.organization.name, slug: invitation.organization.slug },
+    expiresAt: invitation.expiresAt,
+    // An existing sign-in needs the password; a new one also needs a name.
+    existingAccount: !!account,
+    suggestedName: account?.name ?? "",
+  });
+});
+
+/**
+ * Public: redeem an invitation.
+ *
+ * A brand-new email creates the user and joins the brand in one transaction.
+ * An email that already has a GymFlow login must prove it with the existing
+ * password — an invitation never becomes a password reset. Either way the seat
+ * count is re-checked, so revoked plans cannot sneak a member in.
+ */
+router.post("/invitations/:token/accept", async (req, res) => {
+  const body = z
+    .object({
+      name: z.string().min(1).max(100).optional(),
+      password: z.string().min(8),
+    })
+    .safeParse(req.body);
+  if (!body.success) {
+    const issue = body.error.issues[0];
+    return err(res, "validation_error", issue?.message || "Invalid sign-up details", 400, issue?.path.join("."));
+  }
+
+  const invitation = await prisma.invitation.findUnique({
+    where: { token: req.params.token },
+    include: { organization: { select: { id: true, name: true, slug: true, status: true } } },
+  });
+  if (!invitation) return err(res, "not_found", "Invitation not found", 404);
+  if (invitation.acceptedAt || invitation.expiresAt < new Date()) {
+    return err(res, "invite_expired", "This invitation is no longer valid", 410);
+  }
+  if (invitation.organization.status !== "active") {
+    return err(res, "org_suspended", "This gym brand is suspended", 403);
+  }
+
+  const blocked = await seatBlockedReason(invitation.organizationId);
+  if (blocked) return err(res, "seat_limit", blocked, 402);
+
+  const email = invitation.email.toLowerCase();
+  const existing = await prisma.user.findFirst({ where: { email, deletedAt: null } });
+
+  let userId: string;
+  if (existing) {
+    if (!(await compare(body.data.password, existing.passwordHash))) {
+      return err(res, "auth_invalid", "Password does not match the existing account for this email", 401, "password");
+    }
+    userId = existing.id;
+    const membership = await prisma.teamMembership.findFirst({
+      where: { userId, organizationId: invitation.organizationId },
+    });
+    await prisma.$transaction([
+      membership
+        ? prisma.teamMembership.update({
+            where: { id: membership.id },
+            data: { deletedAt: null, role: invitation.role },
+          })
+        : prisma.teamMembership.create({
+            data: { userId, organizationId: invitation.organizationId, role: invitation.role },
+          }),
+      prisma.invitation.update({ where: { id: invitation.id }, data: { acceptedAt: new Date() } }),
+      prisma.user.update({ where: { id: userId }, data: { emailVerified: true } }),
+    ]);
+  } else {
+    const name = body.data.name?.trim();
+    if (!name) return err(res, "validation_error", "Your name is required", 400, "name");
+    const passwordHash = await hash(body.data.password);
+    const created = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: { email, passwordHash, name, emailVerified: true },
+      });
+      await tx.teamMembership.create({
+        data: { userId: user.id, organizationId: invitation.organizationId, role: invitation.role },
+      });
+      await tx.invitation.update({ where: { id: invitation.id }, data: { acceptedAt: new Date() } });
+      return user;
+    });
+    userId = created.id;
+  }
+
+  const access = signAccess({ userId, orgId: invitation.organizationId });
+  const refresh = await issueRefreshToken(userId);
+  res.cookie("refresh_token", refresh, refreshCookieOptions());
+  await audit({
+    orgId: invitation.organizationId,
+    userId,
+    action: "user.invite_accept",
+    entityType: "invitation",
+    entityId: invitation.id,
+    newValues: { email, role: invitation.role },
+    ip: req.ip,
+    userAgent: req.get("user-agent"),
+  });
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: publicUserSelect });
+  return ok(
+    res,
+    {
+      accessToken: access,
+      user,
+      organization: { id: invitation.organization.id, name: invitation.organization.name, slug: invitation.organization.slug },
+      role: invitation.role,
+    },
+    201,
+  );
+});
+
+/** Every brand the signed-in user belongs to, with the role they hold there. */
+router.get("/memberships", async (req, res) => {
+  const token = req.headers.authorization?.replace("Bearer ", "");
+  if (!token) return err(res, "auth_required", "Authentication required", 401);
+  try {
+    const decoded = verifyAccess(token);
+    const memberships = await prisma.teamMembership.findMany({
+      where: { userId: decoded.userId, deletedAt: null, organization: { deletedAt: null } },
+      select: {
+        role: true,
+        organizationId: true,
+        organization: { select: { id: true, name: true, slug: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+    return ok(res, memberships.map((m) => ({ organization: m.organization, role: m.role })));
+  } catch {
+    return err(res, "auth_invalid", "Invalid token", 401);
+  }
+});
+
+/** Switch the active brand without re-entering credentials. */
+router.post("/switch-org", async (req, res) => {
+  const token = req.headers.authorization?.replace("Bearer ", "");
+  if (!token) return err(res, "auth_required", "Authentication required", 401);
+  const parsed = z.object({ organizationId: z.string().uuid() }).safeParse(req.body);
+  if (!parsed.success) return err(res, "validation_error", "organizationId is required", 400, "organizationId");
+  let userId: string;
+  try {
+    userId = verifyAccess(token).userId;
+  } catch {
+    return err(res, "auth_invalid", "Invalid token", 401);
+  }
+  const membership = await prisma.teamMembership.findFirst({
+    where: { userId, organizationId: parsed.data.organizationId, deletedAt: null },
+    select: { role: true },
+  });
+  if (!membership) return err(res, "forbidden", "Not a member of this organization", 403);
+  const access = signAccess({ userId, orgId: parsed.data.organizationId });
+  return ok(res, { accessToken: access, organizationId: parsed.data.organizationId, role: membership.role });
 });
 
 router.get("/me", async (req, res) => {

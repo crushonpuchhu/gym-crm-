@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../config/prisma";
 import { ok, err } from "../utils/response";
 import { audit } from "../utils/audit";
-import { AuthedRequest } from "../middleware/auth";
+import { AuthedRequest, requirePermission } from "../middleware/auth";
 
 const router = Router();
 const activitySchema = z.object({
@@ -21,7 +21,7 @@ router.get("/", async (req: AuthedRequest, res) => {
   return ok(res, activities);
 });
 
-router.post("/", async (req: AuthedRequest, res) => {
+router.post("/", requirePermission("manage_tasks"), async (req: AuthedRequest, res) => {
   const data = activitySchema.parse(req.body);
   const activity = await prisma.activity.create({ data: { organizationId: req.orgId!, actorId: req.userId!, ...data }, include: { actor: { select: { id: true, name: true } } } });
   await audit({ orgId: req.orgId, userId: req.userId, action: "activity.log", entityType: data.entityType, entityId: data.entityId, ip: req.ip, userAgent: req.get("user-agent") });

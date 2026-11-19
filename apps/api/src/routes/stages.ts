@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../config/prisma";
 import { ok, err } from "../utils/response";
 import { audit } from "../utils/audit";
-import { AuthedRequest } from "../middleware/auth";
+import { AuthedRequest, requirePermission } from "../middleware/auth";
 
 const router = Router();
 const stageSchema = z.object({
@@ -29,7 +29,7 @@ router.get("/:pipelineId", async (req: AuthedRequest, res) => {
   return ok(res, stages);
 });
 
-router.post("/", async (req: AuthedRequest, res) => {
+router.post("/", requirePermission("manage_pipelines"), async (req: AuthedRequest, res) => {
   const data = stageSchema.parse(req.body);
   const pipeline = await prisma.pipeline.findFirst({ where: { id: data.pipelineId, organizationId: req.orgId!, deletedAt: null } });
   if (!pipeline) return err(res, "not_found", "Pipeline not found", 404);
@@ -38,7 +38,7 @@ router.post("/", async (req: AuthedRequest, res) => {
   return ok(res, stage, 201);
 });
 
-router.patch("/:id", async (req: AuthedRequest, res) => {
+router.patch("/:id", requirePermission("manage_pipelines"), async (req: AuthedRequest, res) => {
   const stage = await prisma.pipelineStage.findFirst({
     where: { id: req.params.id, deletedAt: null, pipeline: { organizationId: req.orgId!, deletedAt: null } },
   });
@@ -53,7 +53,7 @@ router.patch("/:id", async (req: AuthedRequest, res) => {
   return ok(res, updated);
 });
 
-router.delete("/:id", async (req: AuthedRequest, res) => {
+router.delete("/:id", requirePermission("manage_pipelines"), async (req: AuthedRequest, res) => {
   const stage = await prisma.pipelineStage.findFirst({
     where: { id: req.params.id, deletedAt: null, pipeline: { organizationId: req.orgId!, deletedAt: null } },
   });

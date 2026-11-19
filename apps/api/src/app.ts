@@ -13,6 +13,7 @@ import authRoutes from "./routes/auth";
 import orgRoutes from "./routes/organizations";
 import userRoutes from "./routes/users";
 import roleRoutes from "./routes/roles";
+import invitationRoutes from "./routes/invitations";
 import prospectRoutes from "./routes/prospects";
 import memberRoutes from "./routes/members";
 import locationRoutes from "./routes/locations";
@@ -55,6 +56,7 @@ export function createApp() {
   app.use("/api/v1/organizations", authenticate, resolveTenant, requireOrg, orgRoutes);
   app.use("/api/v1/users", authenticate, resolveTenant, requireOrg, userRoutes);
   app.use("/api/v1/roles", authenticate, resolveTenant, requireOrg, roleRoutes);
+  app.use("/api/v1/invitations", authenticate, resolveTenant, requireOrg, invitationRoutes);
   app.use("/api/v1/prospects", authenticate, resolveTenant, requireOrg, prospectRoutes);
   app.use("/api/v1/members", authenticate, resolveTenant, requireOrg, memberRoutes);
   app.use("/api/v1/locations", authenticate, resolveTenant, requireOrg, locationRoutes);
