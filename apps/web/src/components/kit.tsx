@@ -150,9 +150,9 @@ export function StatCard({
               width: 38,
               height: 38,
               borderRadius: 2,
-              backgroundColor: accent.soft,
-              boxShadow: `inset 0 0 0 1px ${accent.soft}`,
-              color: accent.main,
+              backgroundColor: accent.chip,
+              boxShadow: `inset 0 0 0 1px ${accent.chip}`,
+              color: accent.chipText,
               flexShrink: 0,
             }}
           >
@@ -200,7 +200,18 @@ const STATUS_TONE: Record<string, ToneName | "neutral"> = {
 /** Tinted pill with a hue dot; unknown states stay neutral rather than inventing a colour. */
 function TonePill({ label, name }: { label: string; name: ToneName | "neutral" }) {
   if (name === "neutral") {
-    return <Chip label={label} size="small" sx={{ backgroundColor: "transparent", color: "text.secondary" }} />;
+    return (
+      <Chip
+        label={label}
+        size="small"
+        sx={{
+          backgroundColor: "var(--gf-wash-strong)",
+          color: "text.secondary",
+          boxShadow: "inset 0 0 0 1px var(--gf-border)",
+          "& .MuiChip-label": { paddingInline: 1 },
+        }}
+      />
+    );
   }
   const accent = TONES[name];
   return (

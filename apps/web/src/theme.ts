@@ -48,6 +48,14 @@ interface Tokens {
   washStrong: string;
   accentBorder: string;
   chartBarBottom: string;
+  chartBar: string;
+  chartLine: string;
+  chartDot: string;
+  navActive: string;
+  navActiveText: string;
+  navActiveIcon: string;
+  chipSolid: Record<string, string>;
+  chipSolidText: string;
   tone: Record<string, { main: string; soft: string; glow: string }>;
   seriesExtra: [string, string, string];
   chartAxis: string;
@@ -116,6 +124,21 @@ const DARK: Tokens = {
   washStrong: "rgba(140, 165, 220, 0.12)",
   accentBorder: "rgba(75, 124, 242, 0.6)",
   chartBarBottom: "#3e71ec",
+  chartBar: "#5b8cf5",
+  chartLine: "#5b8cf5",
+  chartDot: "#74aee8",
+  navActive: "rgba(75, 124, 242, 0.16)",
+  navActiveText: "#e4ecff",
+  navActiveIcon: "#74aee8",
+  chipSolid: {
+    indigo: "rgba(91, 140, 245, 0.16)",
+    violet: "rgba(139, 108, 232, 0.16)",
+    cyan: "rgba(116, 174, 232, 0.16)",
+    emerald: "rgba(86, 189, 119, 0.16)",
+    amber: "rgba(237, 162, 60, 0.16)",
+    rose: "rgba(224, 109, 146, 0.16)",
+  },
+  chipSolidText: "#eef2fb",
   tone: tones(
     {
       indigo: "#5b8cf5",
@@ -137,61 +160,76 @@ const DARK: Tokens = {
 };
 
 const LIGHT: Tokens = {
-  bg: "#f4f6fc",
-  bgGlow:
-    "radial-gradient(900px 520px at 6% -16%, rgba(63,111,224,0.14), transparent 60%), radial-gradient(780px 480px at 94% -10%, rgba(109,63,212,0.1), transparent 58%)",
+  // Reference: airy blue-grey desk, white surfaces, one solid blue accent.
+  bg: "#e8eef6",
+  bgGlow: "none",
   paper: "#ffffff",
-  paperBorder: "rgba(16, 40, 84, 0.12)",
-  text: "#0b1220",
-  textSecondary: "#5b6883",
-  textDisabled: "#93a0b8",
-  divider: "rgba(16, 40, 84, 0.12)",
-  primary: "#3f6fe0",
-  primaryHover: "#3564d4",
+  paperBorder: "#edf0f5",
+  text: "#111827",
+  textSecondary: "#6b7280",
+  textDisabled: "#9aa1ad",
+  divider: "#eef1f5",
+  primary: "#2566f9",
+  primaryHover: "#1a55e0",
   primaryText: "#ffffff",
-  primarySoft: "rgba(63, 111, 224, 0.12)",
-  secondary: "#6d3fd4",
-  success: "#18804a",
-  warning: "#96620d",
-  error: "#c23b65",
-  info: "#1c78b8",
-  hover: "rgba(16, 40, 84, 0.05)",
-  selected: "rgba(63, 111, 224, 0.12)",
+  primarySoft: "rgba(37, 102, 249, 0.1)",
+  secondary: "#7c3aed",
+  success: "#059669",
+  warning: "#ea580c",
+  error: "#dc2626",
+  info: "#2563eb",
+  hover: "#f5f7fb",
+  selected: "rgba(37, 102, 249, 0.08)",
   input: "#ffffff",
-  inputBorder: "rgba(16, 40, 84, 0.18)",
+  inputBorder: "#dfe5ef",
   menu: "#ffffff",
-  menuBorder: "rgba(16, 40, 84, 0.14)",
+  menuBorder: "#e6eaf1",
   dialog: "#ffffff",
   drawer: "#ffffff",
-  tooltipBg: "#0b1220",
-  tooltipText: "#f2f6ff",
-  rail: "rgba(255, 255, 255, 0.74)",
-  header: "rgba(255, 255, 255, 0.82)",
-  chipBg: "rgba(16, 40, 84, 0.06)",
-  chipText: "#1c2b47",
-  borderStrong: "rgba(16, 40, 84, 0.2)",
-  wash: "rgba(16, 40, 84, 0.05)",
-  washStrong: "rgba(16, 40, 84, 0.08)",
-  accentBorder: "rgba(63, 111, 224, 0.6)",
-  chartBarBottom: "#2b56bd",
+  tooltipBg: "#111827",
+  tooltipText: "#f8fafc",
+  rail: "#ffffff",
+  header: "rgba(255, 255, 255, 0.92)",
+  chipBg: "#f1f4f9",
+  chipText: "#374151",
+  borderStrong: "#e2e8f0",
+  wash: "#f6f8fb",
+  washStrong: "#eff3f9",
+  accentBorder: "rgba(37, 102, 249, 0.5)",
+  chartBarBottom: "#10b981",
+  chartBar: "#10b981",
+  chartLine: "#3b82f6",
+  chartDot: "#3b82f6",
+  navActive: "#2566f9",
+  navActiveText: "#ffffff",
+  navActiveIcon: "#ffffff",
+  chipSolid: {
+    indigo: "#2f6bf6",
+    violet: "#ae47ff",
+    cyan: "#0d9488",
+    emerald: "#10b981",
+    amber: "#f97316",
+    rose: "#ef4444",
+  },
+  chipSolidText: "#ffffff",
   tone: tones(
     {
-      indigo: "#3f6fe0",
-      violet: "#6d3fd4",
-      cyan: "#1c78b8",
-      emerald: "#18804a",
-      amber: "#96620d",
-      rose: "#c23b65",
+      indigo: "#2563eb",
+      violet: "#7c3aed",
+      cyan: "#0f766e",
+      emerald: "#047857",
+      amber: "#c2410c",
+      rose: "#dc2626",
     },
     0.12,
   ),
-  seriesExtra: ["#7f9df0", "#5fbf8a", "#d9a24a"],
-  chartAxis: "#5b6883",
-  chartGrid: "rgba(16, 40, 84, 0.1)",
-  chartCursor: "rgba(63, 111, 224, 0.08)",
+  seriesExtra: ["#93b4f8", "#6ee7b7", "#fdba74"],
+  chartAxis: "#7d8695",
+  chartGrid: "#eef1f5",
+  chartCursor: "rgba(37, 102, 249, 0.06)",
   chartTooltipBg: "#ffffff",
-  chartTooltipBorder: "rgba(16, 40, 84, 0.16)",
-  chartTooltipText: "#0b1220",
+  chartTooltipBorder: "#e6eaf1",
+  chartTooltipText: "#111827",
 };
 
 function cssVars(t: Tokens) {
@@ -221,7 +259,16 @@ function cssVars(t: Tokens) {
     "--gf-accent": t.primary,
     "--gf-accent-border": t.accentBorder,
     "--gf-chart-bar-bottom": t.chartBarBottom,
+    "--gf-chart-bar": t.chartBar,
+    "--gf-chart-line": t.chartLine,
+    "--gf-chart-dot": t.chartDot,
+    "--gf-nav-active": t.navActive,
+    "--gf-nav-active-text": t.navActiveText,
+    "--gf-chip-solid-text": t.chipSolidText,
   };
+  for (const [name, value] of Object.entries(t.chipSolid)) {
+    vars[`--gf-chip-${name}`] = value;
+  }
   for (const [name, value] of Object.entries(t.tone)) {
     vars[`--gf-tone-${name}-soft`] = value.soft;
     vars[`--gf-tone-${name}-glow`] = value.glow;
@@ -465,10 +512,11 @@ export function createAppTheme(mode: ColorMode) {
             minHeight: 42,
             color: t.textSecondary,
             "&.Mui-selected": {
-              backgroundColor: t.selected,
-              color: mode === "dark" ? "#e4ecff" : "#1d3f7d",
-              "& .MuiListItemIcon-root": { color: mode === "dark" ? "#74aee8" : t.primary },
-              "&:hover": { backgroundColor: hexToRgba(t.primary, 0.22) },
+              backgroundColor: t.navActive,
+              color: t.navActiveText,
+              boxShadow: mode === "light" ? "0 6px 14px rgba(37, 102, 249, 0.24)" : "none",
+              "& .MuiListItemIcon-root": { color: t.navActiveIcon },
+              "&:hover": { backgroundColor: mode === "light" ? t.primaryHover : hexToRgba(t.primary, 0.22) },
             },
           },
         },

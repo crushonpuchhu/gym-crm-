@@ -94,9 +94,9 @@ export default function LocationsPage() {
                     width: 44,
                     height: 44,
                     borderRadius: 2,
-                    backgroundColor: TONES[toneAt(index)].soft,
-                    boxShadow: `inset 0 0 0 1px ${TONES[toneAt(index)].soft}`,
-                    color: TONES[toneAt(index)].main,
+                    backgroundColor: TONES[toneAt(index)].chip,
+                    boxShadow: `inset 0 0 0 1px ${TONES[toneAt(index)].chip}`,
+                    color: TONES[toneAt(index)].chipText,
                     fontSize: 18,
                     fontWeight: 700,
                   }}

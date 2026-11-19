@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Box, Button, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
+import { Box, Button, Table, TableBody, TableCell, TableHead, TableRow, Typography, useTheme } from "@mui/material";
 import { api, getAccessToken } from "@/lib/api";
 import { ErrorState, LoadingSkeleton, PageHeader, Panel, StatCard, TableShell } from "@/components/kit";
 import { CHART, SERIES_9, TONES } from "@/palette";
@@ -48,6 +48,7 @@ export default function ReportsPage() {
   const [retention, setRetention] = useState<Retention | null>(null);
   const [staff, setStaff] = useState<{ row: StaffRow; name: string }[]>([]);
   const [error, setError] = useState("");
+  const light = useTheme().palette.mode === "light";
 
   const load = () => {
     setError("");
@@ -145,7 +146,7 @@ export default function ReportsPage() {
                   <XAxis dataKey="month" tick={CHART.axis} axisLine={false} tickLine={false} />
                   <YAxis tick={CHART.axis} axisLine={false} tickLine={false} />
                   <Tooltip cursor={CHART.cursor} contentStyle={CHART.tooltip} />
-                  <Bar dataKey="value" fill="url(#reportMonthBars)" radius={[5, 5, 0, 0]} />
+                  <Bar dataKey="value" fill={light ? "var(--gf-chart-bar)" : "url(#reportMonthBars)"} radius={[5, 5, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </Box>
@@ -166,13 +167,13 @@ export default function ReportsPage() {
             <Box sx={{ height: 220, mt: 1 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={sources} dataKey="count" nameKey="source" innerRadius={50} outerRadius={78} paddingAngle={2} stroke="#0f0f12">
+                  <Pie data={sources} dataKey="count" nameKey="source" innerRadius={50} outerRadius={78} paddingAngle={2} stroke="var(--gf-paper)">
                     {sources.map((s, i) => (
                       <Cell key={s.source} fill={SOURCE_COLORS[i % SOURCE_COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip contentStyle={CHART.tooltip} />
-                  <Legend formatter={(value) => <span style={{ color: "#94949c", fontSize: 11 }}>{value}</span>} />
+                  <Legend formatter={(value) => <span style={{ color: "var(--gf-chart-axis)", fontSize: 11 }}>{value}</span>} />
                 </PieChart>
               </ResponsiveContainer>
             </Box>
@@ -212,9 +213,13 @@ export default function ReportsPage() {
                 <Line
                   type="monotone"
                   dataKey="count"
-                  stroke="url(#reportCheckInStroke)"
+                  stroke={light ? "var(--gf-chart-line)" : "url(#reportCheckInStroke)"}
                   strokeWidth={2.4}
-                  dot={false}
+                  dot={
+                    light
+                      ? { r: 3, fill: "var(--gf-chart-dot)", stroke: "var(--gf-paper)", strokeWidth: 2 }
+                      : false
+                  }
                   activeDot={{ r: 4, fill: TONES.cyan.main, stroke: "var(--gf-paper)", strokeWidth: 2 }}
                 />
               </LineChart>

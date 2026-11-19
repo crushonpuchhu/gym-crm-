@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Box, Button, Typography } from "@mui/material";
+import { Box, Button, Typography, useTheme } from "@mui/material";
 import { Stack } from "@/components/mui-stack";
 import { api } from "@/lib/api";
 import { ErrorState, LoadingSkeleton, PageHeader, Panel, StatCard } from "@/components/kit";
@@ -33,6 +33,7 @@ export default function DashboardPage() {
   const [joins, setJoins] = useState<JoinMonth[]>([]);
   const [checkIns, setCheckIns] = useState<CheckInDay[]>([]);
   const [error, setError] = useState("");
+  const light = useTheme().palette.mode === "light";
 
   const load = async () => {
     setError("");
@@ -148,7 +149,7 @@ export default function DashboardPage() {
                   <XAxis dataKey="month" tick={CHART.axis} axisLine={false} tickLine={false} />
                   <YAxis tick={CHART.axis} axisLine={false} tickLine={false} />
                   <Tooltip cursor={CHART.cursor} contentStyle={CHART.tooltip} />
-                  <Bar dataKey="value" fill="url(#monthBars)" radius={[5, 5, 0, 0]} />
+                  <Bar dataKey="value" fill={light ? "var(--gf-chart-bar)" : "url(#monthBars)"} radius={[5, 5, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </Box>
@@ -191,9 +192,13 @@ export default function DashboardPage() {
                 <Line
                   type="monotone"
                   dataKey="count"
-                  stroke="url(#checkInStroke)"
+                  stroke={light ? "var(--gf-chart-line)" : "url(#checkInStroke)"}
                   strokeWidth={2.4}
-                  dot={false}
+                  dot={
+                    light
+                      ? { r: 3, fill: "var(--gf-chart-dot)", stroke: "var(--gf-paper)", strokeWidth: 2 }
+                      : false
+                  }
                   activeDot={{ r: 4, fill: TONES.cyan.main, stroke: "var(--gf-paper)", strokeWidth: 2 }}
                 />
               </LineChart>

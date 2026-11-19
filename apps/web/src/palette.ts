@@ -7,12 +7,48 @@
  * `soft` wash for chips and a `glow` for card corners.
  */
 export const TONES = {
-  indigo: { main: "var(--gf-tone-indigo)", soft: "var(--gf-tone-indigo-soft)", glow: "var(--gf-tone-indigo-glow)" },
-  violet: { main: "var(--gf-tone-violet)", soft: "var(--gf-tone-violet-soft)", glow: "var(--gf-tone-violet-glow)" },
-  cyan: { main: "var(--gf-tone-cyan)", soft: "var(--gf-tone-cyan-soft)", glow: "var(--gf-tone-cyan-glow)" },
-  emerald: { main: "var(--gf-tone-emerald)", soft: "var(--gf-tone-emerald-soft)", glow: "var(--gf-tone-emerald-glow)" },
-  amber: { main: "var(--gf-tone-amber)", soft: "var(--gf-tone-amber-soft)", glow: "var(--gf-tone-amber-glow)" },
-  rose: { main: "var(--gf-tone-rose)", soft: "var(--gf-tone-rose-soft)", glow: "var(--gf-tone-rose-glow)" },
+  indigo: {
+    main: "var(--gf-tone-indigo)",
+    soft: "var(--gf-tone-indigo-soft)",
+    glow: "var(--gf-tone-indigo-glow)",
+    chip: "var(--gf-chip-indigo)",
+    chipText: "var(--gf-chip-solid-text)",
+  },
+  violet: {
+    main: "var(--gf-tone-violet)",
+    soft: "var(--gf-tone-violet-soft)",
+    glow: "var(--gf-tone-violet-glow)",
+    chip: "var(--gf-chip-violet)",
+    chipText: "var(--gf-chip-solid-text)",
+  },
+  cyan: {
+    main: "var(--gf-tone-cyan)",
+    soft: "var(--gf-tone-cyan-soft)",
+    glow: "var(--gf-tone-cyan-glow)",
+    chip: "var(--gf-chip-cyan)",
+    chipText: "var(--gf-chip-solid-text)",
+  },
+  emerald: {
+    main: "var(--gf-tone-emerald)",
+    soft: "var(--gf-tone-emerald-soft)",
+    glow: "var(--gf-tone-emerald-glow)",
+    chip: "var(--gf-chip-emerald)",
+    chipText: "var(--gf-chip-solid-text)",
+  },
+  amber: {
+    main: "var(--gf-tone-amber)",
+    soft: "var(--gf-tone-amber-soft)",
+    glow: "var(--gf-tone-amber-glow)",
+    chip: "var(--gf-chip-amber)",
+    chipText: "var(--gf-chip-solid-text)",
+  },
+  rose: {
+    main: "var(--gf-tone-rose)",
+    soft: "var(--gf-tone-rose-soft)",
+    glow: "var(--gf-tone-rose-glow)",
+    chip: "var(--gf-chip-rose)",
+    chipText: "var(--gf-chip-solid-text)",
+  },
 } as const;
 
 export type ToneName = keyof typeof TONES;
