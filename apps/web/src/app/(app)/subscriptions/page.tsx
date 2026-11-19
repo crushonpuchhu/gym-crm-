@@ -5,14 +5,24 @@ import { Stack } from "@/components/mui-stack";
 import { api } from "@/lib/api";
 import { ErrorState, LoadingSkeleton, PageHeader, Panel, StatusChip } from "@/components/kit";
 import { Check, CreditCard } from "lucide-react";
+import { TONES, type ToneName } from "@/palette";
 
 interface Subscription { plan: string; status: string; quotaMembers: number; quotaStaff: number; currentPeriodEnd?: string | null }
 interface Usage { members: number; staff: number }
 
-const PLANS = [
+const PLANS: {
+  name: string;
+  label: string;
+  price: string;
+  members: string;
+  staff: string;
+  features: string[];
+  tone: ToneName;
+}[] = [
   {
     name: "STARTER",
     label: "Starter",
+    tone: "cyan",
     price: "$29",
     members: "500 members",
     staff: "5 staff",
@@ -21,6 +31,7 @@ const PLANS = [
   {
     name: "GROWTH",
     label: "Growth",
+    tone: "indigo",
     price: "$99",
     members: "5,000 members",
     staff: "25 staff",
@@ -29,6 +40,7 @@ const PLANS = [
   {
     name: "SCALE",
     label: "Scale",
+    tone: "violet",
     price: "$299",
     members: "100,000 members",
     staff: "200 staff",
@@ -126,13 +138,24 @@ export default function SubscriptionsPage() {
                 display: "flex",
                 flexDirection: "column",
                 p: 3,
-                borderColor: current ? "rgba(255,255,255,0.42)" : undefined,
+                borderColor: current ? TONES[plan.tone].main : undefined,
               }}
             >
               <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Typography variant="overline" sx={{ color: "text.secondary" }}>
-                  {plan.label}
-                </Typography>
+                <Stack direction="row" spacing={0.9} alignItems="center">
+                  <Box
+                    sx={{
+                      width: 7,
+                      height: 7,
+                      borderRadius: "50%",
+                      backgroundColor: TONES[plan.tone].main,
+                      boxShadow: `0 0 0 3px ${TONES[plan.tone].soft}`,
+                    }}
+                  />
+                  <Typography variant="overline" sx={{ color: "text.secondary" }}>
+                    {plan.label}
+                  </Typography>
+                </Stack>
                 {current ? <StatusChip status="CURRENT" /> : null}
               </Stack>
               <Typography sx={{ mt: 1, fontSize: 32, fontWeight: 700, letterSpacing: "-0.035em" }}>
@@ -147,7 +170,7 @@ export default function SubscriptionsPage() {
               <Stack spacing={1.1} sx={{ mt: 2.5, flex: 1 }}>
                 {plan.features.map((f) => (
                   <Stack key={f} direction="row" spacing={1} alignItems="center">
-                    <Check size={13} color="#b9b9c0" />
+                    <Check size={13} color={TONES[plan.tone].main} />
                     <Typography variant="body2" sx={{ color: "text.secondary" }}>
                       {f}
                     </Typography>

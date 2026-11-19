@@ -5,6 +5,7 @@ import { Stack } from "@/components/mui-stack";
 import { api } from "@/lib/api";
 import { EmptyState, ErrorState, LoadingSkeleton, Modal, PageHeader, PaginationBar, Panel } from "@/components/kit";
 import { DoorOpen, Plus, QrCode, Trash2, Users } from "lucide-react";
+import { TONES, toneAt } from "@/palette";
 
 interface LocationRow {
   id: string;
@@ -83,7 +84,7 @@ export default function LocationsPage() {
       {data && data.items.length === 0 && <EmptyState title="No clubs yet" hint="Add the first location to start assigning members." />}
       {data && data.items.length > 0 && (
         <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr", lg: "repeat(3, 1fr)" } }}>
-          {data.items.map((co) => (
+          {data.items.map((co, index) => (
             <Panel key={co.id} sx={{ display: "flex", flexDirection: "column" }}>
               <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
                 <Box
@@ -93,8 +94,9 @@ export default function LocationsPage() {
                     width: 44,
                     height: 44,
                     borderRadius: 2,
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    backgroundColor: "rgba(255,255,255,0.04)",
+                    backgroundColor: TONES[toneAt(index)].soft,
+                    boxShadow: `inset 0 0 0 1px ${TONES[toneAt(index)].soft}`,
+                    color: TONES[toneAt(index)].main,
                     fontSize: 18,
                     fontWeight: 700,
                   }}

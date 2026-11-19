@@ -24,6 +24,7 @@ import {
   StatusChip,
 } from "@/components/kit";
 import { Inbox, Plus, Send } from "lucide-react";
+import { TONES } from "@/palette";
 
 interface Comment { id: string; body: string; isInternal: boolean; createdAt: string; author: { name: string } }
 interface Ticket { id: string; ticketNumber: string; subject: string; reporterName: string; reporterEmail: string; category: string; status: string; priority: string; owner?: { name: string } | null; location?: { name: string } | null; comments?: Comment[]; createdAt: string }
@@ -218,16 +219,16 @@ export default function TicketsPage() {
                         sx={{
                           borderRadius: 999,
                           border: "1px solid",
-                          borderColor: active ? "#f5f5f6" : "rgba(255,255,255,0.12)",
-                          backgroundColor: active ? "#f5f5f6" : "transparent",
-                          color: active ? "#0a0a0b" : "text.secondary",
+                          borderColor: active ? "rgba(119,134,248,0.6)" : "rgba(255,255,255,0.12)",
+                          backgroundColor: active ? TONES.indigo.soft : "transparent",
+                          color: active ? TONES.indigo.main : "text.secondary",
                           px: 1.25,
                           py: 0.4,
                           fontSize: 10,
                           fontWeight: 700,
                           letterSpacing: "0.06em",
                           cursor: "pointer",
-                          "&:hover": { borderColor: "rgba(255,255,255,0.4)" },
+                          "&:hover": { borderColor: "rgba(119,134,248,0.5)", color: "#dfe3ff" },
                         }}
                       >
                         {s.replaceAll("_", " ")}
@@ -281,7 +282,15 @@ export default function TicketsPage() {
                     label="Internal"
                     sx={{ mr: 0, whiteSpace: "nowrap" }}
                   />
-                  <IconButton type="submit" aria-label="Send reply" sx={{ backgroundColor: "#f5f5f6", color: "#0a0a0b", "&:hover": { backgroundColor: "#ffffff" } }}>
+                  <IconButton
+                    type="submit"
+                    aria-label="Send reply"
+                    sx={{
+                      backgroundImage: "linear-gradient(135deg, #7786f8 0%, #9a89f8 100%)",
+                      color: "#0a0a0b",
+                      "&:hover": { backgroundImage: "linear-gradient(135deg, #8b98ff 0%, #ab9bff 100%)" },
+                    }}
+                  >
                     <Send size={16} />
                   </IconButton>
                 </Stack>

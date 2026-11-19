@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { EmptyState, ErrorState, LoadingSkeleton, Modal, PageHeader, Panel } from "@/components/kit";
 import { DndContext, DragEndEvent, useDraggable, useDroppable } from "@dnd-kit/core";
 import { KanbanSquare, Plus } from "lucide-react";
+import { TONES, toneAt } from "@/palette";
 
 interface Stage { id: string; name: string; order: number; probability: number; isWon: boolean; isLost: boolean }
 interface Pipeline { id: string; name: string; isDefault: boolean; stages: Stage[] }
@@ -66,7 +67,8 @@ function KanbanCard({ contract }: { contract: Contract }) {
   );
 }
 
-function KanbanColumn({ stage, contracts }: { stage: Stage; contracts: Contract[] }) {
+function KanbanColumn({ stage, contracts, index }: { stage: Stage; contracts: Contract[]; index: number }) {
+  const accent = TONES[toneAt(index)];
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
   const monthly = contracts.reduce((s, d) => s + Number(d.monthlyValue), 0);
   return (
@@ -79,15 +81,21 @@ function KanbanColumn({ stage, contracts }: { stage: Stage; contracts: Contract[
         flexShrink: 0,
         borderRadius: 3,
         border: "1px solid",
-        borderColor: isOver ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.08)",
-        backgroundColor: isOver ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.02)",
+        borderColor: isOver ? accent.main : "rgba(255,255,255,0.08)",
+        backgroundColor: isOver ? accent.soft : "rgba(255,255,255,0.02)",
+        backgroundImage: `linear-gradient(180deg, ${accent.soft}, transparent 32%)`,
         p: 1.5,
         transition: "border-color 150ms, background-color 150ms",
       }}
     >
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5, pb: 1.25, borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
         <Box>
-          <Typography sx={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>{stage.name}</Typography>
+          <Stack direction="row" spacing={0.9} alignItems="center">
+            <Box sx={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: accent.main, flexShrink: 0 }} />
+            <Typography sx={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+              {stage.name}
+            </Typography>
+          </Stack>
           <Typography variant="caption" sx={{ color: "text.disabled" }}>
             {stage.probability}% close prob
           </Typography>
@@ -313,8 +321,13 @@ export default function MembershipsPage() {
 
       <DndContext onDragEnd={onDragEnd}>
         <Box sx={{ display: "flex", gap: 2, overflowX: "auto", pb: 2 }}>
-          {activePipeline?.stages.map((stage) => (
-            <KanbanColumn key={stage.id} stage={stage} contracts={contracts.items.filter((d) => d.stageId === stage.id)} />
+          {activePipeline?.stages.map((stage, index) => (
+            <KanbanColumn
+              key={stage.id}
+              stage={stage}
+              index={index}
+              contracts={contracts.items.filter((d) => d.stageId === stage.id)}
+            />
           ))}
         </Box>
       </DndContext>

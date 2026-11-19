@@ -1,11 +1,12 @@
 import { createTheme } from "@mui/material/styles";
 
 /**
- * GymFlow app theme — monochrome dark surface.
+ * GymFlow app theme — near-black ground with a six-hue accent set.
  *
- * One neutral scale only: near-black grounds, white text, hairline dividers.
- * Emphasis comes from contrast and weight, never hue, so status colours stay
- * greyscale and the marketing landing page keeps its own palette.
+ * Neutrals stay quiet (near-black grounds, white text, hairline dividers) and
+ * colour arrives through accents derived from the indigo seed: indigo for
+ * primary action, cyan/emerald/amber/rose for data and status. The marketing
+ * landing page keeps its own paper palette.
  */
 export const theme = createTheme({
   palette: {
@@ -21,17 +22,19 @@ export const theme = createTheme({
       disabled: "#5b5b64",
     },
     primary: {
-      main: "#f5f5f6",
+      main: "#7786f8",
+      light: "#a3acff",
+      dark: "#5b68d8",
       contrastText: "#0a0a0b",
     },
     secondary: {
-      main: "#2a2a30",
-      contrastText: "#f5f5f6",
+      main: "#b584f5",
+      contrastText: "#0a0a0b",
     },
-    success: { main: "#e4e4e7" },
-    warning: { main: "#b9b9c0" },
-    error: { main: "#8d8d95" },
-    info: { main: "#d4d4d8" },
+    success: { main: "#45d39f" },
+    warning: { main: "#f7c04a" },
+    error: { main: "#f06a93" },
+    info: { main: "#53d3ea" },
     action: {
       hover: "rgba(255, 255, 255, 0.06)",
       selected: "rgba(255, 255, 255, 0.09)",
@@ -66,8 +69,9 @@ export const theme = createTheme({
         body: {
           backgroundColor: "#08080a",
           backgroundImage:
-            "radial-gradient(1100px 620px at 12% -12%, rgba(255,255,255,0.07), transparent 62%), radial-gradient(900px 520px at 96% 0%, rgba(255,255,255,0.04), transparent 58%)",
+            "radial-gradient(1100px 640px at 8% -14%, rgba(119,134,248,0.16), transparent 62%), radial-gradient(880px 520px at 92% -6%, rgba(181,132,245,0.13), transparent 58%), radial-gradient(760px 520px at 60% 108%, rgba(83,211,234,0.07), transparent 62%)",
           backgroundAttachment: "fixed",
+          "& ::selection": { backgroundColor: "rgba(119,134,248,0.35)" },
         },
       },
     },
@@ -86,16 +90,25 @@ export const theme = createTheme({
         root: { borderRadius: 10, paddingInline: 16, minHeight: 36 },
         sizeSmall: { minHeight: 30, paddingInline: 12, fontSize: 12 },
         contained: {
-          backgroundColor: "#f5f5f6",
+          backgroundImage: "linear-gradient(135deg, #7786f8 0%, #9a89f8 100%)",
           color: "#0a0a0b",
-          "&:hover": { backgroundColor: "#ffffff" },
+          "&:hover": {
+            backgroundImage: "linear-gradient(135deg, #8b98ff 0%, #ab9bff 100%)",
+          },
         },
         outlined: {
           borderColor: "rgba(255,255,255,0.16)",
           color: "#f5f5f6",
-          "&:hover": { borderColor: "rgba(255,255,255,0.36)", backgroundColor: "rgba(255,255,255,0.05)" },
+          "&:hover": {
+            borderColor: "rgba(119,134,248,0.55)",
+            backgroundColor: "rgba(119,134,248,0.1)",
+            color: "#e3e6ff",
+          },
         },
-        text: { color: "#f5f5f6", "&:hover": { backgroundColor: "rgba(255,255,255,0.06)" } },
+        text: {
+          color: "#f5f5f6",
+          "&:hover": { backgroundColor: "rgba(119,134,248,0.1)", color: "#e3e6ff" },
+        },
       },
     },
     MuiIconButton: {
@@ -103,7 +116,7 @@ export const theme = createTheme({
         root: {
           borderRadius: 10,
           color: "#b9b9c0",
-          "&:hover": { backgroundColor: "rgba(255,255,255,0.07)", color: "#f5f5f6" },
+          "&:hover": { backgroundColor: "rgba(119,134,248,0.14)", color: "#a3acff" },
         },
       },
     },
@@ -125,7 +138,7 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           "&:last-child td": { borderBottom: "none" },
-          "&:hover": { backgroundColor: "rgba(255,255,255,0.025)" },
+          "&:hover": { backgroundColor: "rgba(119,134,248,0.05)" },
         },
       },
     },
@@ -155,7 +168,7 @@ export const theme = createTheme({
           "& .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.12)" },
           "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.24)" },
           "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-            borderColor: "rgba(255,255,255,0.6)",
+            borderColor: "rgba(119,134,248,0.75)",
             borderWidth: 1,
           },
         },
@@ -172,7 +185,7 @@ export const theme = createTheme({
     },
     MuiFormLabel: {
       styleOverrides: {
-        root: { fontSize: 12.5, color: "#94949c", "&.Mui-focused": { color: "#f5f5f6" } },
+        root: { fontSize: 12.5, color: "#94949c", "&.Mui-focused": { color: "#a3acff" } },
       },
     },
     MuiSelect: {
@@ -223,9 +236,10 @@ export const theme = createTheme({
           minHeight: 42,
           color: "#a5a5ad",
           "&.Mui-selected": {
-            backgroundColor: "rgba(255,255,255,0.09)",
-            color: "#f5f5f6",
-            "&:hover": { backgroundColor: "rgba(255,255,255,0.12)" },
+            backgroundColor: "rgba(119,134,248,0.16)",
+            color: "#dfe3ff",
+            "& .MuiListItemIcon-root": { color: "#a3acff" },
+            "&:hover": { backgroundColor: "rgba(119,134,248,0.22)" },
           },
         },
       },
@@ -269,9 +283,9 @@ export const theme = createTheme({
           paddingInline: 12,
           paddingBlock: 4,
           "&.Mui-selected": {
-            backgroundColor: "#f5f5f6",
+            backgroundImage: "linear-gradient(135deg, #7786f8 0%, #9a89f8 100%)",
             color: "#0a0a0b",
-            "&:hover": { backgroundColor: "#ffffff" },
+            "&:hover": { backgroundImage: "linear-gradient(135deg, #8b98ff 0%, #ab9bff 100%)" },
           },
         },
       },
@@ -279,7 +293,10 @@ export const theme = createTheme({
     MuiLinearProgress: {
       styleOverrides: {
         root: { backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 999, height: 6 },
-        bar: { backgroundColor: "#f5f5f6", borderRadius: 999 },
+        bar: {
+          backgroundImage: "linear-gradient(90deg, #7786f8 0%, #b584f5 100%)",
+          borderRadius: 999,
+        },
       },
     },
     MuiSkeleton: {
@@ -301,8 +318,16 @@ export const theme = createTheme({
       },
     },
     MuiDivider: { styleOverrides: { root: { borderColor: "rgba(255,255,255,0.08)" } } },
-    MuiAvatar: { styleOverrides: { root: { backgroundColor: "#26262c", color: "#f5f5f6", fontWeight: 600 } } },
-    MuiTabs: { styleOverrides: { indicator: { backgroundColor: "#f5f5f6", height: 2 } } },
+    MuiAvatar: {
+      styleOverrides: {
+        root: {
+          backgroundImage: "linear-gradient(135deg, #4d59c9 0%, #7c5bd6 100%)",
+          color: "#f5f5f6",
+          fontWeight: 600,
+        },
+      },
+    },
+    MuiTabs: { styleOverrides: { indicator: { backgroundColor: "#7786f8", height: 2 } } },
     MuiTab: {
       styleOverrides: {
         root: {
@@ -310,24 +335,31 @@ export const theme = createTheme({
           fontSize: 13,
           fontWeight: 600,
           color: "#8d8d95",
-          "&.Mui-selected": { color: "#f5f5f6" },
+          "&.Mui-selected": { color: "#a3acff" },
         },
       },
     },
     MuiBadge: {
-      styleOverrides: { badge: { backgroundColor: "#f5f5f6", color: "#0a0a0b", fontWeight: 700 } },
+      styleOverrides: { badge: { backgroundColor: "#7786f8", color: "#0a0a0b", fontWeight: 700 } },
     },
     MuiSwitch: {
       styleOverrides: {
-        root: { "& .MuiSwitch-switchBase.Mui-checked": { color: "#f5f5f6" } },
+        root: {
+          "& .MuiSwitch-switchBase.Mui-checked": { color: "#7786f8" },
+          "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { backgroundColor: "#7786f8" },
+        },
         track: { backgroundColor: "rgba(255,255,255,0.2)" },
       },
     },
     MuiFormControlLabel: {
       styleOverrides: { label: { fontSize: 13, color: "#c9c9cf" } },
     },
-    MuiCheckbox: { styleOverrides: { root: { color: "rgba(255,255,255,0.4)" } } },
-    MuiRadio: { styleOverrides: { root: { color: "rgba(255,255,255,0.4)" } } },
+    MuiCheckbox: {
+      styleOverrides: { root: { color: "rgba(255,255,255,0.4)", "&.Mui-checked": { color: "#7786f8" } } },
+    },
+    MuiRadio: {
+      styleOverrides: { root: { color: "rgba(255,255,255,0.4)", "&.Mui-checked": { color: "#7786f8" } } },
+    },
     MuiTablePagination: {
       styleOverrides: {
         root: { color: "#94949c", fontSize: 12 },

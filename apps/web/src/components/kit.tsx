@@ -19,6 +19,7 @@ import {
   Typography,
 } from "@mui/material";
 import { Stack } from "@/components/mui-stack";
+import { TONES, type ToneName, toneAt } from "@/palette";
 import { LucideIcon, X } from "lucide-react";
 
 /* Page furniture ---------------------------------------------------------- */
@@ -100,19 +101,36 @@ export function StatCard({
   value,
   sub,
   icon: Icon,
+  tone,
+  index = 0,
 }: {
   label: string;
   value: string | number;
   sub?: string;
   icon?: LucideIcon;
+  tone?: ToneName;
+  index?: number;
 }) {
+  const accent = TONES[tone ?? toneAt(index)];
   return (
-    <Paper sx={{ borderRadius: 3, p: 2.5, height: "100%" }}>
+    <Paper
+      sx={{
+        borderRadius: 3,
+        p: 2.5,
+        height: "100%",
+        position: "relative",
+        overflow: "hidden",
+        backgroundImage: `radial-gradient(360px 180px at 104% -30%, ${accent.glow}, transparent 70%)`,
+      }}
+    >
       <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
         <Box>
-          <Typography variant="overline" sx={{ color: "text.secondary" }}>
-            {label}
-          </Typography>
+          <Stack direction="row" spacing={0.75} alignItems="center">
+            <Box sx={{ width: 5, height: 5, borderRadius: "50%", backgroundColor: accent.main, flexShrink: 0 }} />
+            <Typography variant="overline" sx={{ color: "text.secondary" }}>
+              {label}
+            </Typography>
+          </Stack>
           <Typography
             sx={{ fontSize: 30, fontWeight: 700, letterSpacing: "-0.03em", mt: 1, lineHeight: 1.1 }}
           >
@@ -132,8 +150,9 @@ export function StatCard({
               width: 38,
               height: 38,
               borderRadius: 2,
-              border: "1px solid rgba(255,255,255,0.1)",
-              color: "text.secondary",
+              backgroundColor: accent.soft,
+              boxShadow: `inset 0 0 0 1px ${accent.soft}`,
+              color: accent.main,
               flexShrink: 0,
             }}
           >
@@ -147,53 +166,70 @@ export function StatCard({
 
 /* Status ------------------------------------------------------------------ */
 
-const STRONG = new Set(["ACTIVE", "JOINED", "WON", "OPEN", "RESOLVED", "CONVERTED"]);
-const MID = new Set([
-  "NEW",
-  "CONTACTED",
-  "TOUR_BOOKED",
-  "TOURED",
-  "TRIAL",
-  "NEGOTIATING",
-  "PENDING",
-  "IN_PROGRESS",
-  "PAUSED",
-]);
+const STATUS_TONE: Record<string, ToneName | "neutral"> = {
+  ACTIVE: "emerald",
+  JOINED: "emerald",
+  WON: "emerald",
+  RESOLVED: "emerald",
+  CONVERTED: "emerald",
+  COMPLETED: "emerald",
+  AVAILABLE: "emerald",
+  TRIAL: "amber",
+  PENDING: "amber",
+  NEW: "indigo",
+  CONTACTED: "indigo",
+  IN_PROGRESS: "indigo",
+  OPEN: "indigo",
+  TOUR_BOOKED: "cyan",
+  TOURED: "cyan",
+  NEGOTIATING: "violet",
+  PAUSED: "violet",
+  CURRENT: "indigo",
+  "NEAR LIMIT": "amber",
+  SUBSCRIBED: "emerald",
+  CANCELLED: "rose",
+  EXPIRED: "rose",
+  LOST: "rose",
+  FAILED: "rose",
+  URGENT: "rose",
+  HIGH: "amber",
+  MEDIUM: "indigo",
+  LOW: "neutral",
+};
 
-export function StatusChip({ status }: { status: string }) {
-  const key = status.toUpperCase();
-  const strong = STRONG.has(key);
+/** Tinted pill with a hue dot; unknown states stay neutral rather than inventing a colour. */
+function TonePill({ label, name }: { label: string; name: ToneName | "neutral" }) {
+  if (name === "neutral") {
+    return <Chip label={label} size="small" sx={{ backgroundColor: "transparent", color: "text.secondary" }} />;
+  }
+  const accent = TONES[name];
   return (
     <Chip
-      label={status.replaceAll("_", " ")}
-      size="small"
-      sx={
-        strong
-          ? { backgroundColor: "#f5f5f6", color: "#0a0a0b", borderColor: "#f5f5f6" }
-          : MID.has(key)
-            ? { backgroundColor: "rgba(255,255,255,0.12)", color: "#f5f5f6" }
-            : { backgroundColor: "transparent", color: "text.secondary" }
+      label={
+        <Stack direction="row" spacing={0.75} alignItems="center">
+          <Box sx={{ width: 5, height: 5, borderRadius: "50%", backgroundColor: accent.main }} />
+          <Box component="span">{label}</Box>
+        </Stack>
       }
+      size="small"
+      sx={{
+        backgroundColor: accent.soft,
+        color: accent.main,
+        boxShadow: `inset 0 0 0 1px ${accent.soft}`,
+        "& .MuiChip-label": { paddingInline: 1 },
+      }}
     />
   );
 }
 
+export function StatusChip({ status }: { status: string }) {
+  const key = status.toUpperCase();
+  return <TonePill label={status.replaceAll("_", " ")} name={STATUS_TONE[key] ?? "neutral"} />;
+}
+
 export function PriorityChip({ priority }: { priority: string }) {
   const key = priority.toUpperCase();
-  const strength = key === "URGENT" ? 2 : key === "HIGH" ? 1 : 0;
-  return (
-    <Chip
-      label={priority}
-      size="small"
-      sx={
-        strength === 2
-          ? { backgroundColor: "#f5f5f6", color: "#0a0a0b", borderColor: "#f5f5f6" }
-          : strength === 1
-            ? { backgroundColor: "rgba(255,255,255,0.12)" }
-            : { backgroundColor: "transparent", color: "text.secondary" }
-      }
-    />
-  );
+  return <TonePill label={priority} name={STATUS_TONE[key] ?? "neutral"} />;
 }
 
 /* Form -------------------------------------------------------------------- */

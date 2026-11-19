@@ -75,16 +75,28 @@ function Brand() {
           width: 40,
           height: 40,
           borderRadius: 2.5,
-          border: "1px solid rgba(255,255,255,0.14)",
-          background: "linear-gradient(160deg, rgba(255,255,255,0.16), rgba(255,255,255,0.02))",
+          border: "1px solid rgba(119,134,248,0.4)",
+          background: "linear-gradient(160deg, rgba(119,134,248,0.9), rgba(181,132,245,0.85))",
+          color: "#0a0a0b",
         }}
       >
-        <Dumbbell size={18} />
+        <Dumbbell size={18} strokeWidth={2.1} />
       </Box>
       <Box sx={{ minWidth: 0 }}>
         <Stack direction="row" spacing={1} alignItems="center">
           <Typography sx={{ fontWeight: 700, fontSize: 15, letterSpacing: "-0.01em" }}>GymFlow</Typography>
-          <Chip label="Beta" size="small" sx={{ height: 18, fontSize: 9, px: 0.5 }} />
+          <Chip
+            label="Beta"
+            size="small"
+            sx={{
+              height: 18,
+              fontSize: 9,
+              px: 0.5,
+              backgroundColor: "rgba(119,134,248,0.16)",
+              color: "#a3acff",
+              boxShadow: "inset 0 0 0 1px rgba(119,134,248,0.22)",
+            }}
+          />
         </Stack>
         <Typography variant="caption" sx={{ color: "text.secondary" }}>
           Member CRM
@@ -168,7 +180,7 @@ function SidebarContent({
               onClick={onNavigate}
               sx={{
                 mb: 0.5,
-                border: active ? "1px solid rgba(255,255,255,0.14)" : "1px solid transparent",
+                border: active ? "1px solid rgba(119,134,248,0.35)" : "1px solid transparent",
               }}
             >
               <ListItemIcon>
@@ -192,7 +204,7 @@ function SidebarContent({
               onClick={onNavigate}
               sx={{
                 mb: 0.5,
-                border: active ? "1px solid rgba(255,255,255,0.14)" : "1px solid transparent",
+                border: active ? "1px solid rgba(119,134,248,0.35)" : "1px solid transparent",
               }}
             >
               <ListItemIcon>

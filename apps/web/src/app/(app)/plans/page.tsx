@@ -5,6 +5,7 @@ import { Stack } from "@/components/mui-stack";
 import { api } from "@/lib/api";
 import { EmptyState, ErrorState, LoadingSkeleton, Modal, PageHeader, Panel } from "@/components/kit";
 import { Archive, BadgeDollarSign, CalendarDays, Plus, Repeat } from "lucide-react";
+import { TONES, toneAt } from "@/palette";
 
 interface Plan {
   id: string;
@@ -99,7 +100,7 @@ export default function PlansPage() {
       {plans.length === 0 && <EmptyState title="No plans yet" hint="Add the products your front desk sells." />}
 
       <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr", lg: "repeat(3, 1fr)" } }}>
-        {plans.map((plan) => (
+        {plans.map((plan, index) => (
           <Panel key={plan.id} sx={{ display: "flex", flexDirection: "column", opacity: plan.isActive ? 1 : 0.6 }}>
             <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
               <Box
@@ -109,14 +110,26 @@ export default function PlansPage() {
                   width: 40,
                   height: 40,
                   borderRadius: 2,
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  color: "text.secondary",
+                  backgroundColor: TONES[toneAt(index)].soft,
+                  boxShadow: `inset 0 0 0 1px ${TONES[toneAt(index)].soft}`,
+                  color: TONES[toneAt(index)].main,
                 }}
               >
                 <BadgeDollarSign size={19} />
               </Box>
               <Stack direction="row" spacing={0.5} alignItems="center">
-                <Button size="small" variant="text" sx={{ fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase" }} onClick={() => void toggle(plan)}>
+                <Button
+                  size="small"
+                  variant="text"
+                  onClick={() => void toggle(plan)}
+                  sx={{
+                    fontSize: 10.5,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: plan.isActive ? TONES.emerald.main : "text.secondary",
+                    "&:hover": { backgroundColor: plan.isActive ? TONES.emerald.soft : undefined },
+                  }}
+                >
                   {plan.isActive ? "Active" : "Paused"}
                 </Button>
                 <Button size="small" variant="text" aria-label="Archive plan" onClick={() => void archive(plan)} sx={{ minWidth: 0, px: 1 }}>

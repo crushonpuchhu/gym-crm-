@@ -3,7 +3,9 @@ import { useEffect, useState } from "react";
 import { Box, Button, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import { api, getAccessToken } from "@/lib/api";
 import { ErrorState, LoadingSkeleton, PageHeader, Panel, StatCard, TableShell } from "@/components/kit";
+import { CHART, SERIES_9, TONES } from "@/palette";
 import {
+  Area,
   Bar,
   BarChart,
   CartesianGrid,
@@ -20,17 +22,7 @@ import {
 } from "recharts";
 import { Download } from "lucide-react";
 
-const SOURCE_COLORS = ["#f5f5f6", "#c9c9cf", "#9a9aa2", "#74747c", "#55555c", "#3d3d43", "#2c2c32", "#232328", "#1a1a1e"];
-
-const AXIS = { fontSize: 11, fill: "#8d8d95" };
-const GRID = "rgba(255,255,255,0.07)";
-const TOOLTIP_STYLE = {
-  backgroundColor: "#151519",
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 10,
-  fontSize: 12,
-  color: "#f5f5f6",
-};
+const SOURCE_COLORS = SERIES_9;
 
 interface Conversion { total: number; converted: number; rate: number }
 interface ProspectBySource { source: string; count: number }
@@ -122,10 +114,10 @@ export default function ReportsPage() {
       />
 
       <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", lg: "repeat(4, 1fr)" } }}>
-        <StatCard label="Prospects" value={conversion.total} sub={`${conversion.converted} joined`} />
-        <StatCard label="Trial conversion" value={`${conversion.rate.toFixed(1)}%`} sub="Joined ÷ all prospects" />
-        <StatCard label="Active members" value={retention.active} sub={`${retention.trial} on trial · ${retention.paused} paused`} />
-        <StatCard label="Churn rate" value={`${retention.churnRate.toFixed(1)}%`} sub={`${retention.cancelled} cancelled · ${retention.expired} expired`} />
+        <StatCard label="Prospects" value={conversion.total} tone="indigo" sub={`${conversion.converted} joined`} />
+        <StatCard label="Trial conversion" value={`${conversion.rate.toFixed(1)}%`} tone="cyan" sub="Joined ÷ all prospects" />
+        <StatCard label="Active members" value={retention.active} tone="emerald" sub={`${retention.trial} on trial · ${retention.paused} paused`} />
+        <StatCard label="Churn rate" value={`${retention.churnRate.toFixed(1)}%`} tone="rose" sub={`${retention.cancelled} cancelled · ${retention.expired} expired`} />
       </Box>
 
       <Box sx={{ display: "grid", gap: 2, mt: 2, gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" } }}>
@@ -143,11 +135,17 @@ export default function ReportsPage() {
             <Box sx={{ height: 220, mt: 1 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={joins}>
-                  <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="month" tick={AXIS} axisLine={false} tickLine={false} />
-                  <YAxis tick={AXIS} axisLine={false} tickLine={false} />
-                  <Tooltip cursor={{ fill: "rgba(255,255,255,0.05)" }} contentStyle={TOOLTIP_STYLE} />
-                  <Bar dataKey="value" fill="#e4e4e7" radius={[4, 4, 0, 0]} />
+                  <defs>
+                    <linearGradient id="reportMonthBars" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#9aa6ff" />
+                      <stop offset="100%" stopColor="#6370e0" />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke={CHART.grid} strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="month" tick={CHART.axis} axisLine={false} tickLine={false} />
+                  <YAxis tick={CHART.axis} axisLine={false} tickLine={false} />
+                  <Tooltip cursor={CHART.cursor} contentStyle={CHART.tooltip} />
+                  <Bar dataKey="value" fill="url(#reportMonthBars)" radius={[5, 5, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </Box>
@@ -168,12 +166,12 @@ export default function ReportsPage() {
             <Box sx={{ height: 220, mt: 1 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={sources} dataKey="count" nameKey="source" innerRadius={50} outerRadius={78} paddingAngle={2} stroke="#111114">
+                  <Pie data={sources} dataKey="count" nameKey="source" innerRadius={50} outerRadius={78} paddingAngle={2} stroke="#0f0f12">
                     {sources.map((s, i) => (
                       <Cell key={s.source} fill={SOURCE_COLORS[i % SOURCE_COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={TOOLTIP_STYLE} />
+                  <Tooltip contentStyle={CHART.tooltip} />
                   <Legend formatter={(value) => <span style={{ color: "#94949c", fontSize: 11 }}>{value}</span>} />
                 </PieChart>
               </ResponsiveContainer>
@@ -196,11 +194,29 @@ export default function ReportsPage() {
           <Box sx={{ height: 200, mt: 1 }}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={checkIns}>
-                <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="date" tick={AXIS} axisLine={false} tickLine={false} tickFormatter={(v: string) => v.slice(5)} />
-                <YAxis tick={AXIS} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} />
-                <Line type="monotone" dataKey="count" stroke="#f5f5f6" strokeWidth={2} dot={false} />
+                <CartesianGrid stroke={CHART.grid} strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="date" tick={CHART.axis} axisLine={false} tickLine={false} tickFormatter={(v: string) => v.slice(5)} />
+                <YAxis tick={CHART.axis} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={CHART.tooltip} />
+                <defs>
+                  <linearGradient id="reportCheckInStroke" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor={TONES.emerald.main} />
+                    <stop offset="100%" stopColor={TONES.cyan.main} />
+                  </linearGradient>
+                  <linearGradient id="reportCheckInFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={TONES.emerald.main} stopOpacity={0.32} />
+                    <stop offset="100%" stopColor={TONES.emerald.main} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <Area type="monotone" dataKey="count" stroke="none" fill="url(#reportCheckInFill)" />
+                <Line
+                  type="monotone"
+                  dataKey="count"
+                  stroke="url(#reportCheckInStroke)"
+                  strokeWidth={2.4}
+                  dot={false}
+                  activeDot={{ r: 4, fill: TONES.cyan.main, stroke: "#111114", strokeWidth: 2 }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </Box>

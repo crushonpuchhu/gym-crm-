@@ -5,7 +5,8 @@ import { Stack } from "@/components/mui-stack";
 import { api } from "@/lib/api";
 import { ErrorState, LoadingSkeleton, PageHeader, Panel, StatCard } from "@/components/kit";
 import { CircleDollarSign, Dumbbell, QrCode, TicketCheck, UserPlus, Users } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { CHART, TONES, type ToneName } from "@/palette";
 
 interface DashboardStats {
   totalProspects: number;
@@ -21,15 +22,11 @@ interface DashboardStats {
 interface JoinMonth { month: string; value: number; count: number }
 interface CheckInDay { date: string; count: number }
 
-const AXIS = { fontSize: 11, fill: "#8d8d95" };
-const GRID = "rgba(255,255,255,0.07)";
-const TOOLTIP_STYLE = {
-  backgroundColor: "#151519",
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 10,
-  fontSize: 12,
-  color: "#f5f5f6",
-};
+const FUNNEL: { label: string; key: keyof DashboardStats; tone: ToneName }[] = [
+  { label: "Active", key: "activeMembers", tone: "emerald" },
+  { label: "On trial", key: "trialMembers", tone: "amber" },
+  { label: "Contracts", key: "totalMemberships", tone: "violet" },
+];
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -75,10 +72,10 @@ export default function DashboardPage() {
       />
 
       <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", lg: "repeat(4, 1fr)" } }}>
-        <StatCard label="Active members" value={stats.activeMembers} icon={Users} sub={`${stats.totalMembers} total · ${stats.trialMembers} on trial`} />
-        <StatCard label="Recurring revenue" value={`$${monthlyRecurring}`} icon={CircleDollarSign} sub={`${stats.totalMemberships} contracts`} />
-        <StatCard label="Check-ins today" value={stats.checkInsToday} icon={QrCode} sub="Front desk, app and QR" />
-        <StatCard label="Open support" value={stats.openTickets} icon={TicketCheck} sub={`${stats.totalTickets} tickets total`} />
+        <StatCard label="Active members" value={stats.activeMembers} icon={Users} tone="indigo" sub={`${stats.totalMembers} total · ${stats.trialMembers} on trial`} />
+        <StatCard label="Recurring revenue" value={`$${monthlyRecurring}`} icon={CircleDollarSign} tone="emerald" sub={`${stats.totalMemberships} contracts`} />
+        <StatCard label="Check-ins today" value={stats.checkInsToday} icon={QrCode} tone="cyan" sub="Front desk, app and QR" />
+        <StatCard label="Open support" value={stats.openTickets} icon={TicketCheck} tone="amber" sub={`${stats.totalTickets} tickets total`} />
       </Box>
 
       <Box
@@ -91,7 +88,7 @@ export default function DashboardPage() {
       >
         <Panel>
           <Stack direction="row" spacing={1} alignItems="center">
-            <UserPlus size={16} color="#8d8d95" />
+            <UserPlus size={16} color={TONES.indigo.main} />
             <Typography variant="overline" sx={{ color: "text.secondary" }}>
               Prospects in play
             </Typography>
@@ -103,17 +100,24 @@ export default function DashboardPage() {
             Enquiries, tours and trials in the funnel
           </Typography>
           <Stack spacing={1.25} sx={{ mt: 2.5, pt: 2, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-            {[
-              ["Active", stats.activeMembers],
-              ["On trial", stats.trialMembers],
-              ["Contracts", stats.totalMemberships],
-            ].map(([label, value]) => (
-              <Stack key={String(label)} direction="row" justifyContent="space-between">
-                <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                  {label}
-                </Typography>
+            {FUNNEL.map((row) => (
+              <Stack key={row.label} direction="row" justifyContent="space-between" alignItems="center">
+                <Stack direction="row" spacing={0.9} alignItems="center">
+                  <Box
+                    sx={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: "50%",
+                      backgroundColor: TONES[row.tone].main,
+                      boxShadow: `0 0 0 3px ${TONES[row.tone].soft}`,
+                    }}
+                  />
+                  <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                    {row.label}
+                  </Typography>
+                </Stack>
                 <Typography variant="body2" sx={{ fontWeight: 650 }}>
-                  {value}
+                  {stats[row.key]}
                 </Typography>
               </Stack>
             ))}
@@ -134,11 +138,17 @@ export default function DashboardPage() {
             <Box sx={{ height: 200, mt: 1 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={joins}>
-                  <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="month" tick={AXIS} axisLine={false} tickLine={false} />
-                  <YAxis tick={AXIS} axisLine={false} tickLine={false} />
-                  <Tooltip cursor={{ fill: "rgba(255,255,255,0.05)" }} contentStyle={TOOLTIP_STYLE} />
-                  <Bar dataKey="value" fill="#e4e4e7" radius={[4, 4, 0, 0]} />
+                  <defs>
+                    <linearGradient id="monthBars" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#9aa6ff" />
+                      <stop offset="100%" stopColor="#6370e0" />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke={CHART.grid} strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="month" tick={CHART.axis} axisLine={false} tickLine={false} />
+                  <YAxis tick={CHART.axis} axisLine={false} tickLine={false} />
+                  <Tooltip cursor={CHART.cursor} contentStyle={CHART.tooltip} />
+                  <Bar dataKey="value" fill="url(#monthBars)" radius={[5, 5, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </Box>
@@ -148,7 +158,7 @@ export default function DashboardPage() {
 
       <Panel sx={{ mt: 2 }}>
         <Stack direction="row" spacing={1} alignItems="center">
-          <Dumbbell size={16} color="#8d8d95" />
+          <Dumbbell size={16} color={TONES.cyan.main} />
           <Typography variant="overline" sx={{ color: "text.secondary" }}>
             Check-ins · last 14 days
           </Typography>
@@ -163,11 +173,29 @@ export default function DashboardPage() {
           <Box sx={{ height: 170, mt: 1 }}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={checkIns}>
-                <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="date" tick={AXIS} axisLine={false} tickLine={false} tickFormatter={(v: string) => v.slice(5)} />
-                <YAxis tick={AXIS} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} />
-                <Line type="monotone" dataKey="count" stroke="#f5f5f6" strokeWidth={2} dot={false} />
+                <defs>
+                  <linearGradient id="checkInStroke" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor={TONES.indigo.main} />
+                    <stop offset="100%" stopColor={TONES.cyan.main} />
+                  </linearGradient>
+                  <linearGradient id="checkInFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={TONES.indigo.main} stopOpacity={0.35} />
+                    <stop offset="100%" stopColor={TONES.indigo.main} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke={CHART.grid} strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="date" tick={CHART.axis} axisLine={false} tickLine={false} tickFormatter={(v: string) => v.slice(5)} />
+                <YAxis tick={CHART.axis} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={CHART.tooltip} cursor={{ stroke: "rgba(255,255,255,0.15)" }} />
+                <Area type="monotone" dataKey="count" stroke="none" fill="url(#checkInFill)" />
+                <Line
+                  type="monotone"
+                  dataKey="count"
+                  stroke="url(#checkInStroke)"
+                  strokeWidth={2.4}
+                  dot={false}
+                  activeDot={{ r: 4, fill: TONES.cyan.main, stroke: "#111114", strokeWidth: 2 }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </Box>

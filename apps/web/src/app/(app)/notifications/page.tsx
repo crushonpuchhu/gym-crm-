@@ -5,6 +5,7 @@ import { Stack } from "@/components/mui-stack";
 import { api } from "@/lib/api";
 import { EmptyState, ErrorState, LoadingSkeleton, PageHeader, Panel } from "@/components/kit";
 import { CheckCheck } from "lucide-react";
+import { TONES } from "@/palette";
 
 interface NotificationItem { id: string; type: string; title: string; body: string; readAt: string | null; createdAt: string }
 interface NotificationResponse { items: NotificationItem[]; unread: number }
@@ -94,7 +95,8 @@ export default function NotificationsPage() {
                   height: 7,
                   borderRadius: "50%",
                   flexShrink: 0,
-                  backgroundColor: n.readAt ? "rgba(255,255,255,0.16)" : "#f5f5f6",
+                  backgroundColor: n.readAt ? "rgba(255,255,255,0.16)" : TONES.indigo.main,
+                  boxShadow: n.readAt ? "none" : `0 0 0 3px ${TONES.indigo.soft}`,
                 }}
               />
               <Stack spacing={0.25} sx={{ minWidth: 0 }}>

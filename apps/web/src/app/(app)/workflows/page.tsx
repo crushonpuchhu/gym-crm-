@@ -5,6 +5,7 @@ import { Stack } from "@/components/mui-stack";
 import { api } from "@/lib/api";
 import { EmptyState, ErrorState, LoadingSkeleton, PageHeader, Panel } from "@/components/kit";
 import { Plus, Workflow, Zap, ZapOff } from "lucide-react";
+import { TONES } from "@/palette";
 
 interface WorkflowItem { id: string; name: string; trigger: string; isActive: boolean; condition: any; actions: any[] }
 
@@ -139,8 +140,9 @@ export default function WorkflowsPage() {
                 width: 38,
                 height: 38,
                 borderRadius: 2,
-                border: "1px solid rgba(255,255,255,0.1)",
-                color: w.isActive ? "text.primary" : "text.disabled",
+                backgroundColor: w.isActive ? TONES.emerald.soft : "transparent",
+                boxShadow: `inset 0 0 0 1px ${w.isActive ? TONES.emerald.soft : "rgba(255,255,255,0.1)"}`,
+                color: w.isActive ? TONES.emerald.main : "text.disabled",
                 flexShrink: 0,
               }}
             >

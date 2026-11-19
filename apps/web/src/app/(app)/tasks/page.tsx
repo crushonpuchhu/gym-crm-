@@ -5,6 +5,7 @@ import { Stack } from "@/components/mui-stack";
 import { api } from "@/lib/api";
 import { EmptyState, ErrorState, LoadingSkeleton, Modal, PageHeader, Panel, StatusChip } from "@/components/kit";
 import { CheckCircle2, Circle, Plus } from "lucide-react";
+import { TONES } from "@/palette";
 
 interface Task { id: string; title: string; type: string; ownerId: string; dueAt: string | null; status: string; }
 
@@ -87,7 +88,11 @@ export default function TasksPage() {
                   "&:hover": { backgroundColor: "rgba(255,255,255,0.025)" },
                 }}
               >
-                <IconButton aria-label="Toggle complete" onClick={() => void toggle(t)} sx={{ color: done ? "#f5f5f6" : "text.disabled" }}>
+                <IconButton
+                  aria-label="Toggle complete"
+                  onClick={() => void toggle(t)}
+                  sx={{ color: done ? TONES.emerald.main : "text.disabled" }}
+                >
                   {done ? <CheckCircle2 size={20} /> : <Circle size={20} />}
                 </IconButton>
                 <Box sx={{ minWidth: 0, flex: 1 }}>
