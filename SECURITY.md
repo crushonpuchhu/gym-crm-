@@ -12,7 +12,10 @@ Multi-tenant SaaS; primary risks: cross-tenant data access, credential theft, in
 - Every tenant route resolves org context from server-side membership lookup; **client-supplied org IDs are never trusted**
 - Tenant scoping enforced in every Prisma query (`where: { organizationId, deletedAt: null }`)
 - Cross-tenant access returns 404 (record not found), not 403 with existence leakage
-- Vendor access is a separate `User.isPlatformAdmin` flag, checked from the database per request; `/api/v1/platform/*` is mounted without tenant context and exposes commercial data/aggregates only, never gym records
+- Vendor access is a separate `User.isPlatformAdmin` flag (plus `User.isActive`), checked from the database per request; `/api/v1/platform/*` is mounted without tenant context and exposes commercial data/aggregates, not gym records
+- Support access ("View as gym") uses a short-lived token carrying `impersonating`, `impersonatedBy` and a required `reason`; tenant middleware re-verifies the actor is an active platform admin, grants owner-level **reads only**, and returns `403 impersonation_read_only` on any non-GET/HEAD; the platform console refuses an active support session; the gym sees `platform.impersonation_start/end` in its own audit trail
+- Vendor actions write to a separate append-only `PlatformAuditLog` (actor, action, org, target user, metadata, IP, user agent), so customers never see vendor-only notes; exports (`export.gyms_csv`) are logged
+- Operators can disable an account or revoke its refresh tokens; disabling revokes sessions and blocks login/refresh with `403 account_disabled`, while keeping gym roles and data. At least one active platform admin must remain (`409 last_platform_admin`), and self-disable/self-demote is rejected
 - Suspended brands (`Organization.status = "suspended"`) are rejected at login and on every tenant route with `403 org_suspended`; records are preserved
 - Role model: ORG_OWNER, ORG_ADMIN, CLUB_MANAGER, MEMBERSHIP_ADVISOR, SUPPORT_MANAGER, SUPPORT_AGENT, VIEWER. `SUPER_ADMIN` is legacy and unused; the vendor console uses `User.isPlatformAdmin`.
 - Permissions are capabilities (`manage_members`, `manage_billing`, `manage_users`, …) defined in `apps/api/src/config/permissions.ts`; every mutation route and sensitive read declares one with `requirePermission`
@@ -26,6 +29,8 @@ Multi-tenant SaaS; primary risks: cross-tenant data access, credential theft, in
 - `apps/api/tests/tenant-isolation.sh`: org B registers, sees 0 of org A's leads, cross-tenant deal read blocked
 - Live checks: advisor/viewer blocked on member/report/billing writes; admin cannot invite an owner; reused invite → 410; removed staff → immediate 403; existing-account accept rejects a wrong password (401)
 - Live checks: platform admin logs in with no brand and sees aggregates; gym owner gets 403 on `/platform/*`; platform token gets `org_required` on tenant routes; suspended brand gets `403 org_suspended` on login and tenant calls, then recovers after reactivation
+- Live checks (support access): impersonation token reads tenant GET routes, is rejected with `403 impersonation_read_only` on POST; `/auth/me` returns the impersonation context; `POST /auth/stop-impersonation` restores a platform token; both ends appear in `PlatformAuditLog` and the tenant audit log
+- Live checks (account controls): disabled login → `403 account_disabled`; revoked sessions fail refresh; last-admin demotion → `409 last_platform_admin`
 - Member/ticket/contact detail routes all include `organizationId` in `where`
 
 ## Input handling

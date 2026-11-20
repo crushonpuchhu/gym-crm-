@@ -16,11 +16,21 @@ export interface OrgMembership {
   role: string;
 }
 
+export interface ImpersonationInfo {
+  organizationId: string;
+  organizationName: string;
+  organizationSlug: string;
+  reason: string;
+}
+
+const IMPERSONATION_KEY = "gymflow-impersonation";
+
 interface AuthContextType {
   user: SessionUser | null;
   organizationId: string | null;
   role: string | null;
   memberships: OrgMembership[];
+  impersonation: ImpersonationInfo | null;
   loading: boolean;
   login: (
     email: string,
@@ -29,6 +39,11 @@ interface AuthContextType {
   register: (input: { email: string; password: string; name: string; organizationName: string }) => Promise<void>;
   acceptInvitation: (token: string, input: { name?: string; password: string }) => Promise<void>;
   switchOrg: (organizationId: string) => Promise<void>;
+  startImpersonation: (
+    accessToken: string,
+    info: ImpersonationInfo,
+  ) => void;
+  stopImpersonation: () => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -39,9 +54,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [memberships, setMemberships] = useState<OrgMembership[]>([]);
+  const [impersonation, setImpersonation] = useState<ImpersonationInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const clearImpersonation = useCallback(() => {
+    if (typeof window !== "undefined") window.sessionStorage.removeItem(IMPERSONATION_KEY);
+    setImpersonation(null);
+  }, []);
+
   const refresh = useCallback(async () => {
+    // A support session survives a reload through sessionStorage; it must not
+    // silently turn into a normal platform session.
+    if (typeof window !== "undefined") {
+      const stored = window.sessionStorage.getItem(IMPERSONATION_KEY);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored) as ImpersonationInfo & { token: string };
+          setAccessToken(parsed.token);
+          const me = await api<{ user: SessionUser }>("/auth/me");
+          setUser(me.user);
+          setOrganizationId(parsed.organizationId);
+          setMemberships([
+            {
+              organization: {
+                id: parsed.organizationId,
+                name: parsed.organizationName,
+                slug: parsed.organizationSlug,
+              },
+              role: "ORG_OWNER",
+            },
+          ]);
+          setImpersonation({
+            organizationId: parsed.organizationId,
+            organizationName: parsed.organizationName,
+            organizationSlug: parsed.organizationSlug,
+            reason: parsed.reason,
+          });
+          setLoading(false);
+          return;
+        } catch {
+          window.sessionStorage.removeItem(IMPERSONATION_KEY);
+        }
+      }
+    }
+
     try {
       const token = await refreshAccessToken();
       if (!token) {
@@ -55,10 +111,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setOrganizationId(me.memberships?.[0]?.organizationId ?? null);
       const orgs = await api<OrgMembership[]>("/auth/memberships");
       setMemberships(orgs);
+      setImpersonation(null);
     } catch {
       setUser(null);
       setOrganizationId(null);
       setMemberships([]);
+      setImpersonation(null);
       setAccessToken(null);
     } finally {
       setLoading(false);
@@ -76,6 +134,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       setOrganizationId(null);
       setMemberships([]);
+      setImpersonation(null);
+      if (typeof window !== "undefined") window.sessionStorage.removeItem(IMPERSONATION_KEY);
     };
     // Back/forward cache restores the old DOM without re-running the provider.
     const onPageShow = (event: PageTransitionEvent) => {
@@ -99,6 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
+    clearImpersonation();
     setAccessToken(data.accessToken);
     setUser(data.user);
     setOrganizationId(data.organizationId ?? null);
@@ -112,12 +173,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: "POST",
         body: JSON.stringify(input),
       });
+      clearImpersonation();
       setAccessToken(data.accessToken);
       setUser(data.user);
       setOrganizationId(data.organization.id);
       setMemberships(await api<OrgMembership[]>("/auth/memberships"));
     },
-    [],
+    [clearImpersonation],
   );
 
   const acceptInvitation = useCallback(
@@ -126,12 +188,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         `/auth/invitations/${token}/accept`,
         { method: "POST", body: JSON.stringify(input) },
       );
+      clearImpersonation();
       setAccessToken(data.accessToken);
       setUser(data.user);
       setOrganizationId(data.organization.id);
       setMemberships(await api<OrgMembership[]>("/auth/memberships"));
     },
-    [],
+    [clearImpersonation],
   );
 
   const switchOrg = useCallback(async (nextOrgId: string) => {
@@ -142,6 +205,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(data.accessToken);
     setOrganizationId(nextOrgId);
   }, []);
+
+  /** Enter a read-only support session. The platform token is kept in memory. */
+  const startImpersonation = useCallback(
+    (accessToken: string, info: ImpersonationInfo) => {
+      window.sessionStorage.setItem(
+        IMPERSONATION_KEY,
+        JSON.stringify({ token: accessToken, ...info }),
+      );
+      setAccessToken(accessToken);
+      setImpersonation(info);
+      setOrganizationId(info.organizationId);
+      setMemberships([
+        {
+          organization: { id: info.organizationId, name: info.organizationName, slug: info.organizationSlug },
+          role: "ORG_OWNER",
+        },
+      ]);
+    },
+    [],
+  );
+
+  /** Return to the platform console and discard the borrowed brand token. */
+  const stopImpersonation = useCallback(async () => {
+    try {
+      const data = await api<{ accessToken: string }>("/auth/stop-impersonation", { method: "POST" });
+      setAccessToken(data.accessToken);
+    } catch {
+      // Token already expired: a normal refresh restores platform access.
+    }
+    clearImpersonation();
+    setOrganizationId(null);
+    setMemberships([]);
+  }, [clearImpersonation]);
 
   const logout = useCallback(async () => {
     // Revoke the refresh cookie first; if the request hangs, give up after 4s.
@@ -159,14 +255,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       setOrganizationId(null);
       setMemberships([]);
+      setImpersonation(null);
+      if (typeof window !== "undefined") window.sessionStorage.removeItem(IMPERSONATION_KEY);
     }
   }, []);
 
-  const role = memberships.find((m) => m.organization.id === organizationId)?.role ?? null;
+  const role = impersonation
+    ? "ORG_OWNER"
+    : memberships.find((m) => m.organization.id === organizationId)?.role ?? null;
 
   return (
     <AuthContext.Provider
-      value={{ user, organizationId, role, memberships, loading, login, register, acceptInvitation, switchOrg, logout, refresh }}
+      value={{
+        user,
+        organizationId,
+        role,
+        memberships,
+        impersonation,
+        loading,
+        login,
+        register,
+        acceptInvitation,
+        switchOrg,
+        startImpersonation,
+        stopImpersonation,
+        logout,
+        refresh,
+      }}
     >
       {children}
     </AuthContext.Provider>

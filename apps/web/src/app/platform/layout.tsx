@@ -23,16 +23,18 @@ export default function PlatformLayout({ children }: { children: ReactNode }) {
 }
 
 function PlatformShell({ children }: { children: ReactNode }) {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, impersonation } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (loading) return;
     if (!user) router.replace("/login");
+    // Support sessions borrow a brand token; never let them reach the vendor console.
+    else if (impersonation) router.replace("/dashboard");
     else if (!user.isPlatformAdmin) router.replace("/dashboard");
-  }, [loading, user, router]);
+  }, [loading, user, impersonation, router]);
 
-  if (loading || !user || !user.isPlatformAdmin) {
+  if (loading || !user || !user.isPlatformAdmin || impersonation) {
     return (
       <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
         <Box
@@ -145,7 +147,7 @@ function PlatformShell({ children }: { children: ReactNode }) {
 
       <Box sx={{ maxWidth: 1440, mx: "auto", px: { xs: 2, lg: 4 }, pb: 4 }}>
         <Typography variant="caption" sx={{ color: "text.disabled" }}>
-          Viewing commercial data only. To inspect gym records, ask the owner for a staff seat.{" "}
+          Viewing commercial data only. To inspect gym records, use a read-only support view from the gym's manage panel.{" "}
           <Box component={Link} href="/dashboard" sx={{ color: "text.secondary" }}>
             Tenant workspace
           </Box>

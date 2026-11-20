@@ -27,8 +27,17 @@ export function signRefresh(payload: { userId: string; orgId?: string }) {
   return { token, jti };
 }
 
+export interface AccessPayload {
+  userId: string;
+  orgId?: string;
+  /** Short-lived support session: platform staff viewing one brand. */
+  impersonating?: boolean;
+  impersonatedBy?: string;
+  reason?: string;
+}
+
 export function verifyAccess(token: string) {
-  return jwt.verify(token, env.JWT_SECRET) as { userId: string; orgId?: string };
+  return jwt.verify(token, env.JWT_SECRET) as AccessPayload;
 }
 
 export function verifyRefresh(token: string) {

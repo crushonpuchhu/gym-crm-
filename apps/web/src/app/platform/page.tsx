@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Alert,
   Box,
@@ -20,8 +21,21 @@ import {
 } from "@mui/material";
 import { Stack } from "@/components/mui-stack";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { ErrorState, LoadingSkeleton, Modal, PageHeader, Panel, StatCard, StatusChip, TableShell } from "@/components/kit";
-import { Activity, Building2, CreditCard, Search, ShieldCheck, Users } from "lucide-react";
+import {
+  Activity,
+  Building2,
+  CalendarClock,
+  CreditCard,
+  Download,
+  Eye,
+  KeyRound,
+  Search,
+  ShieldCheck,
+  ShieldOff,
+  Users,
+} from "lucide-react";
 import { TONES } from "@/palette";
 
 interface Overview {
@@ -35,6 +49,12 @@ interface Overview {
     members: number;
     staff: number;
     mrr: number;
+    arpu: number;
+    trialConversion: number;
+    trialsEnding7d: number;
+    trialsOverdue: number;
+    churned30d: number;
+    activeOrganizations7d: number;
     newOrganizations30d: number;
   };
   byPlan: Record<string, number>;
@@ -65,6 +85,7 @@ interface OrgRow {
   quotaStaff: number;
   quotaMembers: number;
   currentPeriodEnd: string | null;
+  trialEndsAt: string | null;
   lastActivityAt: string | null;
 }
 
@@ -87,6 +108,8 @@ interface OrgDetail {
     quotaStaff: number;
     quotaMembers: number;
     currentPeriodEnd: string | null;
+    trialEndsAt: string | null;
+    updatedAt: string;
   } | null;
   usage: {
     members: number;
@@ -111,6 +134,8 @@ interface PlatformUser {
   email: string;
   emailVerified: boolean;
   isPlatformAdmin: boolean;
+  isActive: boolean;
+  lastLoginAt: string | null;
   createdAt: string;
   memberships: Array<{ role: string; organization: { id: string; name: string } }>;
 }
@@ -125,12 +150,24 @@ interface ActivityRow {
   user: { name: string; email: string } | null;
 }
 
+interface PlatformLogRow {
+  id: string;
+  action: string;
+  createdAt: string;
+  ip: string | null;
+  metadata: Record<string, unknown> | null;
+  actor: { name: string; email: string };
+  targetUser: { name: string; email: string } | null;
+  organization: { id: string; name: string } | null;
+}
+
 const PLAN_LABEL: Record<string, string> = { STARTER: "Starter", GROWTH: "Growth", SCALE: "Scale" };
 const SUB_STATUSES = ["TRIAL", "ACTIVE", "PAST_DUE", "CANCELLED", "EXPIRED"];
 const TABS = [
   { key: "gyms", label: "Gyms" },
   { key: "users", label: "People" },
-  { key: "activity", label: "Activity" },
+  { key: "log", label: "Platform log" },
+  { key: "activity", label: "Tenant activity" },
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
@@ -148,6 +185,24 @@ function when(value: string | null) {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
+function trialLabel(value: string | null) {
+  if (!value) return "—";
+  const ends = new Date(value).getTime();
+  const days = Math.ceil((ends - Date.now()) / 86_400_000);
+  if (days < 0) return `ended ${Math.abs(days)}d ago`;
+  if (days === 0) return "ends today";
+  if (days <= 14) return `${days}d left`;
+  return new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function trialTone(value: string | null) {
+  if (!value) return "text.disabled";
+  const days = Math.ceil((new Date(value).getTime() - Date.now()) / 86_400_000);
+  if (days < 0) return "error.main";
+  if (days <= 3) return "warning.main";
+  return "text.secondary";
+}
+
 function planTone(plan: string) {
   if (plan === "SCALE") return TONES.violet.main;
   if (plan === "GROWTH") return TONES.indigo.main;
@@ -155,6 +210,8 @@ function planTone(plan: string) {
 }
 
 export default function PlatformPage() {
+  const router = useRouter();
+  const { startImpersonation } = useAuth();
   const [overview, setOverview] = useState<Overview | null>(null);
   const [overviewError, setOverviewError] = useState("");
   const [tab, setTab] = useState<TabKey>("gyms");
@@ -172,11 +229,20 @@ export default function PlatformPage() {
   const [activity, setActivity] = useState<ActivityRow[] | null>(null);
   const [activityError, setActivityError] = useState("");
 
+  const [log, setLog] = useState<PlatformLogRow[] | null>(null);
+  const [logError, setLogError] = useState("");
+  const [logPage, setLogPage] = useState(1);
+  const [logPages, setLogPages] = useState(1);
+
   const [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<OrgDetail | null>(null);
   const [detailError, setDetailError] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [busyUser, setBusyUser] = useState<string | null>(null);
+  const [userActionError, setUserActionError] = useState("");
+  const [trialDays, setTrialDays] = useState(14);
+  const [exporting, setExporting] = useState(false);
   const [form, setForm] = useState({
     status: "active",
     plan: "STARTER",
@@ -229,6 +295,20 @@ export default function PlatformPage() {
     }
   }, []);
 
+  const loadLog = useCallback(async (page = 1) => {
+    setLogError("");
+    try {
+      const data = await api<{ items: PlatformLogRow[]; total: number; pages: number }>(
+        `/platform/audit?page=${page}&limit=50`,
+      );
+      setLog(data.items);
+      setLogPage(page);
+      setLogPages(data.pages);
+    } catch (err: any) {
+      setLogError(err?.message || "Could not load the platform log");
+    }
+  }, []);
+
   useEffect(() => {
     void loadOverview();
     void loadGyms();
@@ -237,7 +317,8 @@ export default function PlatformPage() {
   useEffect(() => {
     if (tab === "users" && !users) void loadUsers();
     if (tab === "activity" && !activity) void loadActivity();
-  }, [tab, users, activity, loadUsers, loadActivity]);
+    if (tab === "log" && !log) void loadLog();
+  }, [tab, users, activity, log, loadUsers, loadActivity, loadLog]);
 
   const openOrg = async (id: string) => {
     setSelected(id);
@@ -298,6 +379,110 @@ export default function PlatformPage() {
     }
   };
 
+  const updatePerson = async (
+    person: PlatformUser,
+    patch: { isActive?: boolean; isPlatformAdmin?: boolean },
+    confirmText: string,
+  ) => {
+    if (!window.confirm(confirmText)) return;
+    setBusyUser(person.id);
+    setUserActionError("");
+    try {
+      await api(`/platform/users/${person.id}`, { method: "PATCH", body: JSON.stringify(patch) });
+      await Promise.all([loadUsers(), loadOverview()]);
+    } catch (err: any) {
+      setUserActionError(err?.message || "Could not update this person");
+    } finally {
+      setBusyUser(null);
+    }
+  };
+
+  const revokeSessions = async (person: PlatformUser) => {
+    if (!window.confirm(`Sign ${person.name} out of every device? They must sign in again.`)) return;
+    setBusyUser(person.id);
+    setUserActionError("");
+    try {
+      await api(`/platform/users/${person.id}/revoke-sessions`, { method: "POST" });
+    } catch (err: any) {
+      setUserActionError(err?.message || "Could not revoke sessions");
+    } finally {
+      setBusyUser(null);
+    }
+  };
+
+  const extendTrial = async (days: number) => {
+    if (!detail) return;
+    setSaving(true);
+    setSaveError("");
+    try {
+      await api(`/platform/organizations/${detail.organization.id}/trial`, {
+        method: "POST",
+        body: JSON.stringify({ days }),
+      });
+      await Promise.all([openOrg(detail.organization.id), loadGyms(), loadOverview()]);
+    } catch (err: any) {
+      setSaveError(err?.message || "Could not change the trial");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const viewAsGym = async () => {
+    if (!detail) return;
+    const reason = window.prompt(
+      `Open a read-only support view of ${detail.organization.name}?\n\nThe session is logged and every write is blocked. Type a short reason:`,
+      "Support investigation",
+    );
+    if (!reason || reason.trim().length < 5) return;
+    setSaving(true);
+    setSaveError("");
+    try {
+      const data = await api<{
+        accessToken: string;
+        organization: { id: string; name: string; slug: string };
+        reason: string;
+      }>(`/platform/organizations/${detail.organization.id}/impersonate`, {
+        method: "POST",
+        body: JSON.stringify({ reason: reason.trim() }),
+      });
+      startImpersonation(data.accessToken, {
+        organizationId: data.organization.id,
+        organizationName: data.organization.name,
+        organizationSlug: data.organization.slug,
+        reason: data.reason,
+      });
+      router.push("/dashboard");
+    } catch (err: any) {
+      setSaveError(err?.message || "Could not start the support view");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const exportCsv = async () => {
+    setExporting(true);
+    try {
+      const { getAccessToken } = await import("@/lib/api");
+      const res = await fetch("/api/v1/platform/export/gyms.csv", {
+        headers: { Authorization: `Bearer ${getAccessToken() ?? ""}` },
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "gymflow-gyms.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+      void loadLog(1);
+    } catch {
+      setGymError("Could not export the gym list");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const planTotal = overview ? Object.values(overview.byPlan).reduce((sum, count) => sum + count, 0) : 0;
 
   if (overviewError && !overview) {
@@ -310,9 +495,20 @@ export default function PlatformPage() {
         title="Product overview"
         subtitle="Every gym brand running GymFlow: adoption, usage and commercial state."
         actions={
-          <Button variant="outlined" size="small" startIcon={<Activity size={15} />} onClick={() => void loadOverview()}>
-            Refresh
-          </Button>
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<Download size={15} />}
+              disabled={exporting}
+              onClick={() => void exportCsv()}
+            >
+              {exporting ? "Exporting…" : "Export CSV"}
+            </Button>
+            <Button variant="outlined" size="small" startIcon={<Activity size={15} />} onClick={() => void loadOverview()}>
+              Refresh
+            </Button>
+          </Stack>
         }
       />
 
@@ -432,6 +628,7 @@ export default function PlatformPage() {
                       <TableCell>Gym brand</TableCell>
                       <TableCell>Plan</TableCell>
                       <TableCell>Status</TableCell>
+                      <TableCell>Trial</TableCell>
                       <TableCell>Staff</TableCell>
                       <TableCell>Members</TableCell>
                       <TableCell>Last activity</TableCell>
@@ -462,6 +659,11 @@ export default function PlatformPage() {
                           <StatusChip status={gym.status} />
                         </TableCell>
                         <TableCell>
+                          <Typography variant="caption" sx={{ color: trialTone(gym.trialEndsAt) }}>
+                            {trialLabel(gym.trialEndsAt)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
                           <Typography variant="caption">
                             {gym.staff} / {gym.quotaStaff}
                           </Typography>
@@ -485,7 +687,7 @@ export default function PlatformPage() {
                     ))}
                     {gyms.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7}>
+                        <TableCell colSpan={8}>
                           <Typography variant="body2" sx={{ color: "text.secondary", py: 2 }}>
                             No gym brands match this filter.
                           </Typography>
@@ -499,6 +701,34 @@ export default function PlatformPage() {
           </Box>
 
           <Stack spacing={2}>
+            {overview ? (
+              <Panel>
+                <Typography variant="overline" sx={{ color: "text.secondary" }}>
+                  Revenue health
+                </Typography>
+                <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 1.25, mt: 1.5 }}>
+                  {[
+                    { label: "ARPU", value: money(overview.totals.arpu) },
+                    { label: "Trial conversion", value: `${overview.totals.trialConversion}%` },
+                    { label: "Trials ending 7d", value: overview.totals.trialsEnding7d },
+                    { label: "Overdue trials", value: overview.totals.trialsOverdue },
+                    { label: "Churned 30d", value: overview.totals.churned30d },
+                    { label: "Active 7d", value: overview.totals.activeOrganizations7d },
+                  ].map((metric) => (
+                    <Box key={metric.label}>
+                      <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                        {metric.label}
+                      </Typography>
+                      <Typography sx={{ fontSize: 17, fontWeight: 700, lineHeight: 1.2 }}>{metric.value}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+                <Typography variant="caption" sx={{ display: "block", mt: 1.5, color: "text.disabled" }}>
+                  Conversion counts paying brands over paying plus trialing.
+                </Typography>
+              </Panel>
+            ) : null}
+
             {overview ? (
               <Panel>
                 <Typography variant="overline" sx={{ color: "text.secondary" }}>
@@ -582,6 +812,7 @@ export default function PlatformPage() {
             </Button>
           </Stack>
           {userError ? <Alert severity="error" sx={{ mb: 2 }}>{userError}</Alert> : null}
+          {userActionError ? <Alert severity="error" sx={{ mb: 2 }}>{userActionError}</Alert> : null}
           {!users ? (
             <LoadingSkeleton rows={6} />
           ) : (
@@ -592,7 +823,8 @@ export default function PlatformPage() {
                     <TableCell>Person</TableCell>
                     <TableCell>Gym access</TableCell>
                     <TableCell>Account</TableCell>
-                    <TableCell>Joined</TableCell>
+                    <TableCell>Last seen</TableCell>
+                    <TableCell align="right">Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -625,22 +857,74 @@ export default function PlatformPage() {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        {person.isPlatformAdmin ? (
-                          <Chip size="small" label="Platform admin" color="primary" sx={{ fontSize: 11 }} />
-                        ) : (
-                          <StatusChip status={person.emailVerified ? "ACTIVE" : "PENDING"} />
-                        )}
+                        <Stack direction="row" spacing={0.5} sx={{ flexWrap: "wrap", gap: 0.5 }}>
+                          {person.isPlatformAdmin ? (
+                            <Chip size="small" label="Platform admin" color="primary" sx={{ fontSize: 11 }} />
+                          ) : (
+                            <StatusChip status={person.emailVerified ? "ACTIVE" : "PENDING"} />
+                          )}
+                          {!person.isActive ? (
+                            <Chip size="small" label="Disabled" color="error" sx={{ fontSize: 11 }} />
+                          ) : null}
+                        </Stack>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                          {when(person.createdAt)}
+                        <Typography variant="caption" sx={{ color: "text.secondary", whiteSpace: "nowrap" }}>
+                          {when(person.lastLoginAt)}
                         </Typography>
+                        <Typography variant="caption" sx={{ display: "block", color: "text.disabled" }}>
+                          joined {when(person.createdAt)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Stack direction="row" spacing={0.5} justifyContent="flex-end" sx={{ flexWrap: "wrap", gap: 0.5 }}>
+                          <Button
+                            size="small"
+                            disabled={busyUser === person.id}
+                            startIcon={<KeyRound size={13} />}
+                            onClick={() => void revokeSessions(person)}
+                          >
+                            Sign out
+                          </Button>
+                          <Button
+                            size="small"
+                            color={person.isActive ? "error" : "primary"}
+                            disabled={busyUser === person.id}
+                            onClick={() =>
+                              void updatePerson(
+                                person,
+                                { isActive: !person.isActive },
+                                person.isActive
+                                  ? `Disable ${person.name}? They are signed out and cannot sign in until you re-enable the account. Their gym roles are kept.`
+                                  : `Re-enable ${person.name}? They will be able to sign in again.`,
+                              )
+                            }
+                          >
+                            {person.isActive ? "Disable" : "Enable"}
+                          </Button>
+                          <Button
+                            size="small"
+                            disabled={busyUser === person.id}
+                            startIcon={person.isPlatformAdmin ? <ShieldOff size={13} /> : <ShieldCheck size={13} />}
+                            onClick={() =>
+                              void updatePerson(
+                                person,
+                                { isPlatformAdmin: !person.isPlatformAdmin },
+                                person.isPlatformAdmin
+                                  ? `Remove platform access from ${person.name}? They keep their gym roles but lose the vendor console.`
+                                  : `Give ${person.name} platform access? They will see every gym brand's commercial data.`,
+                              )
+                            }
+                          >
+                            {person.isPlatformAdmin ? "Revoke vendor" : "Make vendor"}
+                          </Button>
+                        </Stack>
                       </TableCell>
                     </TableRow>
                   ))}
                   {users.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4}>
+                      <TableCell colSpan={5}>
                         <Typography variant="body2" sx={{ color: "text.secondary", py: 2 }}>
                           No people match this search.
                         </Typography>
@@ -650,6 +934,104 @@ export default function PlatformPage() {
                 </TableBody>
               </Table>
             </TableShell>
+          )}
+        </Box>
+      ) : null}
+
+      {tab === "log" ? (
+        <Box>
+          {logError ? <Alert severity="error" sx={{ mb: 2 }}>{logError}</Alert> : null}
+          {!log ? (
+            <LoadingSkeleton rows={6} />
+          ) : (
+            <>
+              <TableShell>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>When</TableCell>
+                      <TableCell>Operator</TableCell>
+                      <TableCell>Action</TableCell>
+                      <TableCell>Target</TableCell>
+                      <TableCell>Detail</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {log.map((row) => (
+                      <TableRow key={row.id} hover>
+                        <TableCell>
+                          <Typography variant="caption" sx={{ color: "text.secondary", whiteSpace: "nowrap" }}>
+                            {new Date(row.createdAt).toLocaleString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                            {row.actor.name}
+                          </Typography>
+                          <Typography variant="caption" sx={{ display: "block", color: "text.disabled" }}>
+                            {row.actor.email}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="caption">{row.action.replace(/[._]/g, " ")}</Typography>
+                          <Typography variant="caption" sx={{ display: "block", color: "text.disabled" }}>
+                            {row.ip ?? "no ip"}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="caption">{row.organization?.name ?? "Platform"}</Typography>
+                          {row.targetUser ? (
+                            <Typography variant="caption" sx={{ display: "block", color: "text.disabled" }}>
+                              {row.targetUser.name} · {row.targetUser.email}
+                            </Typography>
+                          ) : null}
+                        </TableCell>
+                        <TableCell>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              display: "block",
+                              maxWidth: 320,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              color: "text.disabled",
+                            }}
+                          >
+                            {row.metadata ? JSON.stringify(row.metadata) : "—"}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {log.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5}>
+                          <Typography variant="body2" sx={{ color: "text.secondary", py: 2 }}>
+                            No platform operations recorded yet.
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                  </TableBody>
+                </Table>
+              </TableShell>
+              <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end" sx={{ mt: 1.5 }}>
+                <Button size="small" disabled={logPage <= 1} onClick={() => void loadLog(logPage - 1)}>
+                  Newer
+                </Button>
+                <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                  Page {logPage} of {logPages}
+                </Typography>
+                <Button size="small" disabled={logPage >= logPages} onClick={() => void loadLog(logPage + 1)}>
+                  Older
+                </Button>
+              </Stack>
+            </>
           )}
         </Box>
       ) : null}
@@ -732,6 +1114,14 @@ export default function PlatformPage() {
               <Typography variant="caption" sx={{ color: "text.secondary" }}>
                 {detail.organization.slug} · {detail.organization.currency} · {detail.organization.timezone}
               </Typography>
+              {detail.subscription?.trialEndsAt ? (
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  label={`Trial ${trialLabel(detail.subscription.trialEndsAt)}`}
+                  sx={{ textTransform: "none", letterSpacing: 0 }}
+                />
+              ) : null}
             </Stack>
 
             <Box
@@ -756,6 +1146,79 @@ export default function PlatformPage() {
                   <Typography sx={{ fontSize: 17, fontWeight: 700 }}>{metric.value}</Typography>
                 </Box>
               ))}
+            </Box>
+
+            <Box
+              sx={{
+                display: "grid",
+                gap: 1.5,
+                gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+                mb: 2.5,
+              }}
+            >
+              <Box sx={{ p: 1.5, borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                  <CalendarClock size={15} />
+                  <Typography sx={{ fontSize: 13, fontWeight: 700 }}>Trial</Typography>
+                </Stack>
+                <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                  {detail.subscription?.trialEndsAt
+                    ? `Ends ${new Date(detail.subscription.trialEndsAt).toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}.`
+                    : "No trial end date on the current subscription."}
+                </Typography>
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1.25 }}>
+                  <TextField
+                    size="small"
+                    type="number"
+                    label="Days"
+                    value={trialDays}
+                    onChange={(event) =>
+                      setTrialDays(Math.min(Math.max(Number(event.target.value) || 1, 1), 90))
+                    }
+                    sx={{ width: 90 }}
+                  />
+                  <Button variant="outlined" size="small" disabled={saving} onClick={() => void extendTrial(trialDays)}>
+                    Extend trial
+                  </Button>
+                </Stack>
+                <Stack direction="row" spacing={0.75} sx={{ mt: 1 }}>
+                  {[7, 14, 30].map((days) => (
+                    <Button key={days} size="small" disabled={saving} onClick={() => void extendTrial(days)}>
+                      +{days}d
+                    </Button>
+                  ))}
+                </Stack>
+              </Box>
+
+              <Box sx={{ p: 1.5, borderRadius: 2, border: "1px solid var(--gf-accent-border)", backgroundColor: "var(--gf-accent-soft)" }}>
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                  <Eye size={15} />
+                  <Typography sx={{ fontSize: 13, fontWeight: 700 }}>Support access</Typography>
+                </Stack>
+                <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                  Open the gym&apos;s workspace read-only. Writes are blocked, the owner sees the support access
+                  in their audit log, and you must give a reason.
+                </Typography>
+                <Button
+                  variant="contained"
+                  size="small"
+                  disabled={saving || detail.organization.status !== "active"}
+                  startIcon={<Eye size={14} />}
+                  onClick={() => void viewAsGym()}
+                  sx={{ mt: 1.25 }}
+                >
+                  View as gym (read-only)
+                </Button>
+                {detail.organization.status !== "active" ? (
+                  <Typography variant="caption" sx={{ display: "block", mt: 0.75, color: "text.disabled" }}>
+                    Reactivate the brand before opening a support view.
+                  </Typography>
+                ) : null}
+              </Box>
             </Box>
 
             <Typography variant="overline" sx={{ color: "text.secondary" }}>

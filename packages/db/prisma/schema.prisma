@@ -177,6 +177,7 @@ model Organization {
   workflows     Workflow[]
   subscriptions Subscription[]
   auditLogs     AuditLog[]
+  platformAuditLogs PlatformAuditLog[]
   invitations   Invitation[]
   roles         Role[]
 
@@ -192,6 +193,9 @@ model User {
   emailVerified Boolean  @default(false)
   /// GymFlow staff (vendor side): sees the platform console, never tenant records by default.
   isPlatformAdmin Boolean @default(false)
+  /// Disabled accounts keep their data but cannot sign in or refresh.
+  isActive      Boolean  @default(true)
+  lastLoginAt   DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   deletedAt     DateTime?
@@ -208,6 +212,8 @@ model User {
   activities          Activity[]        @relation("ActivityActor")
   notifications       Notification[]    @relation("NotificationRecipient")
   auditLogs           AuditLog[]        @relation("AuditLogActor")
+  platformActions     PlatformAuditLog[] @relation("PlatformAuditActor")
+  platformTargets     PlatformAuditLog[] @relation("PlatformAuditTarget")
   createdInvitations  Invitation[]      @relation("InvitationCreator")
   passwordResetTokens PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
@@ -753,6 +759,8 @@ model Subscription {
   plan              SubscriptionPlan   @default(STARTER)
   status            SubscriptionStatus @default(TRIAL)
   currentPeriodEnd  DateTime?
+  /// When a TRIAL stops being free. Null on comped or legacy rows.
+  trialEndsAt       DateTime?
   quotaMembers      Int                @default(500)
   quotaStaff        Int                @default(5)
   createdAt         DateTime           @default(now())
@@ -782,5 +790,27 @@ model AuditLog {
   @@index([organizationId])
   @@index([userId])
   @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+/// Vendor-side, append-only trail. Separate from AuditLog so customers never see
+/// internal operator notes or support access history.
+model PlatformAuditLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  actorUserId    String   @db.Uuid
+  action         String   @db.VarChar(100)
+  organizationId String?  @db.Uuid
+  targetUserId   String?  @db.Uuid
+  metadata       Json?
+  ip             String?  @db.VarChar(45)
+  userAgent      String?  @db.VarChar(500)
+  createdAt      DateTime @default(now())
+
+  actor        User          @relation("PlatformAuditActor", fields: [actorUserId], references: [id], onDelete: Cascade)
+  targetUser   User?         @relation("PlatformAuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([actorUserId])
+  @@index([organizationId])
   @@index([createdAt])
 }

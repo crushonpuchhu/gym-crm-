@@ -9,7 +9,10 @@ There are two separate control planes. Gym staff manage one brand through
 `TeamMembership`; GymFlow's own operators manage the product through
 `User.isPlatformAdmin` and the `/platform` console. A gym owner never sees the
 vendor console, and a platform admin has no tenant records unless a gym gives
-them a staff seat. See `docs/PLATFORM_ADMIN.md`.
+them a staff seat — or they open a **reason-gated, read-only support view**
+(`POST /platform/organizations/:id/impersonate`). That token cannot write, cannot
+reach `/platform`, is re-checked against the operator's platform flag on every
+request, and is recorded in both audit logs. See `docs/PLATFORM_ADMIN.md`.
 
 ```
 User ──< TeamMembership >── Organization

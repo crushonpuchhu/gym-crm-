@@ -15,6 +15,7 @@ import { prisma } from "../config/prisma";
 import { audit } from "../utils/audit";
 import { env } from "../config/env";
 import { seatBlockedReason } from "../utils/seats";
+import { platformAudit } from "../utils/platform-audit";
 
 const router = Router();
 
@@ -111,7 +112,12 @@ router.post(
         data: { userId: user.id, organizationId: org.id, role: "ORG_OWNER" },
       });
       await tx.subscription.create({
-        data: { organizationId: org.id, plan: "STARTER", status: "TRIAL" },
+        data: {
+          organizationId: org.id,
+          plan: "STARTER",
+          status: "TRIAL",
+          trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+        },
       });
       await tx.emailVerificationToken.create({
         data: { userId: user.id, token: require("crypto").randomBytes(32).toString("hex"), expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) },
@@ -145,6 +151,9 @@ router.post(
     if (!user || !(await compare(password, user.passwordHash))) {
       return err(res, "auth_invalid", "Invalid credentials", 401);
     }
+    if (!user.isActive) {
+      return err(res, "account_disabled", "This account is disabled. Contact your gym owner.", 403);
+    }
     const found = await getOrgContext(user.id);
     const membership = found?.organization.status === "active" ? found : undefined;
     if (!membership && !user.isPlatformAdmin) {
@@ -168,6 +177,7 @@ router.post(
       ip: req.ip,
       userAgent: req.get("user-agent"),
     });
+    await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
     const safeUser = await prisma.user.findUnique({ where: { id: user.id }, select: publicUserSelect });
     return ok(res, {
       accessToken: access,
@@ -195,9 +205,10 @@ router.post("/refresh", async (req, res) => {
     }
     const user = await prisma.user.findFirst({
       where: { id: decoded.userId, deletedAt: null },
-      select: { id: true, isPlatformAdmin: true },
+      select: { id: true, isPlatformAdmin: true, isActive: true },
     });
     if (!user) return err(res, "auth_invalid", "User not found", 401);
+    if (!user.isActive) return err(res, "account_disabled", "This account is disabled", 403);
     // Keep the brand the session was using; fall back to the first membership.
     const found = await getOrgContext(user.id, decoded.orgId);
     const membership = found?.organization.status === "active" ? found : undefined;
@@ -444,10 +455,69 @@ router.get("/me", async (req, res) => {
     const user = await prisma.user.findFirst({ where: { id: decoded.userId, deletedAt: null }, select: publicUserSelect });
     if (!user) return err(res, "not_found", "User not found", 404);
     const memberships = await prisma.teamMembership.findMany({ where: { userId: user.id, deletedAt: null } });
-    return ok(res, { user, memberships });
+
+    // A support session reports the brand it borrowed, so the UI can show a
+    // banner and the correct role without pretending to be the owner.
+    let impersonation: { organizationId: string; organizationName: string; reason: string } | null = null;
+    if (decoded.impersonating && decoded.orgId) {
+      const org = await prisma.organization.findFirst({
+        where: { id: decoded.orgId, deletedAt: null },
+        select: { name: true },
+      });
+      if (org) {
+        impersonation = {
+          organizationId: decoded.orgId,
+          organizationName: org.name,
+          reason: decoded.reason ?? "Support access",
+        };
+      }
+    }
+    return ok(res, { user, memberships, impersonation });
   } catch {
     return err(res, "auth_invalid", "Invalid token", 401);
   }
+});
+
+/**
+ * End a support session. The short-lived impersonation token is replaced by a
+ * normal platform token; the refresh cookie was never switched to the brand.
+ */
+router.post("/stop-impersonation", async (req, res) => {
+  const token = req.headers.authorization?.replace("Bearer ", "");
+  if (!token) return err(res, "auth_required", "Authentication required", 401);
+  let decoded;
+  try {
+    decoded = verifyAccess(token);
+  } catch {
+    return err(res, "auth_invalid", "Invalid token", 401);
+  }
+  if (!decoded.impersonating) return err(res, "not_impersonating", "This is not a support session", 400);
+  const user = await prisma.user.findFirst({
+    where: { id: decoded.userId, isPlatformAdmin: true, isActive: true, deletedAt: null },
+    select: { id: true },
+  });
+  if (!user) return err(res, "forbidden", "Platform access only", 403);
+
+  await platformAudit({
+    actorUserId: user.id,
+    action: "impersonation.end",
+    organizationId: decoded.orgId,
+    metadata: { reason: decoded.reason ?? "Support access" },
+    ip: req.ip,
+    userAgent: req.get("user-agent"),
+  });
+  await audit({
+    orgId: decoded.orgId,
+    userId: user.id,
+    action: "platform.impersonation_end",
+    entityType: "organization",
+    entityId: decoded.orgId,
+    newValues: { reason: decoded.reason ?? "Support access" },
+    ip: req.ip,
+    userAgent: req.get("user-agent"),
+  });
+
+  return ok(res, { accessToken: signAccess({ userId: user.id }) });
 });
 
 export default router;

@@ -11,6 +11,11 @@ export function auditMiddleware(req: Request, res: Response, next: NextFunction)
         userId: (req as any).userId || undefined,
         action: `${req.method} ${req.route?.path}`,
         entityType: "request",
+        // Support sessions are read-only, so this is normally absent; keep the
+        // marker in case a future route opts into delegated writes.
+        newValues: (req as any).isImpersonating
+          ? { impersonated: true, impersonatorId: (req as any).impersonatorId }
+          : undefined,
         ip: req.ip,
         userAgent: req.get("user-agent"),
       });

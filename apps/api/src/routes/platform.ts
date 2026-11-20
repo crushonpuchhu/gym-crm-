@@ -5,6 +5,8 @@ import { ok, err } from "../utils/response";
 import { audit } from "../utils/audit";
 import { AuthedRequest } from "../middleware/auth";
 import { PLAN_PRICES, PLAN_QUOTAS } from "../config/plans";
+import { signAccess } from "../utils/jwt";
+import { platformAudit } from "../utils/platform-audit";
 
 /**
  * Vendor-side platform console API.
@@ -31,7 +33,8 @@ function latestByOrg<T extends { organizationId: string }>(rows: T[]) {
 router.get("/overview", async (_req: AuthedRequest, res) => {
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-  const [orgs, users, members, staff, subscriptions, recentOrgs] = await Promise.all([
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const [orgs, users, members, staff, subscriptions, recentOrgs, activeOrgs7d] = await Promise.all([
     prisma.organization.findMany({
       where: { deletedAt: null },
       select: { id: true, name: true, slug: true, plan: true, status: true, createdAt: true },
@@ -41,7 +44,15 @@ router.get("/overview", async (_req: AuthedRequest, res) => {
     prisma.member.count({ where: { deletedAt: null, organization: { deletedAt: null } } }),
     prisma.teamMembership.count({ where: { deletedAt: null, organization: { deletedAt: null } } }),
     prisma.subscription.findMany({
-      select: { organizationId: true, plan: true, status: true, quotaStaff: true, quotaMembers: true },
+      select: {
+        organizationId: true,
+        plan: true,
+        status: true,
+        quotaStaff: true,
+        quotaMembers: true,
+        trialEndsAt: true,
+        updatedAt: true,
+      },
       orderBy: { createdAt: "desc" },
     }),
     prisma.organization.findMany({
@@ -58,6 +69,12 @@ router.get("/overview", async (_req: AuthedRequest, res) => {
       orderBy: { createdAt: "desc" },
       take: 6,
     }),
+    // Distinct brands that did anything in the last seven days.
+    prisma.auditLog.groupBy({
+      by: ["organizationId"],
+      where: { createdAt: { gte: weekAgo } },
+      _count: { _all: true },
+    }),
   ]);
 
   const subs = latestByOrg(subscriptions);
@@ -67,7 +84,18 @@ router.get("/overview", async (_req: AuthedRequest, res) => {
 
   const paying = active.filter((org) => subs.get(org.id)?.status === "ACTIVE");
   const mrr = paying.reduce((sum, org) => sum + PLAN_PRICES[org.plan], 0);
+  const trialRows = [...subs.values()].filter((sub) => sub.status === "TRIAL");
   const trialing = orgs.filter((org) => subs.get(org.id)?.status === "TRIAL").length;
+  const inSevenDays = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const trialsEnding7d = trialRows.filter(
+    (sub) => sub.trialEndsAt && sub.trialEndsAt >= new Date() && sub.trialEndsAt <= inSevenDays,
+  ).length;
+  const trialsOverdue = trialRows.filter((sub) => sub.trialEndsAt && sub.trialEndsAt < new Date()).length;
+  const churned30d = [...subs.values()].filter(
+    (sub) => (sub.status === "CANCELLED" || sub.status === "EXPIRED") && sub.updatedAt >= since,
+  ).length;
+  const trialConversion = trialing + paying.length > 0 ? Math.round((paying.length / (trialing + paying.length)) * 100) : 0;
+  const arpu = paying.length > 0 ? Math.round(mrr / paying.length) : 0;
 
   return ok(res, {
     totals: {
@@ -80,6 +108,12 @@ router.get("/overview", async (_req: AuthedRequest, res) => {
       members,
       staff,
       mrr,
+      arpu,
+      trialConversion,
+      trialsEnding7d,
+      trialsOverdue,
+      churned30d,
+      activeOrganizations7d: activeOrgs7d.length,
       newOrganizations30d: orgs.filter((org) => org.createdAt >= since).length,
     },
     byPlan,
@@ -141,7 +175,14 @@ router.get("/organizations", async (req: AuthedRequest, res) => {
     prisma.subscription.findMany({
       where: { organizationId: { in: ids } },
       orderBy: { createdAt: "desc" },
-      select: { organizationId: true, status: true, quotaStaff: true, quotaMembers: true, currentPeriodEnd: true },
+      select: {
+        organizationId: true,
+        status: true,
+        quotaStaff: true,
+        quotaMembers: true,
+        currentPeriodEnd: true,
+        trialEndsAt: true,
+      },
     }),
     prisma.auditLog.groupBy({
       by: ["organizationId"],
@@ -166,6 +207,7 @@ router.get("/organizations", async (req: AuthedRequest, res) => {
         quotaStaff: sub?.quotaStaff ?? PLAN_QUOTAS[org.plan].quotaStaff,
         quotaMembers: sub?.quotaMembers ?? PLAN_QUOTAS[org.plan].quotaMembers,
         currentPeriodEnd: sub?.currentPeriodEnd ?? null,
+        trialEndsAt: sub?.trialEndsAt ?? null,
         lastActivityAt: activityMap.get(org.id) ?? null,
       };
     }),
@@ -325,6 +367,17 @@ router.patch("/organizations/:id", async (req: AuthedRequest, res) => {
     ip: req.ip,
     userAgent: req.get("user-agent"),
   });
+  await platformAudit({
+    actorUserId: req.userId!,
+    action: "organization.update",
+    organizationId: before.id,
+    metadata: {
+      before: { plan: before.plan, status: before.status },
+      after: parsed.data,
+    },
+    ip: req.ip,
+    userAgent: req.get("user-agent"),
+  });
 
   const after = await prisma.organization.findUnique({
     where: { id: before.id },
@@ -353,6 +406,8 @@ router.get("/users", async (req: AuthedRequest, res) => {
       email: true,
       emailVerified: true,
       isPlatformAdmin: true,
+      isActive: true,
+      lastLoginAt: true,
       createdAt: true,
       team: {
         where: { deletedAt: null },
@@ -387,6 +442,297 @@ router.get("/activity", async (_req: AuthedRequest, res) => {
     },
   });
   return ok(res, items);
+});
+
+
+/** Extend (or restart) a free trial from the current end date. */
+router.post("/organizations/:id/trial", async (req: AuthedRequest, res) => {
+  if (!z.string().uuid().safeParse(req.params.id).success) {
+    return err(res, "not_found", "Organization not found", 404);
+  }
+  const parsed = z.object({ days: z.number().int().min(1).max(90) }).safeParse(req.body);
+  if (!parsed.success) return err(res, "validation_error", "days must be 1-90", 400, "days");
+
+  const org = await prisma.organization.findFirst({
+    where: { id: req.params.id, deletedAt: null },
+    select: { id: true, name: true, plan: true },
+  });
+  if (!org) return err(res, "not_found", "Organization not found", 404);
+
+  const existing = await prisma.subscription.findFirst({
+    where: { organizationId: org.id },
+    orderBy: { createdAt: "desc" },
+  });
+  const now = new Date();
+  const base = existing?.trialEndsAt && existing.trialEndsAt > now ? existing.trialEndsAt : now;
+  const trialEndsAt = new Date(base.getTime() + parsed.data.days * 24 * 60 * 60 * 1000);
+
+  const subscription = existing
+    ? await prisma.subscription.update({
+        where: { id: existing.id },
+        data: { status: "TRIAL", trialEndsAt },
+      })
+    : await prisma.subscription.create({
+        data: {
+          organizationId: org.id,
+          plan: org.plan,
+          status: "TRIAL",
+          trialEndsAt,
+          ...PLAN_QUOTAS[org.plan],
+        },
+      });
+
+  await audit({
+    orgId: org.id,
+    userId: req.userId,
+    action: "platform.trial_extended",
+    entityType: "subscription",
+    entityId: subscription.id,
+    oldValues: { trialEndsAt: existing?.trialEndsAt ?? null, status: existing?.status ?? null },
+    newValues: { trialEndsAt, days: parsed.data.days },
+    ip: req.ip,
+    userAgent: req.get("user-agent"),
+  });
+  await platformAudit({
+    actorUserId: req.userId!,
+    action: "organization.trial_extended",
+    organizationId: org.id,
+    metadata: { days: parsed.data.days, trialEndsAt, previous: existing?.trialEndsAt ?? null },
+    ip: req.ip,
+    userAgent: req.get("user-agent"),
+  });
+
+  return ok(res, { trialEndsAt, status: subscription.status });
+});
+
+const userUpdateSchema = z
+  .object({ isActive: z.boolean().optional(), isPlatformAdmin: z.boolean().optional() })
+  .refine((value) => Object.keys(value).length > 0, { message: "Nothing to update" });
+
+/** Disable an account, revoke its sessions, or change vendor access. */
+router.patch("/users/:id", async (req: AuthedRequest, res) => {
+  if (!z.string().uuid().safeParse(req.params.id).success) {
+    return err(res, "not_found", "User not found", 404);
+  }
+  const parsed = userUpdateSchema.safeParse(req.body);
+  if (!parsed.success) return err(res, "validation_error", "Invalid user update", 400);
+
+  const target = await prisma.user.findFirst({
+    where: { id: req.params.id, deletedAt: null },
+    select: { id: true, name: true, email: true, isActive: true, isPlatformAdmin: true },
+  });
+  if (!target) return err(res, "not_found", "User not found", 404);
+
+  if (target.id === req.userId && (parsed.data.isActive === false || parsed.data.isPlatformAdmin === false)) {
+    return err(res, "forbidden", "You cannot disable or demote your own account", 403);
+  }
+
+  const removesPlatformAccess =
+    target.isPlatformAdmin &&
+    (parsed.data.isPlatformAdmin === false || parsed.data.isActive === false);
+  if (removesPlatformAccess) {
+    const others = await prisma.user.count({
+      where: {
+        id: { not: target.id },
+        isPlatformAdmin: true,
+        isActive: true,
+        deletedAt: null,
+      },
+    });
+    if (others === 0) {
+      return err(res, "last_platform_admin", "At least one active platform admin must remain", 409);
+    }
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: target.id },
+    data: parsed.data,
+    select: { id: true, name: true, email: true, isActive: true, isPlatformAdmin: true },
+  });
+
+  // A disabled or demoted operator must not keep a usable refresh token.
+  if (parsed.data.isActive === false || parsed.data.isPlatformAdmin === false) {
+    await prisma.refreshToken.updateMany({
+      where: { userId: target.id, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  await platformAudit({
+    actorUserId: req.userId!,
+    action: "user.update",
+    targetUserId: target.id,
+    metadata: {
+      before: { isActive: target.isActive, isPlatformAdmin: target.isPlatformAdmin },
+      after: parsed.data,
+    },
+    ip: req.ip,
+    userAgent: req.get("user-agent"),
+  });
+
+  return ok(res, updated);
+});
+
+/** Sign a person out everywhere without changing their password. */
+router.post("/users/:id/revoke-sessions", async (req: AuthedRequest, res) => {
+  if (!z.string().uuid().safeParse(req.params.id).success) {
+    return err(res, "not_found", "User not found", 404);
+  }
+  const target = await prisma.user.findFirst({
+    where: { id: req.params.id, deletedAt: null },
+    select: { id: true, email: true },
+  });
+  if (!target) return err(res, "not_found", "User not found", 404);
+
+  const result = await prisma.refreshToken.updateMany({
+    where: { userId: target.id, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+  await platformAudit({
+    actorUserId: req.userId!,
+    action: "user.sessions_revoked",
+    targetUserId: target.id,
+    metadata: { sessions: result.count },
+    ip: req.ip,
+    userAgent: req.get("user-agent"),
+  });
+  return ok(res, { revoked: result.count });
+});
+
+/**
+ * Start a read-only support session for one brand.
+ *
+ * The token carries `impersonating`, so tenant middleware re-checks the platform
+ * flag, forces owner-level reads and rejects every write. Nothing about the
+ * gym's owner account or password is borrowed.
+ */
+router.post("/organizations/:id/impersonate", async (req: AuthedRequest, res) => {
+  if (!z.string().uuid().safeParse(req.params.id).success) {
+    return err(res, "not_found", "Organization not found", 404);
+  }
+  const parsed = z
+    .object({ reason: z.string().trim().min(5).max(300) })
+    .safeParse(req.body);
+  if (!parsed.success) {
+    return err(res, "validation_error", "A reason of at least 5 characters is required", 400, "reason");
+  }
+  const org = await prisma.organization.findFirst({
+    where: { id: req.params.id, deletedAt: null },
+    select: { id: true, name: true, slug: true, status: true },
+  });
+  if (!org) return err(res, "not_found", "Organization not found", 404);
+  if (org.status !== "active") {
+    return err(res, "org_suspended", "Reactivate the brand before viewing it", 403);
+  }
+
+  const accessToken = signAccess({
+    userId: req.userId!,
+    orgId: org.id,
+    impersonating: true,
+    impersonatedBy: req.userId!,
+    reason: parsed.data.reason,
+  });
+
+  await platformAudit({
+    actorUserId: req.userId!,
+    action: "impersonation.start",
+    organizationId: org.id,
+    metadata: { reason: parsed.data.reason, mode: "read-only" },
+    ip: req.ip,
+    userAgent: req.get("user-agent"),
+  });
+  await audit({
+    orgId: org.id,
+    userId: req.userId,
+    action: "platform.impersonation_start",
+    entityType: "organization",
+    entityId: org.id,
+    newValues: { reason: parsed.data.reason, mode: "read-only" },
+    ip: req.ip,
+    userAgent: req.get("user-agent"),
+  });
+
+  return ok(res, {
+    accessToken,
+    organization: { id: org.id, name: org.name, slug: org.slug },
+    reason: parsed.data.reason,
+    readOnly: true,
+  });
+});
+
+/** Vendor audit trail, newest first. */
+router.get("/audit", async (req: AuthedRequest, res) => {
+  const page = Math.max(Number(req.query.page) || 1, 1);
+  const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 100);
+  const [items, total] = await Promise.all([
+    prisma.platformAuditLog.findMany({
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
+      include: {
+        actor: { select: { id: true, name: true, email: true } },
+        targetUser: { select: { id: true, name: true, email: true } },
+        organization: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.platformAuditLog.count(),
+  ]);
+  return ok(res, { items, total, page, limit, pages: Math.max(Math.ceil(total / limit), 1) });
+});
+
+/** Flat CSV for finance/ops; exports are themselves audited. */
+router.get("/export/gyms.csv", async (req: AuthedRequest, res) => {
+  const orgs = await prisma.organization.findMany({
+    where: { deletedAt: null },
+    orderBy: { createdAt: "asc" },
+    select: {
+      name: true,
+      slug: true,
+      plan: true,
+      status: true,
+      createdAt: true,
+      subscriptions: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { status: true, quotaStaff: true, quotaMembers: true, trialEndsAt: true, currentPeriodEnd: true },
+      },
+      _count: { select: { members: true, team: true } },
+    },
+  });
+
+  const escape = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+  const header = ["Gym", "Slug", "Plan", "Brand status", "Subscription", "Staff", "Staff quota", "Members", "Member quota", "Trial ends", "Period ends", "Created"];
+  const lines = orgs.map((org) => {
+    const sub = org.subscriptions[0];
+    return [
+      org.name,
+      org.slug,
+      org.plan,
+      org.status,
+      sub?.status ?? "TRIAL",
+      org._count.team,
+      sub?.quotaStaff ?? "",
+      org._count.members,
+      sub?.quotaMembers ?? "",
+      sub?.trialEndsAt?.toISOString() ?? "",
+      sub?.currentPeriodEnd?.toISOString() ?? "",
+      org.createdAt.toISOString(),
+    ]
+      .map(escape)
+      .join(",");
+  });
+
+  await platformAudit({
+    actorUserId: req.userId!,
+    action: "export.gyms_csv",
+    metadata: { rows: orgs.length },
+    ip: req.ip,
+    userAgent: req.get("user-agent"),
+  });
+
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", 'attachment; filename="gymflow-gyms.csv"');
+  return res.send([header.map(escape).join(","), ...lines].join("\n"));
 });
 
 export default router;

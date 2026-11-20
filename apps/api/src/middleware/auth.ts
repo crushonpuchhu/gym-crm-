@@ -12,6 +12,9 @@ export interface AuthedRequest extends Request {
   role?: string;
   orgStatus?: string;
   isPlatformAdmin?: boolean;
+  isImpersonating?: boolean;
+  impersonatorId?: string;
+  impersonationReason?: string;
   memberships?: Array<{ organizationId: string; role: string }>;
 }
 
@@ -24,6 +27,9 @@ export function authenticate(req: AuthedRequest, res: Response, next: NextFuncti
       const payload = verifyAccess(access);
       req.userId = payload.userId;
       req.orgId = payload.orgId;
+      req.isImpersonating = payload.impersonating === true;
+      req.impersonatorId = payload.impersonatedBy ?? payload.userId;
+      req.impersonationReason = payload.reason;
       return next();
     } catch {
       // fall through to refresh rotation
@@ -63,6 +69,27 @@ export async function resolveTenant(req: AuthedRequest, res: Response, next: Nex
       req.role = current.role;
       req.orgStatus = current.organization.status;
     }
+
+    // Support access is re-verified against the DB, then granted owner-level
+    // *read* rights for one brand. It can never outlive the platform flag.
+    if (req.isImpersonating && req.orgId) {
+      const actor = await prisma.user.findFirst({
+        where: { id: req.impersonatorId, isPlatformAdmin: true, isActive: true, deletedAt: null },
+        select: { id: true },
+      });
+      if (!actor) {
+        req.isImpersonating = false;
+        return next();
+      }
+      const org = await prisma.organization.findFirst({
+        where: { id: req.orgId, deletedAt: null },
+        select: { status: true },
+      });
+      if (org?.status === "active") {
+        req.role = "ORG_OWNER";
+        req.orgStatus = org.status;
+      }
+    }
     next();
   } catch {
     next();
@@ -71,11 +98,15 @@ export async function resolveTenant(req: AuthedRequest, res: Response, next: Nex
 
 export function requireOrg(req: AuthedRequest, res: Response, next: NextFunction) {
   if (!req.orgId) return err(res, "org_required", "No organization context", 400);
-  if (!req.memberships?.some((m) => m.organizationId === req.orgId)) {
+  if (!req.isImpersonating && !req.memberships?.some((m) => m.organizationId === req.orgId)) {
     return err(res, "forbidden", "Not a member of this organization", 403);
   }
   if (req.orgStatus && req.orgStatus !== "active") {
     return err(res, "org_suspended", "This gym brand is suspended", 403);
+  }
+  // Support sessions are read-only: investigate, never change customer data.
+  if (req.isImpersonating && req.method !== "GET" && req.method !== "HEAD") {
+    return err(res, "impersonation_read_only", "Support view is read-only", 403);
   }
   next();
 }
@@ -84,11 +115,19 @@ export function requirePermission(permission: string) {
   return (req: AuthedRequest, res: Response, next: NextFunction) => {
     if (!req.orgId) return err(res, "org_required", "No organization context", 400);
     const membership = req.memberships?.find((m) => m.organizationId === req.orgId);
-    if (!membership) return err(res, "forbidden", "Not a member of this organization", 403);
+    if (!membership && !req.isImpersonating) {
+      return err(res, "forbidden", "Not a member of this organization", 403);
+    }
     if (req.orgStatus && req.orgStatus !== "active") {
       return err(res, "org_suspended", "This gym brand is suspended", 403);
     }
-    if (!hasPermission(membership.role, permission)) {
+    if (req.isImpersonating) {
+      if (req.method !== "GET" && req.method !== "HEAD") {
+        return err(res, "impersonation_read_only", "Support view is read-only", 403);
+      }
+      return next();
+    }
+    if (!hasPermission(membership!.role, permission)) {
       return err(res, "forbidden", "Insufficient permission", 403);
     }
     next();
@@ -106,7 +145,7 @@ export async function requirePlatformAdmin(req: AuthedRequest, res: Response, ne
   if (!req.userId) return err(res, "auth_required", "Authentication required", 401);
   try {
     const user = await prisma.user.findFirst({
-      where: { id: req.userId, deletedAt: null },
+      where: { id: req.userId, deletedAt: null, isActive: true },
       select: { isPlatformAdmin: true },
     });
     if (!user?.isPlatformAdmin) return err(res, "forbidden", "Platform access only", 403);

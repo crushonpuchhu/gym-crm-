@@ -6,6 +6,7 @@ import { ReactNode, useEffect, useState } from "react";
 import {
   Avatar,
   Box,
+  Button,
   Divider,
   Drawer,
   IconButton,
@@ -250,9 +251,20 @@ function SidebarContent({
 }
 
 function AppLayoutInner({ children }: { children: ReactNode }) {
-  const { user, loading, logout, memberships, organizationId, role, switchOrg } = useAuth();
+  const {
+    user,
+    loading,
+    logout,
+    memberships,
+    organizationId,
+    role,
+    switchOrg,
+    impersonation,
+    stopImpersonation,
+  } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const [exitingSupport, setExitingSupport] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [search, setSearch] = useState("");
   const isDesktop = useMediaQuery("(min-width:1200px)", { noSsr: true });
@@ -304,7 +316,7 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
       onSignOut={() => void signOut()}
       userName={user.name}
       userEmail={user.email}
-      isPlatformAdmin={!!user.isPlatformAdmin}
+      isPlatformAdmin={!!user.isPlatformAdmin && !impersonation}
       search={search}
       onSearch={setSearch}
       onSearchSubmit={() => {
@@ -450,6 +462,64 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
             component="main"
             sx={{ flex: 1, minWidth: 0, px: { xs: 2, lg: 3.5 }, py: { xs: 2.5, lg: 3.5 } }}
           >
+            {impersonation ? (
+              <Box
+                role="status"
+                sx={{
+                  maxWidth: 1360,
+                  mx: "auto",
+                  mb: 2.5,
+                  display: "flex",
+                  alignItems: { xs: "flex-start", sm: "center" },
+                  flexDirection: { xs: "column", sm: "row" },
+                  gap: 1.5,
+                  px: 2,
+                  py: 1.5,
+                  borderRadius: 2.5,
+                  border: "1px solid var(--gf-accent-border)",
+                  backgroundColor: "var(--gf-accent-soft)",
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "grid",
+                    placeItems: "center",
+                    width: 30,
+                    height: 30,
+                    flexShrink: 0,
+                    borderRadius: 1.5,
+                    color: "var(--gf-accent)",
+                    backgroundColor: "background.paper",
+                  }}
+                >
+                  <ShieldCheck size={17} />
+                </Box>
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  <Typography sx={{ fontSize: 13, fontWeight: 700 }}>
+                    Read-only support view · {impersonation.organizationName}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                    You are viewing this gym as GymFlow staff. Every change is blocked and this session is logged.
+                    {" "}Reason: {impersonation.reason}
+                  </Typography>
+                </Box>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  disabled={exitingSupport}
+                  startIcon={<LogOut size={14} />}
+                  onClick={async () => {
+                    setExitingSupport(true);
+                    await stopImpersonation();
+                    router.replace("/platform");
+                    router.refresh();
+                  }}
+                  sx={{ flexShrink: 0 }}
+                >
+                  {exitingSupport ? "Exiting…" : "Exit support view"}
+                </Button>
+              </Box>
+            ) : null}
             <Box sx={{ maxWidth: 1360, mx: "auto", width: "100%" }}>{children}</Box>
           </Box>
         </Box>
